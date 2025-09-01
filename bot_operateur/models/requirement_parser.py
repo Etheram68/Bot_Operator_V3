@@ -80,6 +80,11 @@ class RequirementParser:
             matches = self._find_matches(cleaned_text, patterns)
             
             for quantity, optional in matches:
+                # Vérifier si c'est un indicateur de ressource plutôt qu'un véhicule
+                if self._is_resource_indicator(requirement_type, cleaned_text):
+                    logger.debug(f"🚫 Ignoré indicateur de ressource: {requirement_type} ({quantity})")
+                    continue
+                
                 # Créer une exigence unique avec le type de besoin générique
                 # Le vehicle_scraper se chargera de choisir les véhicules les plus proches
                 # parmi les alternatives disponibles
@@ -346,6 +351,31 @@ class RequirementParser:
                 converted_requirements.append(req)
         
         return converted_requirements
+    
+    def _is_resource_indicator(self, requirement_type: str, mission_text: str) -> bool:
+        """Vérifie si c'est un indicateur de ressource plutôt qu'un véhicule"""
+        # Types de véhicules explicitement non-déployables
+        resource_only_types = {
+            "WATER_REQUIRED", "EAU_NECESSAIRE", 
+            "MIN_FIREFIGHTERS", "MIN_POLICE",
+            "CITERNE_PROBABILITY", "VAR_PROBABILITY", 
+            "BEA_PROBABILITY", "POLICE_PROBABILITY"
+        }
+        
+        # Vérifier si le requirement_type est dans les types de ressources
+        if requirement_type.upper() in resource_only_types:
+            return True
+        
+        # Vérifier dans les resource_indicators du fichier de configuration
+        resource_indicators = self.needs_labels.get("resource_indicators", {})
+        
+        # Structure: {"WATER_REQUIRED": "Eau nécessaire", ...}
+        for resource_code, resource_text in resource_indicators.items():
+            # Si le requirement_type correspond exactement au resource_code
+            if requirement_type.upper() == resource_code.upper():
+                return True
+        
+        return False
     
     def analyze_mission_complexity(self, requirements: List[MissionRequirement]) -> Dict[str, any]:
         """Analyse la complexité d'une mission basée sur ses exigences"""

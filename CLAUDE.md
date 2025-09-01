@@ -99,6 +99,9 @@ The recommended "smart" strategy includes:
 - Automatic fallback alternatives (VSAV → ASSU → Ambulance)
 - Proximity-based selection (first found = closest)
 - Adaptive complexity handling (simple → major incident)
+- Personnel-to-vehicle conversion (4 Spécialistes IMP → 1 VIMP based on crew_size)
+- Multi-need satisfaction (1 FS vehicle can satisfy both VTU and VSR requirements)
+- Already-deployed vehicle tracking to avoid over-deployment
 
 ### Configuration Management
 Settings loaded from `.env` file with these key variables:
@@ -107,9 +110,39 @@ Settings loaded from `.env` file with these key variables:
 - `HEADLESS`: Browser display mode
 - `LOG_LEVEL`: Logging verbosity
 - `MAX_CONCURRENT_MISSIONS`: Safety limit for simultaneous operations
+- `MIN_CREDITS_THRESHOLD`: Minimum mission credits to consider
+- `PAGE_LOAD_TIMEOUT`/`ELEMENT_WAIT_TIMEOUT`: Browser timing controls
 
 ### Error Handling
 - Retry mechanisms with exponential backoff
 - DOM change detection with adaptive waiting  
 - Comprehensive logging for debugging
 - Graceful degradation on mission failures
+
+## Key Implementation Details
+
+### Requirement Parser Intelligence
+The `requirement_parser.py` uses sophisticated text parsing:
+- HTML table structure recognition for mission requirements
+- Context-aware quantity extraction (handles "Fourgons d'incendie requis: 2")
+- Personnel-to-vehicle conversion using `vehicle_specs.crew_size`
+- Generic requirement types (CARS_POLICE) that allow proximity-based vehicle selection
+
+### Vehicle Selection Logic  
+The `vehicle_scraper.py` implements intelligent selection:
+- Already-deployed vehicle detection and adjustment from mission tables
+- Multi-alternative satisfaction (one FS vehicle satisfies both VTU and VSR needs)
+- Proximity-based selection (vehicles listed first are closest)
+- Alternative mapping resolution (VTU → FS, AMBULANCE → VSAV/ASSU/SMUR(A))
+
+### Mission Processing Flow
+1. Parse mission text → extract generic requirements (e.g., CARS_POLICE: 15)
+2. Convert personnel needs → vehicles (4 Spécialistes IMP → 1 VIMP)
+3. Check already deployed vehicles → adjust requirements  
+4. Select closest available vehicles using alternatives mapping
+5. Deploy and track selected vehicles
+
+### Data File Dependencies
+- `needs_labels_v2.json`: Regex patterns matching mission text to vehicle types
+- `vehicles_v2.json`: Vehicle alternatives and crew specifications
+- Both files are critical for the smart strategy's operation
