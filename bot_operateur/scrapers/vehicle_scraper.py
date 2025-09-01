@@ -54,16 +54,13 @@ class VehicleScraper:
                 logger.warning(f"Bouton 'Afficher la mission' non trouvé pour {mission_id}")
                 return vehicles
             
-            # Vérifier et charger tous les véhicules si nécessaire
-            await self._load_all_vehicles()
-            
-            # Attendre que la liste des véhicules soit chargée
+            # Attendre que la liste des véhicules soit chargée (sans charger tous les véhicules)
             await self.page.wait_for_selector("#vehicle_show_table_all", timeout=10000)
             
-            # Récupérer tous les véhicules
-            vehicles = await self._scrape_vehicles_from_table()
+            # Récupérer les véhicules visibles (les plus proches sont déjà affichés)
+            vehicles = await self._scrape_closest_vehicles_from_table()
             
-            logger.info(f"Trouvé {len(vehicles)} véhicules pour la mission {mission_id}")
+            logger.info(f"Trouvé {len(vehicles)} véhicules proches pour la mission {mission_id}")
             
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des véhicules: {e}")
@@ -106,6 +103,30 @@ class VehicleScraper:
             
         except Exception as e:
             logger.error(f"Erreur lors du scraping du tableau des véhicules: {e}")
+        
+        return vehicles
+    
+    async def _scrape_closest_vehicles_from_table(self) -> List[Vehicle]:
+        """Scrape uniquement les véhicules visibles (les plus proches) sans charger tous les véhicules"""
+        vehicles = []
+        
+        try:
+            # Récupérer les lignes de véhicules visibles (les plus proches sont affichés en premier)
+            vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+            
+            logger.debug(f"Récupération de {len(vehicle_rows)} véhicules visibles (les plus proches)")
+            
+            for row in vehicle_rows:
+                try:
+                    vehicle = await self._extract_vehicle_from_row(row)
+                    if vehicle:
+                        vehicles.append(vehicle)
+                except Exception as e:
+                    logger.warning(f"Erreur lors de l'extraction d'un véhicule proche: {e}")
+                    continue
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du scraping des véhicules proches: {e}")
         
         return vehicles
     
@@ -289,4 +310,72 @@ class VehicleScraper:
             
         except Exception as e:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
+            return 0
+    
+    async def select_closest_vehicles_by_type(self, vehicle_needs: dict) -> int:
+        """Sélectionne les véhicules les plus proches par type sans charger tous les véhicules"""
+        total_selected = 0
+        
+        try:
+            # Attendre que le tableau soit visible
+            await self.page.wait_for_selector("#vehicle_show_table_all", timeout=10000)
+            
+            # Récupérer les lignes de véhicules visibles (triées par proximité)
+            vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+            
+            if not vehicle_rows:
+                logger.warning("Aucune ligne de véhicule trouvée")
+                return 0
+            
+            logger.info(f"Sélection parmi {len(vehicle_rows)} véhicules visibles (triés par proximité)")
+            
+            # Compteurs pour chaque type demandé
+            selected_counts = {vtype: 0 for vtype in vehicle_needs.keys()}
+            
+            # Parcourir les véhicules dans l'ordre (premier = plus proche)
+            for row in vehicle_rows:
+                try:
+                    # Extraire le type du véhicule
+                    vehicle_type = await row.get_attribute("vehicle_type")
+                    if not vehicle_type:
+                        continue
+                    
+                    # Vérifier si on a besoin de ce type
+                    needed_count = vehicle_needs.get(vehicle_type, 0)
+                    already_selected = selected_counts.get(vehicle_type, 0)
+                    
+                    if needed_count > already_selected:
+                        # Chercher la checkbox de ce véhicule
+                        checkbox = await row.query_selector(".vehicle_checkbox")
+                        
+                        if checkbox and not await checkbox.is_disabled():
+                            # Sélectionner ce véhicule
+                            await checkbox.check()
+                            selected_counts[vehicle_type] = already_selected + 1
+                            total_selected += 1
+                            
+                            vehicle_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
+                            logger.info(f"✅ Sélectionné: {vehicle_caption} ({vehicle_type})")
+                    
+                    # Vérifier si tous les besoins sont satisfaits
+                    if all(selected_counts.get(vtype, 0) >= needed 
+                           for vtype, needed in vehicle_needs.items()):
+                        logger.info("🎯 Tous les besoins en véhicules sont satisfaits")
+                        break
+                        
+                except Exception as e:
+                    logger.warning(f"Erreur lors de la sélection d'un véhicule: {e}")
+                    continue
+            
+            # Log du résumé final
+            logger.info("📊 Résumé de la sélection:")
+            for vtype, needed in vehicle_needs.items():
+                selected = selected_counts.get(vtype, 0)
+                status = "✅" if selected >= needed else "❌"
+                logger.info(f"  {status} {vtype}: {selected}/{needed}")
+            
+            return total_selected
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la sélection des véhicules proches: {e}")
             return 0

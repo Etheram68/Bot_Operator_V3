@@ -129,3 +129,28 @@ class BaseStrategy(ABC):
                 return False
         
         return True
+    
+    async def get_vehicle_needs(self, mission: Mission) -> Dict[str, int]:
+        """
+        Calcule les besoins en véhicules pour une mission (version optimisée)
+        
+        Args:
+            mission: La mission à analyser
+            
+        Returns:
+            Dictionnaire {type_vehicule: quantité_requise}
+        """
+        needs = {}
+        
+        # Ajouter les exigences de base
+        requirements = mission.get_total_vehicle_requirements()
+        for vehicle_type, quantity in requirements.items():
+            needs[vehicle_type] = quantity
+        
+        # Ajouter les ambulances pour les patients (règle: 1 patient = 1 ambulance minimum)
+        if mission.patient_count > 0:
+            ambulance_needed = max(needs.get("Ambulance", 0), mission.patient_count)
+            needs["Ambulance"] = ambulance_needed
+        
+        self.logger.debug(f"Besoins calculés: {needs}")
+        return needs

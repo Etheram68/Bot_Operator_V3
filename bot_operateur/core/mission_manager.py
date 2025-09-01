@@ -134,6 +134,79 @@ class MissionManager:
             logger.error(f"Erreur lors du déploiement de mission {mission.id}: {e}")
             return False
     
+    async def deploy_vehicles_for_mission_optimized(
+        self, 
+        mission: Mission, 
+        strategy_name: str = None
+    ) -> bool:
+        """Déploie des véhicules pour une mission en utilisant la sélection optimisée (véhicules les plus proches)"""
+        
+        strategy_name = strategy_name or self.settings.default_strategy
+        strategy = self.strategies.get(strategy_name)
+        
+        if not strategy:
+            logger.error(f"Stratégie '{strategy_name}' non trouvée")
+            return False
+        
+        logger.info(f"🚀 Déploiement optimisé pour mission {mission.id} avec stratégie '{strategy_name}'")
+        
+        try:
+            # Récupérer les détails complets de la mission
+            mission = await self.get_mission_details(mission)
+            if not mission:
+                return False
+            
+            # Navigation vers la page de mission (sans charger tous les véhicules)
+            mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
+            await self.browser_manager.page.goto(mission_url)
+            await self.browser_manager.page.wait_for_load_state('networkidle')
+
+            # Naviguer vers la page de déploiement
+            help_button = await self.browser_manager.page.query_selector("#mission_help")
+            if help_button:
+                help_href = await help_button.get_attribute("href")
+                if help_href:
+                    help_url = f"https://www.operateur112.fr{help_href}"
+                    await self.browser_manager.page.goto(help_url)
+                    await self.browser_manager.page.wait_for_load_state('networkidle')
+                    
+                    back_to_mission_link = await self.browser_manager.page.query_selector("#back_to_mission")
+                    if back_to_mission_link:
+                        mission_url = await back_to_mission_link.get_attribute("href")
+                        if mission_url:
+                            await self.browser_manager.page.goto(f"https://www.operateur112.fr{mission_url}")
+                            await self.browser_manager.page.wait_for_load_state('networkidle')
+            
+            # Calculer les besoins en véhicules selon la stratégie
+            vehicle_needs = await strategy.get_vehicle_needs(mission)
+            
+            if not vehicle_needs:
+                logger.warning(f"Aucun besoin en véhicule identifié pour mission {mission.id}")
+                return False
+            
+            logger.info(f"📋 Besoins identifiés: {vehicle_needs}")
+            
+            # Sélectionner directement les véhicules les plus proches par type
+            selected_count = await self.vehicle_scraper.select_closest_vehicles_by_type(vehicle_needs)
+            
+            if selected_count == 0:
+                logger.warning(f"Aucun véhicule sélectionné pour mission {mission.id}")
+                return False
+            
+            # Déployer immédiatement
+            deployment_success = await self.vehicle_scraper.deploy_selected_vehicles()
+            if deployment_success:
+                logger.info(f"✅ Mission {mission.id} déployée avec succès en mode optimisé!")
+                mission.status = MissionStatus.IN_PROGRESS
+                return True
+            else:
+                logger.error(f"❌ Échec du déploiement pour mission {mission.id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Erreur lors du déploiement optimisé de mission {mission.id}: {e}")
+            return False
+    
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
         """Déploie automatiquement les missions selon la configuration"""
         max_missions = max_missions or self.settings.max_concurrent_missions
@@ -168,7 +241,8 @@ class MissionManager:
                 
                 logger.info(f"Traitement mission {mission.id}: {mission.title}")
                 
-                success = await self.deploy_vehicles_for_mission(mission)
+                # Utiliser le déploiement optimisé par défaut
+                success = await self.deploy_vehicles_for_mission_optimized(mission)
                 
                 if success:
                     stats["deployed"] += 1

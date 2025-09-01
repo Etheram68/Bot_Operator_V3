@@ -131,7 +131,8 @@ class OperateurBot:
             logger.error(f"Mission {mission_id} non trouvée")
             return False
         
-        return await self.mission_manager.deploy_vehicles_for_mission(mission, strategy)
+        # Utiliser la version optimisée par défaut
+        return await self.mission_manager.deploy_vehicles_for_mission_optimized(mission, strategy)
     
     async def run_auto_missions(self, max_missions: int = None) -> dict:
         """Lance le déploiement automatique de missions"""
