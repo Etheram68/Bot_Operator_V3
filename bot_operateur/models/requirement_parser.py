@@ -80,16 +80,15 @@ class RequirementParser:
             matches = self._find_matches(cleaned_text, patterns)
             
             for quantity, optional in matches:
-                # Mapper vers les véhicules réels
-                vehicle_types = self._map_requirement_to_vehicles(requirement_type)
-                
-                for vehicle_type in vehicle_types:
-                    requirement = MissionRequirement(
-                        vehicle_type=vehicle_type,
-                        quantity=quantity,
-                        optional=optional
-                    )
-                    requirements.append(requirement)
+                # Créer une exigence unique avec le type de besoin générique
+                # Le vehicle_scraper se chargera de choisir les véhicules les plus proches
+                # parmi les alternatives disponibles
+                requirement = MissionRequirement(
+                    vehicle_type=requirement_type,  # Type générique (ex: "CARS_POLICE")
+                    quantity=quantity,              # Quantité exacte demandée
+                    optional=optional
+                )
+                requirements.append(requirement)
         
         # Post-traitement pour éviter les doublons et optimiser
         requirements = self._post_process_requirements(requirements)
@@ -117,8 +116,8 @@ class RequirementParser:
         
         for pattern in patterns:
             for match in pattern.finditer(text):
-                # Extraire la quantité du match
-                quantity = self._extract_quantity_from_match(match)
+                # Extraire la quantité du match et de son contexte
+                quantity = self._extract_quantity_from_match_and_context(text, match)
                 
                 # Déterminer si c'est optionnel (basé sur des mots-clés)
                 optional = self._is_optional_requirement(match.group())
@@ -131,8 +130,63 @@ class RequirementParser:
         
         return matches
     
+    def _extract_quantity_from_match_and_context(self, full_text: str, match: re.Match) -> int:
+        """Extrait la quantité numérique d'un match et de son contexte environnant"""
+        # D'abord chercher dans le match lui-même
+        match_text = match.group()
+        numbers_in_match = re.findall(r'\d+', match_text)
+        
+        if numbers_in_match:
+            return int(numbers_in_match[0])
+        
+        # Chercher dans le contexte proche (50 caractères avant et après le match)
+        start_pos = max(0, match.start() - 50)
+        end_pos = min(len(full_text), match.end() + 50)
+        context = full_text[start_pos:end_pos]
+        
+        # Patterns pour chercher des quantités dans le contexte - plus précis
+        # Échapper le texte du match pour éviter les problèmes avec les caractères spéciaux
+        safe_match_text = re.escape(match_text)
+        first_word = match_text.split()[0] if match_text.split() else ""
+        safe_first_word = re.escape(first_word)
+        
+        quantity_patterns = [
+            # Patterns "Type: X" ou "Type requis: X" 
+            safe_match_text + r'\s*(?:requis?)?\s*:\s*(\d+)',
+            # Patterns "X Type" ou "X Type requis/nécessaires"
+            r'(\d+)\s+' + safe_match_text + r'\s*(?:requis?|nécessaires?)?',
+            r'(\d+)\s+' + safe_first_word + r'.*?(?:requis?|nécessaires?)',
+            # Patterns avec mots-clés de proximité
+            safe_match_text + r'.*?requis?\s*:\s*(\d+)',
+            safe_match_text + r'.*?nécessaires?\s*:\s*(\d+)',
+        ]
+        
+        for pattern in quantity_patterns:
+            matches = re.findall(pattern, context, re.IGNORECASE)
+            if matches:
+                try:
+                    return int(matches[0])
+                except ValueError:
+                    continue
+        
+        # Chercher des mots-nombres français dans le contexte
+        word_numbers = {
+            'un': 1, 'une': 1, 'deux': 2, 'trois': 3, 'quatre': 4, 'cinq': 5,
+            'six': 6, 'sept': 7, 'huit': 8, 'neuf': 9, 'dix': 10, 'onze': 11, 'douze': 12,
+            'treize': 13, 'quatorze': 14, 'quinze': 15, 'seize': 16, 'dix-sept': 17,
+            'dix-huit': 18, 'dix-neuf': 19, 'vingt': 20
+        }
+        
+        context_lower = context.lower()
+        for word, number in word_numbers.items():
+            if word in context_lower:
+                return number
+        
+        # Par défaut
+        return 1
+    
     def _extract_quantity_from_match(self, match: re.Match) -> int:
-        """Extrait la quantité numérique d'un match regex"""
+        """Extrait la quantité numérique d'un match regex (méthode legacy)"""
         # Chercher des nombres dans le match
         numbers = re.findall(r'\d+', match.group())
         
