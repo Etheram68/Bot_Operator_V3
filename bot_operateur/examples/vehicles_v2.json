@@ -1,7 +1,7 @@
 {
   "_schema_version": "2.0",
   "_description": "Configuration des véhicules disponibles et leur mapping vers les besoins",
-  "_last_updated": "2025-08-29",
+  "_last_updated": "2025-09-01",
 
   "vehicle_mapping": {
     "fire_rescue": {
@@ -92,11 +92,11 @@
         "secondary": []
       },
       "MOTOPOMPES": {
-        "primary": ["FDGP", "CEEP"],
+        "primary": ["FDGP", "CEEP", "RLC"],
         "secondary": []
       },
       "CAMION_DEVIDOIRS": {
-        "primary": ["FDGP"],
+        "primary": ["FDGP", "RLC"],
         "secondary": []
       }
     },
@@ -149,7 +149,7 @@
         "availability_limited": true
       },
       "VTP_CRS": {
-        "primary": ["VTP"],
+        "primary": ["VTP(ris)"],
         "secondary": [],
         "availability_limited": true
       },
@@ -199,11 +199,82 @@
       }
     }
   },
+  
+  "vehicle_specs": {
+    "FPT": {
+      "crew_size": 6,
+      "water_capacity_l": 3000,
+      "pump_capacity_l_min": 1000
+    },
+    "FPT(SR)": {
+      "crew_size": 6,
+      "water_capacity_l": 3000,
+      "pump_capacity_l_min": 1000
+    },
+    "CCR(SR)": {
+      "crew_size": 6,
+      "water_capacity_l": 3000,
+      "pump_capacity_l_min": 1000
+    },
+    "CCF(M)": {
+      "crew_size": 4,
+      "water_capacity_l": 4000,
+      "pump_capacity_l_min": 1000
+    },
+    "CCF(S)": {
+      "crew_size": 4,
+      "water_capacity_l": 14500,
+      "pump_capacity_l_min": 1000
+    },
+    "CCGC": {
+      "crew_size": 2,
+      "water_capacity_l": 11000
+    },
+    "FS": {
+      "crew_size": 3,
+      "pump_capacity_l_min": 1000
+    },
+    "FMOGP": {
+      "crew_size": 3,
+      "water_capacity_l": 12000
+    },
+    "FDGP": {
+      "crew_size": 4,
+      "pump_capacity_l_min": 1000,
+      "extra_water_storage_pct": 35
+    },
+    "RLC": {
+      "pump_capacity_l_min": 1000,
+      "extra_water_storage_pct": 35
+    },
+    "VTP(ers)": {
+      "crew_size": 9
+    },
+    "VPC": {
+      "crew_size": 6
+    },
+    "CEEM": {
+      "water_capacity_l": 8000,
+      "pump_capacity_l_min": 120
+    },
+    "CEEP": {
+      "pump_capacity_l_min": 1500
+    },
+    "GN": {
+      "crew_size": 4
+    },
+    "PN": {
+      "crew_size": 4
+    },
+    "VR": {
+      "crew_size": 6
+    }
+  },
 
   "availability_config": {
     "default_check_interval": 60,
     "limited_availability_types": [
-      "VCT", "RAM", "VAT", "VTP", "BLS", "CSL"
+      "VCT", "RAM", "VAT", "VTP(ris)", "BLS", "CSL"
     ],
     "transport_priorities": {
       "medical": ["ASSU", "SMUR(A)", "Ambulance"],
