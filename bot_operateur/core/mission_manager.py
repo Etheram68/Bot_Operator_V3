@@ -65,8 +65,12 @@ class MissionManager:
                     f"Mission {mission.id}: {len(mission.patients)} patients, "
                     f"{len(mission.requirements)} exigences, {mission.credits} crédits"
                 )
-            
-            return mission
+                
+                return mission
+            else:
+                # Si details est None, c'est que la mission est accomplie ou invalide
+                logger.info(f"Mission {mission.id} ignorée (accomplie ou inaccessible)")
+                return None
             
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des détails de {mission.id}: {e}")

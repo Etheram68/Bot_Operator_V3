@@ -133,6 +133,12 @@ class MissionScraper:
             await self.page.goto(mission_url)
             await self.page.wait_for_load_state('networkidle')
 
+            # Vérifier si la mission est déjà accomplie
+            mission_completed = await self.page.query_selector(".alert-info.mission-success")
+            if mission_completed:
+                logger.info(f"Mission {mission_id} déjà accomplie - ignorée")
+                return None
+
             # Récupération dynamique du href du bouton "Conditions"
             help_href = await self.page.get_attribute("#mission_help", "href")
             if not help_href:
