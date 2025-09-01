@@ -108,8 +108,105 @@ class SmartStrategy(BaseStrategy):
                 ambulance_needed = max(needs.get("Ambulance", 0), mission.patient_count)
                 needs["Ambulance"] = ambulance_needed
         
+        # CORRECTION: Éliminer les doublons causés par les alternatives redondantes
+        needs = self._eliminate_redundant_alternatives(needs)
+        
         self.logger.info(f"🎯 Besoins calculés avec alternatives: {needs}")
         return needs
+    
+    def _eliminate_redundant_alternatives(self, needs: dict) -> dict:
+        """Élimine les besoins redondants causés par les alternatives"""
+        cleaned_needs = {}
+        excluded_types = set()
+        
+        # Obtenir le mapping des alternatives
+        vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
+        fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
+        police_mapping = vehicle_mapping.get('police', {})
+        all_mappings = {**fire_rescue_mapping, **police_mapping}
+        
+        # Traiter les alternatives case-insensitive et croisées
+        needs_lower = {k.lower(): k for k in needs.keys()}  # Mapping lowercase -> original
+        
+        # Grouper les types qui sont des alternatives les uns des autres
+        alternative_groups = {}
+        for need_type in needs.keys():
+            if need_type in excluded_types:
+                continue
+                
+            alternatives_info = all_mappings.get(need_type, {})
+            primary_alternatives = alternatives_info.get('primary', [need_type])
+            
+            # Chercher les alternatives dans toutes les directions
+            related_needs = []
+            
+            # 1. Chercher les besoins qui sont dans mes alternatives
+            for other_need in needs.keys():
+                if other_need != need_type and other_need in primary_alternatives:
+                    related_needs.append(other_need)
+            
+            # 2. Chercher les besoins dont je suis une alternative
+            for other_need in needs.keys():
+                if other_need != need_type:
+                    other_alternatives_info = all_mappings.get(other_need, {})
+                    other_primary = other_alternatives_info.get('primary', [other_need])
+                    if need_type in other_primary:
+                        related_needs.append(other_need)
+            
+            # 3. Traiter les problèmes de casse (AMBULANCE vs Ambulance)
+            need_lower = need_type.lower()
+            for other_need in needs.keys():
+                if other_need != need_type and other_need.lower() == need_lower:
+                    related_needs.append(other_need)
+            
+            # 4. Cas spéciaux pour les groupes logiques
+            special_groups = {
+                'ambulance': ['VSAV', 'ASSU', 'SMUR(A)', 'Ambulance', 'AMBULANCE'],
+                'command': ['VLHR', 'VPC', 'PC'],  # Véhicules de commandement
+                'fire': ['FPT', 'FPT(SR)', 'CCR(SR)', 'FS']  # Véhicules incendie
+            }
+            
+            for group_name, group_vehicles in special_groups.items():
+                if need_type in group_vehicles:
+                    for other_need in needs.keys():
+                        if other_need != need_type and other_need in group_vehicles:
+                            related_needs.append(other_need)
+            
+            # Si on a trouvé des alternatives
+            if related_needs:
+                # Créer un groupe avec le type principal + ses alternatives trouvées
+                all_related = list(set([need_type] + related_needs))
+                group_key = min(all_related)  # Prendre le premier alphabétiquement
+                
+                if group_key not in alternative_groups:
+                    alternative_groups[group_key] = []
+                
+                alternative_groups[group_key].extend(all_related)
+                excluded_types.update(all_related)
+        
+        # Nettoyer les groupes (éliminer les doublons)
+        for group_key in alternative_groups:
+            alternative_groups[group_key] = list(set(alternative_groups[group_key]))
+        
+        # Traiter chaque groupe d'alternatives
+        for group_key, group_types in alternative_groups.items():
+            # Prendre le maximum des besoins dans ce groupe
+            max_needed = max(needs[t] for t in group_types if t in needs)
+            cleaned_needs[group_key] = max_needed
+            
+            self.logger.debug(f"🔧 Groupe d'alternatives {group_types} -> {group_key}: {max_needed}")
+        
+        # Ajouter les types qui n'ont pas d'alternatives redondantes
+        for need_type, quantity in needs.items():
+            if need_type not in excluded_types:
+                cleaned_needs[need_type] = quantity
+        
+        if len(cleaned_needs) != len(needs):
+            self.logger.info(f"🧹 Nettoyage des doublons: {len(needs)} -> {len(cleaned_needs)} besoins")
+            self.logger.debug(f"   Avant: {needs}")
+            self.logger.debug(f"   Après: {cleaned_needs}")
+        
+        return cleaned_needs
     
     def _group_vehicles_by_type_and_proximity(self, vehicles: List[Vehicle]) -> Dict[str, List[Vehicle]]:
         """Groupe les véhicules par type en préservant l'ordre de proximité"""
