@@ -186,8 +186,20 @@ class MissionManager:
             
             logger.info(f"📋 Besoins identifiés: {vehicle_needs}")
             
-            # Sélectionner directement les véhicules les plus proches par type
-            selected_count = await self.vehicle_scraper.select_closest_vehicles_by_type(vehicle_needs)
+            # Obtenir le mapping des alternatives depuis la stratégie
+            alternatives_mapping = {}
+            if hasattr(strategy, 'parser') and strategy.parser:
+                # Extraire le mapping des alternatives depuis le parser
+                vehicle_mapping = strategy.parser.vehicles_mapping.get('vehicle_mapping', {})
+                
+                # Combiner les mappings fire_rescue et police
+                fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
+                police_mapping = vehicle_mapping.get('police', {})
+                
+                alternatives_mapping = {**fire_rescue_mapping, **police_mapping}
+            
+            # Sélectionner directement les véhicules les plus proches par type avec alternatives
+            selected_count = await self.vehicle_scraper.select_closest_vehicles_by_type(vehicle_needs, alternatives_mapping)
             
             if selected_count == 0:
                 logger.warning(f"Aucun véhicule sélectionné pour mission {mission.id}")
@@ -233,8 +245,10 @@ class MissionManager:
             eligible_missions = self._filter_eligible_missions(missions)
             logger.info(f"{len(eligible_missions)} missions éligibles sur {len(missions)}")
             
-            # Déployer jusqu'à la limite
+            # Déployer jusqu'à la limite avec retry pour les échecs
             deployed_count = 0
+            failed_missions = []
+            
             for mission in eligible_missions:
                 if deployed_count >= max_missions:
                     break
@@ -250,10 +264,38 @@ class MissionManager:
                     self.active_missions.append(mission)
                 else:
                     stats["failed"] += 1
+                    failed_missions.append(mission)
+                    logger.warning(f"❌ Échec de déploiement pour mission {mission.id}")
                 
                 # Cooldown entre missions
                 if deployed_count < max_missions:
                     await asyncio.sleep(self.settings.mission_cooldown)
+            
+            # Retry des missions échouées avec plus de véhicules si nécessaire
+            if failed_missions and deployed_count < max_missions:
+                logger.info(f"🔄 Retry de {len(failed_missions)} missions échouées avec recherche étendue...")
+                
+                for mission in failed_missions:
+                    if deployed_count >= max_missions:
+                        break
+                    
+                    logger.info(f"🔄 Retry mission {mission.id} avec recherche étendue de véhicules")
+                    
+                    # Pour le retry, on force l'utilisation de la méthode classique qui charge tous les véhicules
+                    success = await self.deploy_vehicles_for_mission(mission)
+                    
+                    if success:
+                        stats["deployed"] += 1
+                        stats["failed"] -= 1  # Retirer du compte des échecs
+                        deployed_count += 1
+                        self.active_missions.append(mission)
+                        logger.info(f"✅ Retry réussi pour mission {mission.id}")
+                    else:
+                        logger.warning(f"❌ Retry échoué pour mission {mission.id}")
+                    
+                    # Cooldown entre retries
+                    if deployed_count < max_missions:
+                        await asyncio.sleep(self.settings.mission_cooldown)
             
             # Compter les missions ignorées
             stats["skipped"] = len(eligible_missions) - stats["deployed"] - stats["failed"]

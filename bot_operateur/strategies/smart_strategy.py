@@ -58,6 +58,59 @@ class SmartStrategy(BaseStrategy):
         
         return [v.id for v in selected_vehicles]
     
+    async def get_vehicle_needs(self, mission: Mission) -> Dict[str, int]:
+        """
+        Calcule les besoins en véhicules en utilisant le système d'alternatives intelligentes
+        Cette version optimisée évite les doublons comme BEA+EPA
+        """
+        needs = {}
+        
+        # Analyser les exigences avec le système d'alternatives
+        requirements = mission.get_total_vehicle_requirements()
+        
+        # Traiter chaque type d'exigence avec alternatives
+        for vehicle_type, quantity in requirements.items():
+            # Obtenir les alternatives directement depuis le mapping véhicules
+            vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
+            fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
+            police_mapping = vehicle_mapping.get('police', {})
+            
+            # Chercher dans les deux mappings
+            alternatives_info = fire_rescue_mapping.get(vehicle_type) or police_mapping.get(vehicle_type, {})
+            
+            if alternatives_info and len(alternatives_info.get('primary', [])) > 1:
+                # Si on a plusieurs alternatives primaires (comme BEA: ["BEA", "EPA"])
+                # On ne garde que le type principal dans les besoins
+                primary_type = vehicle_type  # Le type demandé reste le même
+                needs[primary_type] = quantity
+                
+                self.logger.debug(
+                    f"Type {vehicle_type} avec alternatives {alternatives_info.get('primary', [])} "
+                    f"-> besoin: {primary_type}:{quantity}"
+                )
+            else:
+                # Pas d'alternatives ou qu'une seule option
+                needs[vehicle_type] = quantity
+        
+        # Ajouter les ambulances pour les patients
+        if mission.patient_count > 0:
+            # Utiliser le système d'alternatives pour les ambulances aussi
+            vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
+            fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
+            ambulance_alternatives = fire_rescue_mapping.get("AMBULANCE", {})
+            
+            if ambulance_alternatives:
+                # On compte les besoins pour "AMBULANCE" (qui sera résolu en VSAV/ASSU/etc)
+                ambulance_needed = max(needs.get("AMBULANCE", 0), mission.patient_count)
+                needs["AMBULANCE"] = ambulance_needed
+            else:
+                # Fallback si pas de mapping
+                ambulance_needed = max(needs.get("Ambulance", 0), mission.patient_count)
+                needs["Ambulance"] = ambulance_needed
+        
+        self.logger.info(f"🎯 Besoins calculés avec alternatives: {needs}")
+        return needs
+    
     def _group_vehicles_by_type_and_proximity(self, vehicles: List[Vehicle]) -> Dict[str, List[Vehicle]]:
         """Groupe les véhicules par type en préservant l'ordre de proximité"""
         groups = {}

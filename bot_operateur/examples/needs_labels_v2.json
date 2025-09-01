@@ -42,7 +42,7 @@
     "FPT_SR": ["[Ff]ourgons? d'incendie.{0,30}secours routiers?", "FPT.{0,10}VSR", "pompiers?.{0,20}secours"],
     "BLS_CSL": ["BLS.{0,10}CSL", "blindés?.{0,20}compagnies? sécurité"],
     "CARS_POLICE_PATROUILLE_VR": ["[Vv]éhicules? patrouilles?.{0,20}VR", "police.{0,20}radio"],
-    "CARS_POLICE_VR": ["[Vv]oitures? police.{0,20}VR", "police.{0,20}véhicules? radio"],
+    "CARS_POLICE_VR": ["[Vv]oitures? police.{0,20}VR", "police.{0,20}véhicules? radio", "[Vv]oitures? de police ou VR"],
     "FPT_SR_BEA": ["[Ff]ourgons?.{0,30}secours.{0,30}échelles?", "pompiers?.{0,40}aériens?"],
     "VR": ["VR", "véhicules? radios?"]
   },

@@ -140,11 +140,14 @@ class VehicleScraper:
                 
             vehicle_id = row_id.replace("vehicle_element_content_", "")
             
-            # Extraire le type et le nom
-            vehicle_type = await row.get_attribute("vehicle_type")
+            # Extraire le nom du véhicule
             vehicle_caption = await row.get_attribute("vehicle_caption")
+            if not vehicle_caption:
+                return None
             
-            if not vehicle_type or not vehicle_caption:
+            # Extraire le type depuis vehicle_caption : "FS 1 Brunstatt" -> "FS"
+            vehicle_type = vehicle_caption.split()[0] if vehicle_caption else None
+            if not vehicle_type:
                 return None
             
             # Vérifier la disponibilité via la checkbox
@@ -166,7 +169,7 @@ class VehicleScraper:
                 condition=condition
             )
             
-            logger.debug(f"Véhicule extrait: {vehicle.caption} ({vehicle.type})")
+            logger.debug(f"Véhicule extrait: {vehicle.caption} -> Type: {vehicle.type}")
             return vehicle
             
         except Exception as e:
@@ -312,8 +315,8 @@ class VehicleScraper:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
     
-    async def select_closest_vehicles_by_type(self, vehicle_needs: dict) -> int:
-        """Sélectionne les véhicules les plus proches par type sans charger tous les véhicules"""
+    async def select_closest_vehicles_by_type(self, vehicle_needs: dict, alternatives_mapping: dict = None) -> int:
+        """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives"""
         total_selected = 0
         
         try:
@@ -329,33 +332,46 @@ class VehicleScraper:
             
             logger.info(f"Sélection parmi {len(vehicle_rows)} véhicules visibles (triés par proximité)")
             
-            # Compteurs pour chaque type demandé
-            selected_counts = {vtype: 0 for vtype in vehicle_needs.keys()}
+            # Préparer les compteurs avec gestion d'alternatives
+            selected_counts = {}
+            alternatives_used = {}  # Track quelles alternatives ont été utilisées
+            
+            # Initialiser les compteurs
+            for req_type in vehicle_needs.keys():
+                selected_counts[req_type] = 0
+                alternatives_used[req_type] = []
             
             # Parcourir les véhicules dans l'ordre (premier = plus proche)
             for row in vehicle_rows:
                 try:
-                    # Extraire le type du véhicule
-                    vehicle_type = await row.get_attribute("vehicle_type")
+                    # Extraire le type du véhicule depuis vehicle_caption (avant le premier espace)
+                    vehicle_caption = await row.get_attribute("vehicle_caption")
+                    if not vehicle_caption:
+                        continue
+                    
+                    # Extraire le type : "FS 1 Brunstatt" -> "FS"
+                    vehicle_type = vehicle_caption.split()[0] if vehicle_caption else None
                     if not vehicle_type:
                         continue
                     
-                    # Vérifier si on a besoin de ce type
-                    needed_count = vehicle_needs.get(vehicle_type, 0)
-                    already_selected = selected_counts.get(vehicle_type, 0)
+                    # Chercher si ce véhicule peut satisfaire un besoin
+                    matching_need = self._find_matching_need(vehicle_type, vehicle_needs, selected_counts, alternatives_mapping)
                     
-                    if needed_count > already_selected:
+                    if matching_need:
+                        need_type, needed_count, already_selected = matching_need
+                        
                         # Chercher la checkbox de ce véhicule
                         checkbox = await row.query_selector(".vehicle_checkbox")
                         
                         if checkbox and not await checkbox.is_disabled():
                             # Sélectionner ce véhicule
                             await checkbox.check()
-                            selected_counts[vehicle_type] = already_selected + 1
+                            selected_counts[need_type] = already_selected + 1
                             total_selected += 1
+                            alternatives_used[need_type].append(vehicle_type)
                             
-                            vehicle_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
-                            logger.info(f"✅ Sélectionné: {vehicle_caption} ({vehicle_type})")
+                            full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
+                            logger.info(f"✅ Sélectionné: {full_caption} -> Type: {vehicle_type} (pour {need_type})")
                     
                     # Vérifier si tous les besoins sont satisfaits
                     if all(selected_counts.get(vtype, 0) >= needed 
@@ -367,15 +383,147 @@ class VehicleScraper:
                     logger.warning(f"Erreur lors de la sélection d'un véhicule: {e}")
                     continue
             
-            # Log du résumé final
-            logger.info("📊 Résumé de la sélection:")
+            # Vérifier si tous les besoins sont satisfaits
+            unsatisfied_needs = {}
+            for vtype, needed in vehicle_needs.items():
+                selected = selected_counts.get(vtype, 0)
+                if selected < needed:
+                    unsatisfied_needs[vtype] = needed - selected
+            
+            # Si des besoins ne sont pas satisfaits, essayer de charger plus de véhicules
+            if unsatisfied_needs and total_selected > 0:  # Seulement si on a déjà trouvé quelque chose
+                logger.warning(f"⚠️ Besoins non satisfaits: {unsatisfied_needs}. Tentative de chargement de véhicules supplémentaires...")
+                additional_selected = await self._load_and_select_additional_vehicles(unsatisfied_needs, alternatives_mapping)
+                total_selected += additional_selected
+                
+                # Mettre à jour les compteurs
+                if additional_selected > 0:
+                    # Re-compter les véhicules sélectionnés après le chargement supplémentaire
+                    selected_checkboxes = await self.page.query_selector_all(".vehicle_checkbox:checked")
+                    actual_selected = len(selected_checkboxes)
+                    logger.info(f"✅ Véhicules supplémentaires trouvés: +{additional_selected} (total: {actual_selected})")
+            
+            # Log du résumé final avec détails des alternatives
+            logger.info("📊 Résumé de la sélection finale:")
+            final_selected = await self.page.query_selector_all(".vehicle_checkbox:checked")
+            final_count = len(final_selected)
+            
             for vtype, needed in vehicle_needs.items():
                 selected = selected_counts.get(vtype, 0)
                 status = "✅" if selected >= needed else "❌"
-                logger.info(f"  {status} {vtype}: {selected}/{needed}")
+                used_alternatives = alternatives_used.get(vtype, [])
+                alternatives_str = f" (via: {', '.join(set(used_alternatives))})" if used_alternatives else ""
+                logger.info(f"  {status} {vtype}: {selected}/{needed}{alternatives_str}")
             
-            return total_selected
+            return final_count
             
         except Exception as e:
             logger.error(f"Erreur lors de la sélection des véhicules proches: {e}")
+            return 0
+    
+    def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None):
+        """Trouve si un véhicule peut satisfaire un besoin (avec alternatives)"""
+        # D'abord vérifier la correspondance directe
+        if vehicle_type in vehicle_needs:
+            needed_count = vehicle_needs[vehicle_type]
+            already_selected = selected_counts.get(vehicle_type, 0)
+            if needed_count > already_selected:
+                return (vehicle_type, needed_count, already_selected)
+        
+        # Si pas de correspondance directe, vérifier les alternatives
+        if alternatives_mapping:
+            for need_type, needed_count in vehicle_needs.items():
+                already_selected = selected_counts.get(need_type, 0)
+                if needed_count > already_selected:
+                    # Vérifier si ce vehicle_type peut satisfaire ce need_type
+                    alternatives = alternatives_mapping.get(need_type, {})
+                    primary_alternatives = alternatives.get('primary', [])
+                    secondary_alternatives = alternatives.get('secondary', [])
+                    
+                    if vehicle_type in primary_alternatives or vehicle_type in secondary_alternatives:
+                        return (need_type, needed_count, already_selected)
+        
+        return None
+    
+    async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, alternatives_mapping: dict = None) -> int:
+        """Charge tous les véhicules et sélectionne ceux manquants"""
+        additional_selected = 0
+        
+        try:
+            # Charger tous les véhicules (même les plus éloignés)
+            logger.info("📡 Chargement de tous les véhicules disponibles...")
+            await self._load_all_vehicles()
+            
+            # Attendre que les nouveaux véhicules soient chargés
+            await self.page.wait_for_timeout(3000)
+            await self.page.wait_for_load_state('networkidle')
+            
+            # Récupérer toutes les lignes (maintenant avec plus de véhicules)
+            all_vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+            logger.info(f"🔍 {len(all_vehicle_rows)} véhicules au total disponibles")
+            
+            # Sélectionner les véhicules manquants
+            for row in all_vehicle_rows:
+                try:
+                    # Extraire le type du véhicule
+                    vehicle_caption = await row.get_attribute("vehicle_caption")
+                    if not vehicle_caption:
+                        continue
+                    
+                    vehicle_type = vehicle_caption.split()[0] if vehicle_caption else None
+                    if not vehicle_type:
+                        continue
+                    
+                    # Chercher si ce véhicule peut satisfaire un besoin non satisfait
+                    matching_need = None
+                    for need_type, needed_count in unsatisfied_needs.items():
+                        if needed_count > 0:  # Encore besoin de ce type
+                            # Vérification directe
+                            if vehicle_type == need_type:
+                                matching_need = need_type
+                                break
+                            
+                            # Vérification avec alternatives
+                            if alternatives_mapping:
+                                alternatives = alternatives_mapping.get(need_type, {})
+                                primary_alternatives = alternatives.get('primary', [])
+                                secondary_alternatives = alternatives.get('secondary', [])
+                                
+                                if vehicle_type in primary_alternatives or vehicle_type in secondary_alternatives:
+                                    matching_need = need_type
+                                    break
+                    
+                    if matching_need:
+                        # Vérifier si ce véhicule n'est pas déjà sélectionné
+                        checkbox = await row.query_selector(".vehicle_checkbox")
+                        
+                        if checkbox and not await checkbox.is_checked() and not await checkbox.is_disabled():
+                            # Sélectionner ce véhicule
+                            await checkbox.check()
+                            additional_selected += 1
+                            unsatisfied_needs[matching_need] -= 1
+                            
+                            logger.info(f"🆕 Véhicule supplémentaire sélectionné: {vehicle_caption} -> Type: {vehicle_type} (pour {matching_need})")
+                            
+                            # Si ce besoin est maintenant satisfait, le retirer
+                            if unsatisfied_needs[matching_need] <= 0:
+                                del unsatisfied_needs[matching_need]
+                    
+                    # Si tous les besoins sont satisfaits, arrêter
+                    if not unsatisfied_needs:
+                        logger.info("🎯 Tous les besoins supplémentaires sont maintenant satisfaits")
+                        break
+                        
+                except Exception as e:
+                    logger.warning(f"Erreur lors de la sélection d'un véhicule supplémentaire: {e}")
+                    continue
+            
+            # Log final des besoins non satisfaits
+            if unsatisfied_needs:
+                logger.warning(f"⚠️ Besoins toujours non satisfaits après chargement complet: {unsatisfied_needs}")
+            
+            return additional_selected
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du chargement de véhicules supplémentaires: {e}")
             return 0
