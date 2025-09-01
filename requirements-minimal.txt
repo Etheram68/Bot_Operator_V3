@@ -1,0 +1,4 @@
+playwright
+pydantic
+loguru
+python-dotenv

@@ -1,0 +1,66 @@
+{
+  "_schema_version": "2.0",
+  "_description": "Mapping des labels de besoins en véhicules depuis les missions vers les types internes",
+  "_last_updated": "2025-08-29",
+  
+  "vehicle_requirements": {
+    "AMBULANCE": ["Ambulances? requises?", "ambulances? nécessaires?"],
+    "AMBULANCE_TRANSPORT": ["Transport médical requis", "transport sanitaire"],
+    "PCDSM": ["PC DSM nécessaires?", "poste de commandement.{0,20}DSM"],
+    "DIRECTEUR_SECOURS": ["Directeur des Secours Médicaux?", "DSM requis"],
+    "CHEF_DE_GROUPE": ["Chefs? de groupes? .{0,20}requis", "VLHR requis"],
+    "BEA": ["Moyens? [ÉEé]lévateurs? [Aa]ériens? requis", "BEA requis", "échelle aérienne"],
+    "FPT": ["[Ff]ourgons?\\s+d[’' ]incendies?\\s*(requis)?", "FPT\\s*(requis)?"],
+    "CCF": ["CCF\\s*(requis)?", "camions?[\\s-]*citernes?[\\s-]*feux"],
+    "VIMP": ["Spécialistes\\s+IMP\\s*(requis)?", "VIMP", "intervention\\s+milieu\\s+périlleux"],
+    "VGRIMP": ["VGRIMP", "groupe\\s+d'intervention.{0,20}milieu\\s+périlleux"],
+    "VIRT": ["Véhicules?\\s+risques?\\s+technologiques?\\s*(requis)?", "VIRT", "risques?\\s+technologiques?"],
+    "VTU": ["VTU\\s*(requis)?", "véhicules?\\s+tout\\s+usage"],
+    "VSR": ["Véhicules?\\s+de\\s+secours\\s+routiers?\\s*(requis)?", "VSR", "secours\\s+routier"],
+    "VPC": ["Véhicules?\\s+postes?\\s+de\\s+commandements?\\s*(requis)?", "VPC", "postes?\\s+de\\s+commandements?"],
+    "CITERNE": ["Camions?-citernes? requis", "citernes? nécessaires?", "véhicules? citernes?"],
+    "VAR": ["Assistance respiratoire requise", "VAR", "assistance ventilatoire"],
+    "VLHR": ["VLHR requis", "véhicules? liaisons? hors route"],
+    "FMOGP": ["FMOGP nécessaires?", "fourgons? moyens généraux"],
+    "MOTOPOMPES": ["Motopompes nécessaires?", "motopompes?"],
+    "CAMION_DEVIDOIRS": ["Camions? dévidoirs nécessaires?", "dévidoirs?"],
+    "BLS": ["BLS requis", "blindés? légers"],
+    "VPL": ["VPL requis", "véhicules? protection littoral"],
+    "DRAGON": ["DRAGON", "hélicoptères?", "soutien aérien"],
+    "CARS_POLICE": ["Voitures? de police requises?", "véhicules? police", "patrouilles? police"],
+    "CARS_POLICE_PATROUILLE": ["Véhicules? de patrouilles?", "patrouilles?"],
+    "CARS_DROGUE": ["Unités? cynophiles? requises?", "chiens? détection", "brigade stupéfiants"],
+    "CHOUCAS": ["Soutien aérien FAG requis", "CHOUCAS", "hélicoptères? gendarmerie"],
+    "VR_CRS": ["VR nécessaires?", "véhicules? radios? CRS"],
+    "VCT": ["VCT nécessaires?", "véhicules? commandements? tactiques?"],
+    "RAM": ["RAM nécessaires?", "remorques? anti-manifestation"],
+    "VAT": ["VAT nécessaires?", "véhicules? anti-terrorisme"],
+    "VTP_CRS": ["VTP nécessaires?", "véhicules? transports? personnel"],
+    "BP": ["Barres?-ponts? nécessaires?", "ReBP", "remorques? barres? pont"],
+    "ELE": ["ELE nécessaires?", "éclairages? mobiles?"],
+    "RLC": ["RLC", "remorques? logistiques? commandements?"],
+    "FPT_SR": ["[Ff]ourgons? d'incendie.{0,30}secours routiers?", "FPT.{0,10}VSR", "pompiers?.{0,20}secours"],
+    "BLS_CSL": ["BLS.{0,10}CSL", "blindés?.{0,20}compagnies? sécurité"],
+    "CARS_POLICE_PATROUILLE_VR": ["[Vv]éhicules? patrouilles?.{0,20}VR", "police.{0,20}radio"],
+    "CARS_POLICE_VR": ["[Vv]oitures? police.{0,20}VR", "police.{0,20}véhicules? radio"],
+    "FPT_SR_BEA": ["[Ff]ourgons?.{0,30}secours.{0,30}échelles?", "pompiers?.{0,40}aériens?"],
+    "VR": ["VR", "véhicules? radios?"]
+  },
+
+  "resource_indicators": {
+    "Eau nécessaire": "WATER_REQUIRED",
+    "Chances qu'un camion-citerne soit requis": "CITERNE_PROBABILITY", 
+    "Nombre minimum de pompiers requis": "MIN_FIREFIGHTERS",
+    "Nombre minimum de policiers requis": "MIN_POLICE",
+    "Chances qu'une assistance respiratoire soit requise": "VAR_PROBABILITY",
+    "Chances qu'un moyen elévateur aérien soit requis": "BEA_PROBABILITY",
+    "Chances que la police soit requise": "POLICE_PROBABILITY"
+  },
+
+  "probability_thresholds": {
+    "CITERNE_PROBABILITY": 30,
+    "VAR_PROBABILITY": 25,
+    "BEA_PROBABILITY": 40,
+    "POLICE_PROBABILITY": 50
+  }
+}

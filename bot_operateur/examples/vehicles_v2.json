@@ -1,0 +1,228 @@
+{
+  "_schema_version": "2.0",
+  "_description": "Configuration des véhicules disponibles et leur mapping vers les besoins",
+  "_last_updated": "2025-08-29",
+
+  "vehicle_mapping": {
+    "fire_rescue": {
+      "AMBULANCE": {
+        "primary": ["VSAV", "ASSU", "SMUR(A)"],
+        "secondary": ["Ambulance"],
+        "transport_capable": ["ASSU", "SMUR(A)"]
+      },
+      "AMBULANCE_TRANSPORT": {
+        "primary": ["Ambulance"],
+        "secondary": []
+      },
+      "BEA": {
+        "primary": ["BEA", "EPA"],
+        "secondary": []
+      },
+      "FPT": {
+        "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
+        "secondary": ["FS"]
+      },
+      "CCF": {
+        "primary": ["CCF(M)", "CCF(S)", "CCR(SR)"],
+        "secondary": ["FMOGP"]
+      },
+      "VSR": {
+        "primary": ["VSR", "FPT(SR)", "CCR(SR)", "FS"],
+        "secondary": []
+      },
+      "CITERNE": {
+        "primary": ["CCGC", "CCF(S)", "FMOGP", "CCR(SR)"],
+        "secondary": []
+      },
+      "VLHR": {
+        "primary": ["VLHR"],
+        "secondary": []
+      },
+      "CHEF_DE_GROUPE": {
+        "primary": ["VLHR", "VPC"],
+        "secondary": []
+      }
+    },
+
+    "medical": {
+      "PCDSM": {
+        "primary": ["PC"],
+        "secondary": []
+      },
+      "DIRECTEUR_SECOURS": {
+        "primary": ["PC"],
+        "secondary": []
+      },
+      "VAR": {
+        "primary": ["VAR"],
+        "secondary": []
+      },
+      "DRAGON": {
+        "primary": ["Dragon", "HéliSMUR"],
+        "secondary": []
+      }
+    },
+
+    "specialized": {
+      "VIMP": {
+        "primary": ["VIMP"],
+        "secondary": []
+      },
+      "VGRIMP": {
+        "primary": ["VIMP"],
+        "secondary": []
+      },
+      "VIRT": {
+        "primary": ["VIRT"],
+        "secondary": []
+      },
+      "VTU": {
+        "primary": ["FS"],
+        "secondary": []
+      },
+      "VPC": {
+        "primary": ["VPC"],
+        "secondary": []
+      }
+    },
+
+    "water_rescue": {
+      "FMOGP": {
+        "primary": ["FMOGP", "CEEM"],
+        "secondary": []
+      },
+      "MOTOPOMPES": {
+        "primary": ["FDGP", "CEEP"],
+        "secondary": []
+      },
+      "CAMION_DEVIDOIRS": {
+        "primary": ["FDGP"],
+        "secondary": []
+      }
+    },
+
+    "police": {
+      "CARS_POLICE": {
+        "primary": ["GN", "PN"],
+        "secondary": []
+      },
+      "CARS_POLICE_PATROUILLE": {
+        "primary": ["GN", "PN"],
+        "secondary": []
+      },
+      "CARS_DROGUE": {
+        "primary": ["Equipe"],
+        "secondary": []
+      },
+      "VR": {
+        "primary": ["VR"],
+        "secondary": []
+      },
+      "VR_CRS": {
+        "primary": ["VR"],
+        "secondary": []
+      },
+      "CARS_POLICE_VR": {
+        "primary": ["GN", "PN", "VR"],
+        "secondary": []
+      },
+      "CARS_POLICE_PATROUILLE_VR": {
+        "primary": ["GN", "PN", "VR"],
+        "secondary": []
+      }
+    },
+
+    "crs_specialized": {
+      "VCT": {
+        "primary": ["VCT"],
+        "secondary": [],
+        "availability_limited": true
+      },
+      "RAM": {
+        "primary": ["RAM"],
+        "secondary": [],
+        "availability_limited": true
+      },
+      "VAT": {
+        "primary": ["VAT"],
+        "secondary": [],
+        "availability_limited": true
+      },
+      "VTP_CRS": {
+        "primary": ["VTP"],
+        "secondary": [],
+        "availability_limited": true
+      },
+      "BLS": {
+        "primary": ["BLS"],
+        "secondary": [],
+        "availability_limited": true
+      },
+      "BP": {
+        "primary": ["ReBP"],
+        "secondary": []
+      },
+      "ELE": {
+        "primary": ["ELE"],
+        "secondary": []
+      },
+      "RLC": {
+        "primary": ["RLC"],
+        "secondary": []
+      }
+    },
+
+    "civil_security": {
+      "VPL": {
+        "primary": ["VPL"],
+        "secondary": []
+      },
+      "CHOUCAS": {
+        "primary": ["Choucas"],
+        "secondary": []
+      }
+    },
+
+    "combined_requirements": {
+      "FPT_SR": {
+        "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR"],
+        "secondary": ["FS"]
+      },
+      "BLS_CSL": {
+        "primary": ["BLS", "CSL"],
+        "secondary": [],
+        "availability_limited": true
+      },
+      "FPT_SR_BEA": {
+        "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR", "BEA", "EPA"],
+        "secondary": []
+      }
+    }
+  },
+
+  "availability_config": {
+    "default_check_interval": 60,
+    "limited_availability_types": [
+      "VCT", "RAM", "VAT", "VTP", "BLS", "CSL"
+    ],
+    "transport_priorities": {
+      "medical": ["ASSU", "SMUR(A)", "Ambulance"],
+      "prisoner": ["GN", "PN", "VR"]
+    }
+  },
+
+  "fallback_strategy": {
+    "AMBULANCE": {
+      "if_unavailable": ["AMBULANCE_TRANSPORT"],
+      "priority_order": ["VSAV", "ASSU", "SMUR(A)", "Ambulance"]
+    },
+    "FPT": {
+      "if_unavailable": ["VSR", "FPT_SR"],
+      "priority_order": ["FPT", "FPT(SR)", "CCR(SR)", "FS"]
+    },
+    "CARS_POLICE": {
+      "if_unavailable": ["CARS_POLICE_VR"],
+      "priority_order": ["GN", "PN", "VR"]
+    }
+  }
+}
