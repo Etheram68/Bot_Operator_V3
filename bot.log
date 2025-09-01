@@ -4299,3 +4299,290 @@ waiting for locator("#mission_help")
 2025-09-01 14:39:40 | INFO     | bot_operateur.core.browser_manager:cleanup:60 - Nettoyage des ressources du navigateur...
 2025-09-01 14:39:40 | INFO     | bot_operateur.core.bot:stop:72 - Bot arrêté
 2025-09-01 14:39:40 | INFO     | __main__:main:197 - ✅ Terminé
+2025-09-01 14:55:59 | INFO     | bot_operateur.utils.logger:setup_logger:38 - Logger configuré - Niveau: INFO
+2025-09-01 14:55:59 | INFO     | bot_operateur.utils.logger:setup_logger:40 - Logs sauvegardés dans: bot.log
+2025-09-01 14:55:59 | INFO     | bot_operateur.core.bot:__init__:30 - Bot Opérateur 112 v3 initialisé
+2025-09-01 14:55:59 | INFO     | bot_operateur.core.bot:start:38 - Démarrage du bot...
+2025-09-01 14:55:59 | INFO     | bot_operateur.core.browser_manager:start:23 - Démarrage du navigateur...
+2025-09-01 14:55:59 | INFO     | bot_operateur.core.browser_manager:start:47 - Navigateur démarré avec succès
+2025-09-01 14:55:59 | INFO     | bot_operateur.core.bot:_login:79 - Connexion en cours...
+2025-09-01 14:56:02 | ERROR    | bot_operateur.core.bot:_login:107 - Connexion échouée - toujours sur la page de connexion
+2025-09-01 14:56:02 | ERROR    | bot_operateur.core.bot:start:56 - Erreur lors du démarrage: Échec de la connexion
+2025-09-01 15:01:18 | INFO     | bot_operateur.utils.logger:setup_logger:38 - Logger configuré - Niveau: DEBUG
+2025-09-01 15:01:18 | INFO     | bot_operateur.utils.logger:setup_logger:40 - Logs sauvegardés dans: bot.log
+2025-09-01 15:01:18 | INFO     | bot_operateur.core.bot:__init__:30 - Bot Opérateur 112 v3 initialisé
+2025-09-01 15:01:18 | INFO     | bot_operateur.core.bot:start:38 - Démarrage du bot...
+2025-09-01 15:01:18 | INFO     | bot_operateur.core.browser_manager:start:23 - Démarrage du navigateur...
+2025-09-01 15:01:19 | INFO     | bot_operateur.core.browser_manager:start:47 - Navigateur démarré avec succès
+2025-09-01 15:01:19 | INFO     | bot_operateur.core.bot:_login:79 - Connexion en cours...
+2025-09-01 15:01:19 | DEBUG    | bot_operateur.core.browser_manager:_navigate:88 - Navigation vers: https://www.operateur112.fr/users/sign_in
+2025-09-01 15:01:20 | DEBUG    | bot_operateur.core.browser_manager:safe_fill:150 - Champ rempli: #user_email
+2025-09-01 15:01:21 | DEBUG    | bot_operateur.core.browser_manager:safe_fill:150 - Champ rempli: #user_password
+2025-09-01 15:01:22 | DEBUG    | bot_operateur.core.browser_manager:safe_click:126 - Clic réussi sur: input[type='submit']
+2025-09-01 15:01:24 | INFO     | bot_operateur.core.bot:_login:110 - Connexion réussie! Page actuelle: OPERATEUR112.FR - Gérez votre propre service de pompiers dans votre ville!
+2025-09-01 15:01:24 | DEBUG    | bot_operateur.models.requirement_parser:_load_needs_labels:28 - Labels de besoins chargés depuis /mnt/c/Users/FrancoisFrey/Downloads/Bot_OperateurV3/bot_operateur/examples/needs_labels_v2.json
+2025-09-01 15:01:24 | DEBUG    | bot_operateur.models.requirement_parser:_load_vehicles_mapping:42 - Mapping véhicules chargé depuis /mnt/c/Users/FrancoisFrey/Downloads/Bot_OperateurV3/bot_operateur/examples/vehicles_v2.json
+2025-09-01 15:01:25 | DEBUG    | bot_operateur.models.requirement_parser:_compile_patterns:65 - Compilé 41 types de besoins avec 96 patterns
+2025-09-01 15:01:25 | DEBUG    | bot_operateur.models.requirement_parser:_load_needs_labels:28 - Labels de besoins chargés depuis /mnt/c/Users/FrancoisFrey/Downloads/Bot_OperateurV3/bot_operateur/examples/needs_labels_v2.json
+2025-09-01 15:01:25 | DEBUG    | bot_operateur.models.requirement_parser:_load_vehicles_mapping:42 - Mapping véhicules chargé depuis /mnt/c/Users/FrancoisFrey/Downloads/Bot_OperateurV3/bot_operateur/examples/vehicles_v2.json
+2025-09-01 15:01:25 | DEBUG    | bot_operateur.models.requirement_parser:_compile_patterns:65 - Compilé 41 types de besoins avec 96 patterns
+2025-09-01 15:01:25 | INFO     | bot_operateur.core.bot:start:53 - Bot démarré avec succès!
+2025-09-01 15:01:25 | INFO     | __main__:run_auto_mode:45 - Mode automatique activé
+2025-09-01 15:01:25 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:226 - Déploiement automatique - max 2 missions
+2025-09-01 15:01:25 | INFO     | bot_operateur.core.mission_manager:get_all_missions:36 - Récupération de toutes les missions...
+2025-09-01 15:01:25 | DEBUG    | bot_operateur.core.browser_manager:_navigate:88 - Navigation vers: https://www.operateur112.fr/
+2025-09-01 15:01:29 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260885357 - 
+2025-09-01 15:01:29 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260944481 - 
+2025-09-01 15:01:30 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260945872 - 
+2025-09-01 15:01:30 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260947514 - 
+2025-09-01 15:01:30 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261028157 - 
+2025-09-01 15:01:30 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261029192 - 
+2025-09-01 15:01:30 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261031007 - 
+2025-09-01 15:01:30 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261031964 - 
+2025-09-01 15:01:30 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261032810 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261033550 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261034678 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261036563 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261037821 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261039022 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261040208 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261041508 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261070413 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261072455 - 
+2025-09-01 15:01:31 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_all_missions:38 - Trouvé 18 missions normal
+2025-09-01 15:01:32 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260885356 - 
+2025-09-01 15:01:32 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260886823 - 
+2025-09-01 15:01:32 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260941095 - 
+2025-09-01 15:01:32 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261028158 - 
+2025-09-01 15:01:32 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261031008 - 
+2025-09-01 15:01:32 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261031963 - 
+2025-09-01 15:01:32 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261033551 - 
+2025-09-01 15:01:32 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261034676 - 
+2025-09-01 15:01:32 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261037820 - 
+2025-09-01 15:01:33 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261039023 - 
+2025-09-01 15:01:33 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_all_missions:38 - Trouvé 10 missions transport
+2025-09-01 15:01:33 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_all_missions:38 - Trouvé 0 missions security
+2025-09-01 15:01:33 | INFO     | bot_operateur.scrapers.mission_scraper:get_all_missions:40 - Total des missions récupérées: 28
+2025-09-01 15:01:33 | INFO     | bot_operateur.core.mission_manager:get_all_missions:43 - Trouvé 28 missions au total
+2025-09-01 15:01:33 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:246 - 28 missions éligibles sur 28
+2025-09-01 15:01:33 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:256 - Traitement mission 260885357: 
+2025-09-01 15:01:33 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:151 - 🚀 Déploiement optimisé pour mission 260885357 avec stratégie 'smart'
+2025-09-01 15:01:33 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:53 - Récupération des détails pour mission 260885357
+2025-09-01 15:01:34 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_mission_details:144 - URL des conditions: https://www.operateur112.fr/einsaetze/393?mission_id=260885357
+2025-09-01 15:01:35 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_patients_from_help_page:222 - Extrait 0 patients depuis la page d'aide
+2025-09-01 15:01:35 | DEBUG    | bot_operateur.models.requirement_parser:parse_mission_text:97 - Extrait 0 exigences du texte de mission
+2025-09-01 15:01:35 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_requirements_from_current_page:351 - Trouvé 0 exigences sur la page
+2025-09-01 15:01:37 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:64 - Mission 260885357: 0 patients, 0 exigences, None crédits
+2025-09-01 15:01:41 | INFO     | bot_operateur.strategies.smart_strategy:get_vehicle_needs:111 - 🎯 Besoins calculés avec alternatives: {}
+2025-09-01 15:01:41 | WARNING  | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:184 - Aucun besoin en véhicule identifié pour mission 260885357
+2025-09-01 15:01:41 | WARNING  | bot_operateur.core.mission_manager:auto_deploy_missions:268 - ❌ Échec de déploiement pour mission 260885357
+2025-09-01 15:02:10 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:256 - Traitement mission 260944481: 
+2025-09-01 15:02:10 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:151 - 🚀 Déploiement optimisé pour mission 260944481 avec stratégie 'smart'
+2025-09-01 15:02:10 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:53 - Récupération des détails pour mission 260944481
+2025-09-01 15:02:12 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_mission_details:144 - URL des conditions: https://www.operateur112.fr/einsaetze/535?mission_id=260944481
+2025-09-01 15:02:12 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_patients_from_help_page:222 - Extrait 0 patients depuis la page d'aide
+2025-09-01 15:02:12 | DEBUG    | bot_operateur.models.requirement_parser:parse_mission_text:97 - Extrait 8 exigences du texte de mission
+2025-09-01 15:02:12 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_requirements_from_current_page:351 - Trouvé 8 exigences sur la page
+2025-09-01 15:02:12 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:64 - Mission 260944481: 0 patients, 8 exigences, 2000 crédits
+2025-09-01 15:02:16 | INFO     | bot_operateur.strategies.smart_strategy:get_vehicle_needs:111 - 🎯 Besoins calculés avec alternatives: {'VCT': 1, 'RAM': 1, 'VAT': 1, 'VTP': 1, 'ReBP': 1, 'GN': 1, 'PN': 1, 'VR': 2}
+2025-09-01 15:02:16 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:187 - 📋 Besoins identifiés: {'VCT': 1, 'RAM': 1, 'VAT': 1, 'VTP': 1, 'ReBP': 1, 'GN': 1, 'PN': 1, 'VR': 2}
+2025-09-01 15:02:16 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:454 - 🚫 Véhicule déjà en mission: 2786001
+2025-09-01 15:02:16 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:454 - 🚫 Véhicule déjà en mission: 2482883
+2025-09-01 15:02:16 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:454 - 🚫 Véhicule déjà en mission: 3006206
+2025-09-01 15:02:16 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:454 - 🚫 Véhicule déjà en mission: 3006205
+2025-09-01 15:02:16 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:454 - 🚫 Véhicule déjà en mission: 3006204
+2025-09-01 15:02:16 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:454 - 🚫 Véhicule déjà en mission: 2481940
+2025-09-01 15:02:17 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:454 - 🚫 Véhicule déjà en mission: 3006235
+2025-09-01 15:02:17 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:454 - 🚫 Véhicule déjà en mission: 2187871
+2025-09-01 15:02:17 | INFO     | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:478 - Trouvé 8 véhicules à exclure (déjà déployés/en route)
+2025-09-01 15:02:17 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:326 - 🚫 Véhicules déjà déployés/en route à exclure: 8 véhicules
+2025-09-01 15:02:17 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:338 - Sélection parmi 267 véhicules visibles (triés par proximité)
+2025-09-01 15:02:20 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:386 - ✅ Sélectionné: GN 5 Baldersheim -> Type: GN (pour GN)
+2025-09-01 15:02:21 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:386 - ✅ Sélectionné: VTP 1 Illzach -> Type: VTP (pour VTP)
+2025-09-01 15:02:23 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:386 - ✅ Sélectionné: PN 7 Mulhouse -> Type: PN (pour PN)
+2025-09-01 15:02:26 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:386 - ✅ Sélectionné: VR 13 Mulhouse -> Type: VR (pour VR)
+2025-09-01 15:02:26 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:386 - ✅ Sélectionné: VR 12 Mulhouse -> Type: VR (pour VR)
+2025-09-01 15:02:26 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:386 - ✅ Sélectionné: ReBP 1 Mulhouse -> Type: ReBP (pour ReBP)
+2025-09-01 15:02:29 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:386 - ✅ Sélectionné: VAT 1 Wittenheim  -> Type: VAT (pour VAT)
+2025-09-01 15:02:29 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:386 - ✅ Sélectionné: VCT 1 Wittenheim  -> Type: VCT (pour VCT)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:386 - ✅ Sélectionné: RAM 1 Wittenheim  -> Type: RAM (pour RAM)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:391 - 🎯 Tous les besoins en véhicules sont satisfaits
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:419 - 📊 Résumé de la sélection finale:
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:428 -   ✅ VCT: 1/1 (via: VCT)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:428 -   ✅ RAM: 1/1 (via: RAM)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:428 -   ✅ VAT: 1/1 (via: VAT)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:428 -   ✅ VTP: 1/1 (via: VTP)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:428 -   ✅ ReBP: 1/1 (via: ReBP)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:428 -   ✅ GN: 1/1 (via: GN)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:428 -   ✅ PN: 1/1 (via: PN)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:428 -   ✅ VR: 2/2 (via: VR)
+2025-09-01 15:02:30 | INFO     | bot_operateur.scrapers.vehicle_scraper:deploy_selected_vehicles:297 - Véhicules déployés avec succès
+2025-09-01 15:02:32 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:211 - ✅ Mission 260944481 déployée avec succès en mode optimisé!
+2025-09-01 15:03:01 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:256 - Traitement mission 260945872: 
+2025-09-01 15:03:01 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:151 - 🚀 Déploiement optimisé pour mission 260945872 avec stratégie 'smart'
+2025-09-01 15:03:01 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:53 - Récupération des détails pour mission 260945872
+2025-09-01 15:03:02 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_mission_details:144 - URL des conditions: https://www.operateur112.fr/einsaetze/323?mission_id=260945872
+2025-09-01 15:03:03 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_patients_from_help_page:222 - Extrait 0 patients depuis la page d'aide
+2025-09-01 15:03:03 | DEBUG    | bot_operateur.models.requirement_parser:parse_mission_text:97 - Extrait 0 exigences du texte de mission
+2025-09-01 15:03:03 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_requirements_from_current_page:351 - Trouvé 0 exigences sur la page
+2025-09-01 15:03:05 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:64 - Mission 260945872: 0 patients, 0 exigences, None crédits
+2025-09-01 15:03:09 | INFO     | bot_operateur.strategies.smart_strategy:get_vehicle_needs:111 - 🎯 Besoins calculés avec alternatives: {}
+2025-09-01 15:03:09 | WARNING  | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:184 - Aucun besoin en véhicule identifié pour mission 260945872
+2025-09-01 15:03:09 | WARNING  | bot_operateur.core.mission_manager:auto_deploy_missions:268 - ❌ Échec de déploiement pour mission 260945872
+2025-09-01 15:03:37 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:256 - Traitement mission 260947514: 
+2025-09-01 15:03:37 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:151 - 🚀 Déploiement optimisé pour mission 260947514 avec stratégie 'smart'
+2025-09-01 15:03:37 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:53 - Récupération des détails pour mission 260947514
+2025-09-01 15:03:37 | ERROR    | bot_operateur.scrapers.mission_scraper:get_mission_details:157 - Erreur lors de la récupération des détails de la mission 260947514 : Page.goto: Target page, context or browser has been closed
+2025-09-01 15:03:37 | ERROR    | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:219 - Erreur lors du déploiement optimisé de mission 260947514: Page.goto: Target page, context or browser has been closed
+2025-09-01 15:03:37 | WARNING  | bot_operateur.core.mission_manager:auto_deploy_missions:268 - ❌ Échec de déploiement pour mission 260947514
+2025-09-01 15:03:39 | INFO     | bot_operateur.core.bot:stop:65 - Arrêt du bot...
+2025-09-01 15:03:39 | INFO     | bot_operateur.core.browser_manager:cleanup:60 - Nettoyage des ressources du navigateur...
+2025-09-01 15:03:39 | WARNING  | bot_operateur.core.browser_manager:cleanup:80 - Erreur lors du nettoyage: BrowserContext.close: Target page, context or browser has been closed
+2025-09-01 15:03:39 | INFO     | bot_operateur.core.bot:stop:72 - Bot arrêté
+2025-09-01 15:10:45 | INFO     | bot_operateur.utils.logger:setup_logger:38 - Logger configuré - Niveau: DEBUG
+2025-09-01 15:10:45 | INFO     | bot_operateur.utils.logger:setup_logger:40 - Logs sauvegardés dans: bot.log
+2025-09-01 15:10:45 | INFO     | bot_operateur.core.bot:__init__:30 - Bot Opérateur 112 v3 initialisé
+2025-09-01 15:10:45 | INFO     | bot_operateur.core.bot:start:38 - Démarrage du bot...
+2025-09-01 15:10:45 | INFO     | bot_operateur.core.browser_manager:start:23 - Démarrage du navigateur...
+2025-09-01 15:10:46 | INFO     | bot_operateur.core.browser_manager:start:47 - Navigateur démarré avec succès
+2025-09-01 15:10:46 | INFO     | bot_operateur.core.bot:_login:79 - Connexion en cours...
+2025-09-01 15:10:46 | DEBUG    | bot_operateur.core.browser_manager:_navigate:88 - Navigation vers: https://www.operateur112.fr/users/sign_in
+2025-09-01 15:10:49 | DEBUG    | bot_operateur.core.browser_manager:safe_fill:150 - Champ rempli: #user_email
+2025-09-01 15:10:49 | DEBUG    | bot_operateur.core.browser_manager:safe_fill:150 - Champ rempli: #user_password
+2025-09-01 15:10:51 | DEBUG    | bot_operateur.core.browser_manager:safe_click:126 - Clic réussi sur: input[type='submit']
+2025-09-01 15:11:17 | INFO     | bot_operateur.core.bot:_login:110 - Connexion réussie! Page actuelle: OPERATEUR112.FR - Gérez votre propre service de pompiers dans votre ville!
+2025-09-01 15:11:17 | DEBUG    | bot_operateur.models.requirement_parser:_load_needs_labels:28 - Labels de besoins chargés depuis /mnt/c/Users/FrancoisFrey/Downloads/Bot_OperateurV3/bot_operateur/examples/needs_labels_v2.json
+2025-09-01 15:11:17 | DEBUG    | bot_operateur.models.requirement_parser:_load_vehicles_mapping:42 - Mapping véhicules chargé depuis /mnt/c/Users/FrancoisFrey/Downloads/Bot_OperateurV3/bot_operateur/examples/vehicles_v2.json
+2025-09-01 15:11:17 | DEBUG    | bot_operateur.models.requirement_parser:_compile_patterns:65 - Compilé 41 types de besoins avec 96 patterns
+2025-09-01 15:11:17 | DEBUG    | bot_operateur.models.requirement_parser:_load_needs_labels:28 - Labels de besoins chargés depuis /mnt/c/Users/FrancoisFrey/Downloads/Bot_OperateurV3/bot_operateur/examples/needs_labels_v2.json
+2025-09-01 15:11:17 | DEBUG    | bot_operateur.models.requirement_parser:_load_vehicles_mapping:42 - Mapping véhicules chargé depuis /mnt/c/Users/FrancoisFrey/Downloads/Bot_OperateurV3/bot_operateur/examples/vehicles_v2.json
+2025-09-01 15:11:17 | DEBUG    | bot_operateur.models.requirement_parser:_compile_patterns:65 - Compilé 41 types de besoins avec 96 patterns
+2025-09-01 15:11:17 | INFO     | bot_operateur.core.bot:start:53 - Bot démarré avec succès!
+2025-09-01 15:11:17 | INFO     | __main__:run_auto_mode:45 - Mode automatique activé
+2025-09-01 15:11:17 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:226 - Déploiement automatique - max 2 missions
+2025-09-01 15:11:17 | INFO     | bot_operateur.core.mission_manager:get_all_missions:36 - Récupération de toutes les missions...
+2025-09-01 15:11:17 | DEBUG    | bot_operateur.core.browser_manager:_navigate:88 - Navigation vers: https://www.operateur112.fr/
+2025-09-01 15:11:22 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260944481 - 
+2025-09-01 15:11:22 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260945872 - 
+2025-09-01 15:11:22 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260947514 - 
+2025-09-01 15:11:23 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261028157 - 
+2025-09-01 15:11:23 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261029192 - 
+2025-09-01 15:11:23 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261031007 - 
+2025-09-01 15:11:23 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261031964 - 
+2025-09-01 15:11:23 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261032810 - 
+2025-09-01 15:11:23 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261033550 - 
+2025-09-01 15:11:23 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261034678 - 
+2025-09-01 15:11:23 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261036563 - 
+2025-09-01 15:11:24 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261037821 - 
+2025-09-01 15:11:24 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261039022 - 
+2025-09-01 15:11:24 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261040208 - 
+2025-09-01 15:11:24 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261041508 - 
+2025-09-01 15:11:24 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261070413 - 
+2025-09-01 15:11:24 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261072455 - 
+2025-09-01 15:11:24 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261074164 - 
+2025-09-01 15:11:24 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_all_missions:38 - Trouvé 18 missions normal
+2025-09-01 15:11:24 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260885356 - 
+2025-09-01 15:11:25 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260886823 - 
+2025-09-01 15:11:25 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 260941095 - 
+2025-09-01 15:11:25 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261028158 - 
+2025-09-01 15:11:25 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261031008 - 
+2025-09-01 15:11:25 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261031963 - 
+2025-09-01 15:11:25 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261033551 - 
+2025-09-01 15:11:25 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261034676 - 
+2025-09-01 15:11:25 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261037820 - 
+2025-09-01 15:11:26 | DEBUG    | bot_operateur.scrapers.mission_scraper:_extract_mission_from_element:112 - Mission extraite: 261039023 - 
+2025-09-01 15:11:26 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_all_missions:38 - Trouvé 10 missions transport
+2025-09-01 15:11:26 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_all_missions:38 - Trouvé 0 missions security
+2025-09-01 15:11:26 | INFO     | bot_operateur.scrapers.mission_scraper:get_all_missions:40 - Total des missions récupérées: 28
+2025-09-01 15:11:26 | INFO     | bot_operateur.core.mission_manager:get_all_missions:43 - Trouvé 28 missions au total
+2025-09-01 15:11:26 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:246 - 28 missions éligibles sur 28
+2025-09-01 15:11:26 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:256 - Traitement mission 260944481: 
+2025-09-01 15:11:26 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:151 - 🚀 Déploiement optimisé pour mission 260944481 avec stratégie 'smart'
+2025-09-01 15:11:26 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:53 - Récupération des détails pour mission 260944481
+2025-09-01 15:11:28 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_mission_details:144 - URL des conditions: https://www.operateur112.fr/einsaetze/535?mission_id=260944481
+2025-09-01 15:11:28 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_patients_from_help_page:222 - Extrait 0 patients depuis la page d'aide
+2025-09-01 15:11:28 | DEBUG    | bot_operateur.models.requirement_parser:parse_mission_text:97 - Extrait 8 exigences du texte de mission
+2025-09-01 15:11:28 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_requirements_from_current_page:351 - Trouvé 8 exigences sur la page
+2025-09-01 15:11:29 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:64 - Mission 260944481: 0 patients, 8 exigences, 2000 crédits
+2025-09-01 15:11:32 | INFO     | bot_operateur.strategies.smart_strategy:get_vehicle_needs:111 - 🎯 Besoins calculés avec alternatives: {'VCT': 1, 'RAM': 1, 'VAT': 1, 'VTP': 1, 'ReBP': 1, 'GN': 1, 'PN': 1, 'VR': 2}
+2025-09-01 15:11:32 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:187 - 📋 Besoins identifiés: {'VCT': 1, 'RAM': 1, 'VAT': 1, 'VTP': 1, 'ReBP': 1, 'GN': 1, 'PN': 1, 'VR': 2}
+2025-09-01 15:11:32 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 13 Mulhouse
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 12 Mulhouse
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: PN 7 Mulhouse
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: GN 5 Baldersheim
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: GN 6 Sausheim
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 6 Mulhouse
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VAT 1 Wittenheim
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 2 Mulhouse
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: ReBP 1 Mulhouse
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VTP 1 Illzach
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VAT 1 Mulhouse
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: RAM 1 Mulhouse
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VCT 1 Mulhouse
+2025-09-01 15:11:33 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 1 Mulhouse
+2025-09-01 15:11:34 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: ReBP 3 Mulhouse
+2025-09-01 15:11:34 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VTP 1 Sausheim
+2025-09-01 15:11:34 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:486 - 🚫 Véhicule en route: VTP 1 Mulhouse
+2025-09-01 15:11:34 | INFO     | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:492 - Trouvé 17 véhicules à exclure (déjà déployés/en route)
+2025-09-01 15:11:34 | INFO     | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:493 - 📋 Liste des véhicules exclus: VR 13 Mulhouse, VR 12 Mulhouse, PN 7 Mulhouse, GN 5 Baldersheim, GN 6 Sausheim, VR 6 Mulhouse, VAT 1 Wittenheim, VR 2 Mulhouse, ReBP 1 Mulhouse, VTP 1 Illzach, VAT 1 Mulhouse, RAM 1 Mulhouse, VCT 1 Mulhouse, VR 1 Mulhouse, ReBP 3 Mulhouse, VTP 1 Sausheim, VTP 1 Mulhouse
+2025-09-01 15:11:34 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:326 - 🚫 Véhicules déjà déployés/en route à exclure: 17 véhicules
+2025-09-01 15:11:34 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:327 - IDs exclus: ['3006209', '2785918', '2788714', '2813526', '2786001', '2482883', '8905237', '2481948', '2785906', '2187870', '3006206', '3006205', '3006204', '2481940', '3006235', '2187871', '3006207']
+2025-09-01 15:11:34 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:339 - Sélection parmi 258 véhicules visibles (triés par proximité)
+2025-09-01 15:11:36 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:389 - ✅ Sélectionné: GN 4 Baldersheim -> Type: GN (pour GN)
+2025-09-01 15:11:39 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:389 - ✅ Sélectionné: PN 9 Mulhouse -> Type: PN (pour PN)
+2025-09-01 15:11:42 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:389 - ✅ Sélectionné: ReBP 3 Mulhouse -> Type: ReBP (pour ReBP)
+2025-09-01 15:11:43 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:389 - ✅ Sélectionné: VR 3  Mulhouse -> Type: VR (pour VR)
+2025-09-01 15:11:43 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:389 - ✅ Sélectionné: VR 4 Mulhouse -> Type: VR (pour VR)
+2025-09-01 15:11:45 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:389 - ✅ Sélectionné: VCT 1 Wittenheim  -> Type: VCT (pour VCT)
+2025-09-01 15:11:45 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:389 - ✅ Sélectionné: RAM 1 Wittenheim  -> Type: RAM (pour RAM)
+2025-09-01 15:11:45 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:389 - ✅ Sélectionné: VTP 1 Wittenheim  -> Type: VTP (pour VTP)
+2025-09-01 15:11:45 | WARNING  | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:410 - ⚠️ Besoins non satisfaits: {'VAT': 1}. Tentative de chargement de véhicules supplémentaires...
+2025-09-01 15:11:45 | INFO     | bot_operateur.scrapers.vehicle_scraper:_load_and_select_additional_vehicles:530 - 📡 Chargement de tous les véhicules disponibles...
+2025-09-01 15:11:46 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_load_all_vehicles:77 - Chargement des véhicules manquants...
+2025-09-01 15:11:51 | INFO     | bot_operateur.scrapers.vehicle_scraper:_load_and_select_additional_vehicles:539 - 🔍 435 véhicules au total disponibles
+2025-09-01 15:11:51 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 13 Mulhouse
+2025-09-01 15:11:51 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 12 Mulhouse
+2025-09-01 15:11:51 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: PN 7 Mulhouse
+2025-09-01 15:11:51 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: GN 5 Baldersheim
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: GN 6 Sausheim
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 6 Mulhouse
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VAT 1 Wittenheim
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 2 Mulhouse
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: ReBP 1 Mulhouse
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VTP 1 Illzach
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VAT 1 Mulhouse
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: RAM 1 Mulhouse
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VCT 1 Mulhouse
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VR 1 Mulhouse
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: ReBP 3 Mulhouse
+2025-09-01 15:11:52 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:463 - 🚫 Véhicule déjà en mission: VTP 1 Sausheim
+2025-09-01 15:11:53 | DEBUG    | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:486 - 🚫 Véhicule en route: VTP 1 Mulhouse
+2025-09-01 15:11:53 | INFO     | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:492 - Trouvé 17 véhicules à exclure (déjà déployés/en route)
+2025-09-01 15:11:53 | INFO     | bot_operateur.scrapers.vehicle_scraper:_get_already_deployed_vehicles:493 - 📋 Liste des véhicules exclus: VR 13 Mulhouse, VR 12 Mulhouse, PN 7 Mulhouse, GN 5 Baldersheim, GN 6 Sausheim, VR 6 Mulhouse, VAT 1 Wittenheim, VR 2 Mulhouse, ReBP 1 Mulhouse, VTP 1 Illzach, VAT 1 Mulhouse, RAM 1 Mulhouse, VCT 1 Mulhouse, VR 1 Mulhouse, ReBP 3 Mulhouse, VTP 1 Sausheim, VTP 1 Mulhouse
+2025-09-01 15:12:13 | WARNING  | bot_operateur.scrapers.vehicle_scraper:_load_and_select_additional_vehicles:611 - ⚠️ Besoins toujours non satisfaits après chargement complet: {'VAT': 1}
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:422 - 📊 Résumé de la sélection finale:
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:431 -   ✅ VCT: 1/1 (via: VCT)
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:431 -   ✅ RAM: 1/1 (via: RAM)
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:431 -   ❌ VAT: 0/1
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:431 -   ✅ VTP: 1/1 (via: VTP)
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:431 -   ✅ ReBP: 1/1 (via: ReBP)
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:431 -   ✅ GN: 1/1 (via: GN)
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:431 -   ✅ PN: 1/1 (via: PN)
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:select_closest_vehicles_by_type:431 -   ✅ VR: 2/2 (via: VR)
+2025-09-01 15:12:13 | INFO     | bot_operateur.scrapers.vehicle_scraper:deploy_selected_vehicles:297 - Véhicules déployés avec succès
+2025-09-01 15:12:14 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:211 - ✅ Mission 260944481 déployée avec succès en mode optimisé!
+2025-09-01 15:12:44 | INFO     | bot_operateur.core.mission_manager:auto_deploy_missions:256 - Traitement mission 260945872: 
+2025-09-01 15:12:44 | INFO     | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:151 - 🚀 Déploiement optimisé pour mission 260945872 avec stratégie 'smart'
+2025-09-01 15:12:44 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:53 - Récupération des détails pour mission 260945872
+2025-09-01 15:12:45 | DEBUG    | bot_operateur.scrapers.mission_scraper:get_mission_details:144 - URL des conditions: https://www.operateur112.fr/einsaetze/323?mission_id=260945872
+2025-09-01 15:12:46 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_patients_from_help_page:222 - Extrait 0 patients depuis la page d'aide
+2025-09-01 15:12:46 | DEBUG    | bot_operateur.models.requirement_parser:parse_mission_text:97 - Extrait 0 exigences du texte de mission
+2025-09-01 15:12:46 | DEBUG    | bot_operateur.scrapers.mission_scraper:_scrape_requirements_from_current_page:351 - Trouvé 0 exigences sur la page
+2025-09-01 15:12:46 | WARNING  | bot_operateur.scrapers.mission_scraper:_scrape_credits:390 - Erreur lors du scraping des crédits: ElementHandle.inner_text: Target page, context or browser has been closed
+2025-09-01 15:12:46 | DEBUG    | bot_operateur.core.mission_manager:get_mission_details:64 - Mission 260945872: 0 patients, 0 exigences, None crédits
+2025-09-01 15:12:46 | ERROR    | bot_operateur.core.mission_manager:deploy_vehicles_for_mission_optimized:219 - Erreur lors du déploiement optimisé de mission 260945872: Page.goto: Target page, context or browser has been closed
+2025-09-01 15:12:46 | WARNING  | bot_operateur.core.mission_manager:auto_deploy_missions:268 - ❌ Échec de déploiement pour mission 260945872
+2025-09-01 15:12:47 | INFO     | bot_operateur.core.bot:stop:65 - Arrêt du bot...
+2025-09-01 15:12:47 | INFO     | bot_operateur.core.browser_manager:cleanup:60 - Nettoyage des ressources du navigateur...
+2025-09-01 15:12:47 | WARNING  | bot_operateur.core.browser_manager:cleanup:80 - Erreur lors du nettoyage: BrowserContext.close: Target page, context or browser has been closed
+2025-09-01 15:12:47 | INFO     | bot_operateur.core.bot:stop:72 - Bot arrêté

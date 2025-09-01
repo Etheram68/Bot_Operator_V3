@@ -320,6 +320,17 @@ class VehicleScraper:
         total_selected = 0
         
         try:
+            # D'abord, compter les véhicules déjà déployés par type
+            deployed_by_type = await self._get_already_deployed_vehicles_by_type()
+            
+            # Ajuster les besoins en fonction des véhicules déjà déployés
+            adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type)
+            
+            # Si tous les besoins sont déjà satisfaits, ne rien faire
+            if not adjusted_vehicle_needs:
+                logger.info("🎉 Tous les besoins sont déjà satisfaits ! Aucun véhicule supplémentaire nécessaire.")
+                return 0
+            
             # Attendre que le tableau soit visible
             await self.page.wait_for_selector("#vehicle_show_table_all", timeout=10000)
             
@@ -332,12 +343,12 @@ class VehicleScraper:
             
             logger.info(f"Sélection parmi {len(vehicle_rows)} véhicules visibles (triés par proximité)")
             
-            # Préparer les compteurs avec gestion d'alternatives
+            # Préparer les compteurs avec gestion d'alternatives (utiliser adjusted_vehicle_needs)
             selected_counts = {}
             alternatives_used = {}  # Track quelles alternatives ont été utilisées
             
-            # Initialiser les compteurs
-            for req_type in vehicle_needs.keys():
+            # Initialiser les compteurs pour les besoins ajustés
+            for req_type in adjusted_vehicle_needs.keys():
                 selected_counts[req_type] = 0
                 alternatives_used[req_type] = []
             
@@ -354,8 +365,8 @@ class VehicleScraper:
                     if not vehicle_type:
                         continue
                     
-                    # Chercher si ce véhicule peut satisfaire un besoin
-                    matching_need = self._find_matching_need(vehicle_type, vehicle_needs, selected_counts, alternatives_mapping)
+                    # Chercher si ce véhicule peut satisfaire un besoin (utiliser adjusted_vehicle_needs)
+                    matching_need = self._find_matching_need(vehicle_type, adjusted_vehicle_needs, selected_counts, alternatives_mapping)
                     
                     if matching_need:
                         need_type, needed_count, already_selected = matching_need
@@ -373,9 +384,9 @@ class VehicleScraper:
                             full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
                             logger.info(f"✅ Sélectionné: {full_caption} -> Type: {vehicle_type} (pour {need_type})")
                     
-                    # Vérifier si tous les besoins sont satisfaits
+                    # Vérifier si tous les besoins ajustés sont satisfaits
                     if all(selected_counts.get(vtype, 0) >= needed 
-                           for vtype, needed in vehicle_needs.items()):
+                           for vtype, needed in adjusted_vehicle_needs.items()):
                         logger.info("🎯 Tous les besoins en véhicules sont satisfaits")
                         break
                         
@@ -383,9 +394,9 @@ class VehicleScraper:
                     logger.warning(f"Erreur lors de la sélection d'un véhicule: {e}")
                     continue
             
-            # Vérifier si tous les besoins sont satisfaits
+            # Vérifier si tous les besoins ajustés sont satisfaits
             unsatisfied_needs = {}
-            for vtype, needed in vehicle_needs.items():
+            for vtype, needed in adjusted_vehicle_needs.items():
                 selected = selected_counts.get(vtype, 0)
                 if selected < needed:
                     unsatisfied_needs[vtype] = needed - selected
@@ -403,23 +414,161 @@ class VehicleScraper:
                     actual_selected = len(selected_checkboxes)
                     logger.info(f"✅ Véhicules supplémentaires trouvés: +{additional_selected} (total: {actual_selected})")
             
-            # Log du résumé final avec détails des alternatives
+            # Log du résumé final avec détails des alternatives (besoins originaux + ajustés)
             logger.info("📊 Résumé de la sélection finale:")
             final_selected = await self.page.query_selector_all(".vehicle_checkbox:checked")
             final_count = len(final_selected)
             
-            for vtype, needed in vehicle_needs.items():
+            # Afficher les besoins originaux vs ajustés vs sélectionnés
+            for vtype, original_needed in vehicle_needs.items():
+                already_deployed = deployed_by_type.get(vtype, 0)
+                adjusted_needed = adjusted_vehicle_needs.get(vtype, 0)
                 selected = selected_counts.get(vtype, 0)
-                status = "✅" if selected >= needed else "❌"
+                total_satisfied = already_deployed + selected
+                
+                status = "✅" if total_satisfied >= original_needed else "❌"
                 used_alternatives = alternatives_used.get(vtype, [])
                 alternatives_str = f" (via: {', '.join(set(used_alternatives))})" if used_alternatives else ""
-                logger.info(f"  {status} {vtype}: {selected}/{needed}{alternatives_str}")
+                
+                if already_deployed > 0:
+                    logger.info(f"  {status} {vtype}: {total_satisfied}/{original_needed} (déjà: {already_deployed}, ajouté: {selected}){alternatives_str}")
+                else:
+                    logger.info(f"  {status} {vtype}: {selected}/{original_needed}{alternatives_str}")
             
             return final_count
             
         except Exception as e:
             logger.error(f"Erreur lors de la sélection des véhicules proches: {e}")
             return 0
+    
+    async def _get_already_deployed_vehicles(self) -> List[str]:
+        """Récupère les IDs des véhicules déjà déployés sur la mission ou en route"""
+        excluded_vehicle_ids = []
+        excluded_names = []  # Pour le debug
+        
+        try:
+            # Véhicules déjà présents sur la mission (mission_vehicle_at_mission)
+            at_mission_rows = await self.page.query_selector_all("#mission_vehicle_at_mission tbody tr")
+            for row in at_mission_rows:
+                try:
+                    # Chercher le lien du véhicule dans la ligne
+                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                    if vehicle_link:
+                        href = await vehicle_link.get_attribute("href")
+                        vehicle_name = await vehicle_link.inner_text()
+                        
+                        # Extraire l'ID depuis l'URL: /vehicles/2786001 -> 2786001
+                        vehicle_id = href.split("/")[-1] if href and "/" in href else None
+                        
+                        if vehicle_id:
+                            excluded_vehicle_ids.append(vehicle_id)
+                            # Afficher le nom s'il est disponible, sinon l'ID
+                            display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
+                            excluded_names.append(display_name)
+                            logger.debug(f"🚫 Véhicule déjà en mission: {display_name}")
+                except Exception as e:
+                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission: {e}")
+                    continue
+            
+            # Véhicules en route vers la mission (mission_vehicle_driving)
+            driving_rows = await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
+            for row in driving_rows:
+                try:
+                    # Chercher le lien du véhicule dans la ligne
+                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                    if vehicle_link:
+                        href = await vehicle_link.get_attribute("href")
+                        vehicle_name = await vehicle_link.inner_text()
+                        
+                        # Extraire l'ID depuis l'URL: /vehicles/2786001 -> 2786001
+                        vehicle_id = href.split("/")[-1] if href and "/" in href else None
+                        
+                        if vehicle_id:
+                            excluded_vehicle_ids.append(vehicle_id)
+                            # Afficher le nom s'il est disponible, sinon l'ID
+                            display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
+                            excluded_names.append(display_name)
+                            logger.debug(f"🚫 Véhicule en route: {display_name}")
+                except Exception as e:
+                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en route: {e}")
+                    continue
+            
+            if excluded_vehicle_ids:
+                logger.info(f"Trouvé {len(excluded_vehicle_ids)} véhicules à exclure (déjà déployés/en route)")
+                logger.info(f"📋 Liste des véhicules exclus: {', '.join(excluded_names)}")
+            
+        except Exception as e:
+            logger.warning(f"Erreur lors de la récupération des véhicules déployés: {e}")
+        
+        return excluded_vehicle_ids
+    
+    async def _get_already_deployed_vehicles_by_type(self) -> dict:
+        """Compte les véhicules déjà déployés par type pour ajuster les besoins"""
+        deployed_by_type = {}
+        
+        try:
+            # Véhicules déjà présents sur la mission (mission_vehicle_at_mission)
+            at_mission_rows = await self.page.query_selector_all("#mission_vehicle_at_mission tbody tr")
+            for row in at_mission_rows:
+                try:
+                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                    if vehicle_link:
+                        vehicle_name = await vehicle_link.inner_text()
+                        if vehicle_name:
+                            # Extraire le type : "VCT 1 Mulhouse" -> "VCT"
+                            vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
+                            if vehicle_type:
+                                deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
+                                logger.debug(f"🔢 Véhicule déjà en mission: {vehicle_name.strip()} -> Type: {vehicle_type}")
+                except Exception as e:
+                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission (par type): {e}")
+                    continue
+            
+            # Véhicules en route vers la mission (mission_vehicle_driving)
+            driving_rows = await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
+            for row in driving_rows:
+                try:
+                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                    if vehicle_link:
+                        vehicle_name = await vehicle_link.inner_text()
+                        if vehicle_name:
+                            # Extraire le type : "VCT 1 Mulhouse" -> "VCT"
+                            vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
+                            if vehicle_type:
+                                deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
+                                logger.debug(f"🔢 Véhicule en route: {vehicle_name.strip()} -> Type: {vehicle_type}")
+                except Exception as e:
+                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en route (par type): {e}")
+                    continue
+            
+            if deployed_by_type:
+                logger.info(f"📊 Véhicules déjà déployés par type: {deployed_by_type}")
+            
+        except Exception as e:
+            logger.warning(f"Erreur lors du comptage des véhicules déployés par type: {e}")
+        
+        return deployed_by_type
+    
+    def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict) -> dict:
+        """Ajuste les besoins en soustrayant les véhicules déjà déployés"""
+        adjusted_needs = {}
+        
+        for vehicle_type, needed_count in original_needs.items():
+            already_deployed = deployed_by_type.get(vehicle_type, 0)
+            remaining_need = max(0, needed_count - already_deployed)
+            
+            if remaining_need > 0:
+                adjusted_needs[vehicle_type] = remaining_need
+                logger.debug(f"🎯 {vehicle_type}: besoin {needed_count} - déployé {already_deployed} = restant {remaining_need}")
+            else:
+                logger.debug(f"✅ {vehicle_type}: besoin {needed_count} déjà satisfait par {already_deployed} véhicules déployés")
+        
+        if adjusted_needs:
+            logger.info(f"🔄 Besoins ajustés: {adjusted_needs}")
+        else:
+            logger.info("🎉 Tous les besoins sont déjà satisfaits par les véhicules déployés !")
+        
+        return adjusted_needs
     
     def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None):
         """Trouve si un véhicule peut satisfaire un besoin (avec alternatives)"""
@@ -462,7 +611,7 @@ class VehicleScraper:
             all_vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
             logger.info(f"🔍 {len(all_vehicle_rows)} véhicules au total disponibles")
             
-            # Sélectionner les véhicules manquants
+            # Sélectionner les véhicules manquants (sans exclusion par ID, la logique est maintenant dans les besoins ajustés)
             for row in all_vehicle_rows:
                 try:
                     # Extraire le type du véhicule
