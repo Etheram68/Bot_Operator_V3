@@ -90,6 +90,9 @@ class RequirementParser:
                 )
                 requirements.append(requirement)
         
+        # Conversion des exigences de personnel vers exigences de véhicules
+        requirements = self._convert_personnel_to_vehicle_requirements(requirements)
+        
         # Post-traitement pour éviter les doublons et optimiser
         requirements = self._post_process_requirements(requirements)
         
@@ -306,6 +309,43 @@ class RequirementParser:
                 unique_alternatives.append(alt)
         
         return unique_alternatives
+    
+    def _convert_personnel_to_vehicle_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
+        """Convertit les exigences de personnel vers exigences de véhicules selon crew_size"""
+        converted_requirements = []
+        
+        # Types de véhicules spécialisés qui ont des exigences de personnel
+        personnel_vehicles = {'VIMP', 'VIRT'}
+        
+        vehicle_specs = self.vehicles_mapping.get('vehicle_specs', {})
+        
+        for req in requirements:
+            # Vérifier si c'est un véhicule spécialisé avec personnel
+            if req.vehicle_type in personnel_vehicles:
+                # Récupérer la taille d'équipe depuis vehicle_specs
+                crew_size = vehicle_specs.get(req.vehicle_type, {}).get('crew_size')
+                
+                if crew_size and crew_size > 1:
+                    # Calculer le nombre de véhicules nécessaires
+                    vehicles_needed = max(1, (req.quantity + crew_size - 1) // crew_size)  # Arrondi supérieur
+                    
+                    logger.debug(f"🔄 Conversion personnel: {req.vehicle_type} {req.quantity} spécialistes → {vehicles_needed} véhicules (crew_size: {crew_size})")
+                    
+                    # Créer la nouvelle exigence de véhicule
+                    converted_req = MissionRequirement(
+                        vehicle_type=req.vehicle_type,  # Même type de véhicule
+                        quantity=vehicles_needed,       # Quantité ajustée
+                        optional=req.optional
+                    )
+                    converted_requirements.append(converted_req)
+                else:
+                    # Pas de crew_size défini, garder l'exigence originale
+                    converted_requirements.append(req)
+            else:
+                # Pas un véhicule spécialisé, garder l'exigence originale
+                converted_requirements.append(req)
+        
+        return converted_requirements
     
     def analyze_mission_complexity(self, requirements: List[MissionRequirement]) -> Dict[str, any]:
         """Analyse la complexité d'une mission basée sur ses exigences"""

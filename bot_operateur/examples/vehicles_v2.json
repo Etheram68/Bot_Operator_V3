@@ -201,6 +201,12 @@
   },
   
   "vehicle_specs": {
+    "VIRT": {
+      "crew_size": 4
+    },
+    "VIMP": {
+      "crew_size": 5
+    },
     "FPT": {
       "crew_size": 6,
       "water_capacity_l": 3000,

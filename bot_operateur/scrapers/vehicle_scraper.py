@@ -324,7 +324,7 @@ class VehicleScraper:
             deployed_by_type = await self._get_already_deployed_vehicles_by_type()
             
             # Ajuster les besoins en fonction des véhicules déjà déployés
-            adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type)
+            adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type, alternatives_mapping)
             
             # Si tous les besoins sont déjà satisfaits, ne rien faire
             if not adjusted_vehicle_needs:
@@ -377,9 +377,25 @@ class VehicleScraper:
                         if checkbox and not await checkbox.is_disabled():
                             # Sélectionner ce véhicule
                             await checkbox.check()
+                            
+                            # Mettre à jour le compteur pour le besoin principal
                             selected_counts[need_type] = already_selected + 1
                             total_selected += 1
                             alternatives_used[need_type].append(vehicle_type)
+                            
+                            # Mettre à jour aussi les compteurs pour tous les autres besoins que ce véhicule peut satisfaire
+                            if alternatives_mapping:
+                                for other_need_type in adjusted_vehicle_needs.keys():
+                                    if other_need_type != need_type:  # Pas le besoin déjà traité
+                                        alternatives = alternatives_mapping.get(other_need_type, {})
+                                        primary_alternatives = alternatives.get('primary', [])
+                                        secondary_alternatives = alternatives.get('secondary', [])
+                                        
+                                        if vehicle_type in primary_alternatives or vehicle_type in secondary_alternatives:
+                                            # Ce véhicule peut aussi satisfaire cet autre besoin
+                                            selected_counts[other_need_type] = selected_counts.get(other_need_type, 0) + 1
+                                            alternatives_used[other_need_type].append(vehicle_type)
+                                            logger.debug(f"  🔗 Satisfait aussi le besoin {other_need_type}")
                             
                             full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
                             logger.info(f"✅ Sélectionné: {full_caption} -> Type: {vehicle_type} (pour {need_type})")
@@ -549,12 +565,29 @@ class VehicleScraper:
         
         return deployed_by_type
     
-    def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict) -> dict:
-        """Ajuste les besoins en soustrayant les véhicules déjà déployés"""
+    def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict, alternatives_mapping: dict = None) -> dict:
+        """Ajuste les besoins en soustrayant les véhicules déjà déployés (avec alternatives)"""
         adjusted_needs = {}
         
         for vehicle_type, needed_count in original_needs.items():
-            already_deployed = deployed_by_type.get(vehicle_type, 0)
+            # Compter les véhicules déployés qui peuvent satisfaire ce besoin
+            already_deployed = 0
+            
+            # D'abord vérifier le type exact
+            already_deployed += deployed_by_type.get(vehicle_type, 0)
+            
+            # Ensuite vérifier les alternatives si disponibles
+            if alternatives_mapping and vehicle_type in alternatives_mapping:
+                alternatives = alternatives_mapping[vehicle_type].get('primary', [])
+                for alt_type in alternatives:
+                    already_deployed += deployed_by_type.get(alt_type, 0)
+                    
+                # Vérifier aussi les alternatives secondaires si pas de primaires
+                if already_deployed == 0:
+                    alternatives = alternatives_mapping[vehicle_type].get('secondary', [])
+                    for alt_type in alternatives:
+                        already_deployed += deployed_by_type.get(alt_type, 0)
+            
             remaining_need = max(0, needed_count - already_deployed)
             
             if remaining_need > 0:
