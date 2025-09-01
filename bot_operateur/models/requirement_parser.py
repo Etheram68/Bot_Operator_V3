@@ -139,48 +139,49 @@ class RequirementParser:
         if numbers_in_match:
             return int(numbers_in_match[0])
         
-        # Chercher dans le contexte proche (50 caractères avant et après le match)
-        start_pos = max(0, match.start() - 50)
+        # Pour les tableaux HTML, chercher spécifiquement la structure <td>texte</td><td>nombre</td>
+        # Chercher la ligne complète qui contient notre match
+        lines = full_text.split('\n')
+        match_line_index = None
+        
+        # Trouver la ligne contenant notre match
+        for i, line in enumerate(lines):
+            if match.start() >= sum(len(l) + 1 for l in lines[:i]) and match.start() <= sum(len(l) + 1 for l in lines[:i+1]):
+                match_line_index = i
+                break
+        
+        if match_line_index is not None:
+            # Chercher dans cette ligne et les lignes adjacentes pour tableaux multi-lignes
+            search_lines = []
+            for i in range(max(0, match_line_index - 1), min(len(lines), match_line_index + 3)):
+                search_lines.append(lines[i])
+            
+            search_text = '\n'.join(search_lines)
+            
+            # Pattern spécifique pour tableaux HTML
+            table_pattern = r'<td[^>]*>[^<]*' + re.escape(match_text) + r'[^<]*</td>\s*<td[^>]*>\s*(\d+)\s*</td>'
+            table_match = re.search(table_pattern, search_text, re.IGNORECASE | re.DOTALL)
+            if table_match:
+                return int(table_match.group(1))
+        
+        # Fallback sur les patterns simples avec contexte réduit
+        start_pos = max(0, match.start() - 30)
         end_pos = min(len(full_text), match.end() + 50)
         context = full_text[start_pos:end_pos]
         
-        # Patterns pour chercher des quantités dans le contexte - plus précis
-        # Échapper le texte du match pour éviter les problèmes avec les caractères spéciaux
-        safe_match_text = re.escape(match_text)
-        first_word = match_text.split()[0] if match_text.split() else ""
-        safe_first_word = re.escape(first_word)
-        
-        quantity_patterns = [
-            # Patterns "Type: X" ou "Type requis: X" 
-            safe_match_text + r'\s*(?:requis?)?\s*:\s*(\d+)',
-            # Patterns "X Type" ou "X Type requis/nécessaires"
-            r'(\d+)\s+' + safe_match_text + r'\s*(?:requis?|nécessaires?)?',
-            r'(\d+)\s+' + safe_first_word + r'.*?(?:requis?|nécessaires?)',
-            # Patterns avec mots-clés de proximité
-            safe_match_text + r'.*?requis?\s*:\s*(\d+)',
-            safe_match_text + r'.*?nécessaires?\s*:\s*(\d+)',
+        # Patterns simples
+        simple_patterns = [
+            re.escape(match_text) + r'[^0-9]*(\d+)',  # Texte suivi d'un nombre
+            r'(\d+)[^0-9]*' + re.escape(match_text)   # Nombre suivi du texte
         ]
         
-        for pattern in quantity_patterns:
+        for pattern in simple_patterns:
             matches = re.findall(pattern, context, re.IGNORECASE)
             if matches:
                 try:
                     return int(matches[0])
                 except ValueError:
                     continue
-        
-        # Chercher des mots-nombres français dans le contexte
-        word_numbers = {
-            'un': 1, 'une': 1, 'deux': 2, 'trois': 3, 'quatre': 4, 'cinq': 5,
-            'six': 6, 'sept': 7, 'huit': 8, 'neuf': 9, 'dix': 10, 'onze': 11, 'douze': 12,
-            'treize': 13, 'quatorze': 14, 'quinze': 15, 'seize': 16, 'dix-sept': 17,
-            'dix-huit': 18, 'dix-neuf': 19, 'vingt': 20
-        }
-        
-        context_lower = context.lower()
-        for word, number in word_numbers.items():
-            if word in context_lower:
-                return number
         
         # Par défaut
         return 1

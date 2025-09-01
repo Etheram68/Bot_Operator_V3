@@ -29,9 +29,17 @@ class PatientScraper:
                 logger.debug(f"Aucun patient trouvé pour mission {mission_id}")
                 return patients
             
-            # Compter les patients depuis le texte du formulaire
-            patient_count_text = await patient_form.inner_text()
-            patient_count = self._extract_number_from_text(patient_count_text)
+            # Compter les patients depuis le texte spécifique du span
+            patient_text_span = await self.page.query_selector("#patient_button_text")
+            if patient_text_span:
+                patient_count_text = await patient_text_span.inner_text()
+                patient_count = self._extract_number_from_text(patient_count_text)
+                logger.debug(f"Texte patient trouvé: '{patient_count_text}' → {patient_count} patients")
+            else:
+                # Fallback sur tout l'élément patient_form
+                patient_count_text = await patient_form.inner_text()
+                patient_count = self._extract_number_from_text(patient_count_text)
+                logger.debug(f"Fallback texte patient: '{patient_count_text}' → {patient_count} patients")
             
             # Récupérer les détails des patients
             patient_elements = await self.page.query_selector_all(".mission_patient")
