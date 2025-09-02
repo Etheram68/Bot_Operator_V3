@@ -121,7 +121,6 @@ class RequirementParser:
     def _find_matches(self, text: str, patterns: List[re.Pattern]) -> List[Tuple[int, bool]]:
         """Trouve les correspondances pour un type de besoin"""
         matches = []
-        
         for pattern in patterns:
             for match in pattern.finditer(text):
                 # Extraire la quantité du match et de son contexte

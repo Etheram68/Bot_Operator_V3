@@ -396,7 +396,6 @@ class MissionScraper:
                         "besoin" in text.lower() or
                         len(text.strip()) > 20  # Au moins un peu de contenu
                     ):
-                        logger.debug(f"Texte de besoins trouvé dans la seconde colonne: {text[:100]}...")
                         return text
             
             # Fallback: chercher directement les div col-md-4 après h1 sans passer par row
@@ -442,7 +441,6 @@ class MissionScraper:
         try:
             # Extraire le texte spécifiquement de la seconde colonne des besoins
             requirements_text = await self._extract_requirements_text_from_columns()
-            logger.debug(f"Texte des exigences extrait: {requirements_text[:200]}...")
             
             # Utiliser le parser intelligent pour extraire les exigences
             requirements = self.requirement_parser.parse_mission_text(requirements_text) if requirements_text else []

@@ -72,14 +72,14 @@ class SmartStrategy(BaseStrategy):
         for vehicle_type, quantity in requirements.items():
             # Obtenir les alternatives directement depuis le mapping véhicules
             vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
-            fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
-            police_mapping = vehicle_mapping.get('police', {})
-            water_rescue_mapping = vehicle_mapping.get('water_rescue', {})
             
-            # Chercher dans tous les mappings
-            alternatives_info = (fire_rescue_mapping.get(vehicle_type) or 
-                               police_mapping.get(vehicle_type) or 
-                               water_rescue_mapping.get(vehicle_type, {}))
+            # Chercher dans toutes les catégories disponibles
+            alternatives_info = {}
+            for category_name, category_mapping in vehicle_mapping.items():
+                if vehicle_type in category_mapping:
+                    alternatives_info = category_mapping[vehicle_type]
+                    logger.debug(f"Trouvé {vehicle_type} dans catégorie {category_name}")
+                    break
             
             if alternatives_info and len(alternatives_info.get('primary', [])) > 1:
                 # Si on a plusieurs alternatives primaires (comme BEA: ["BEA", "EPA"])
@@ -108,10 +108,16 @@ class SmartStrategy(BaseStrategy):
             if current_ambulances < mission.patient_count:
                 ambulances_needed = mission.patient_count - current_ambulances
                 
-                # Utiliser le système d'alternatives pour les ambulances
+                # Utiliser le système d'alternatives pour les ambulances  
                 vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
-                fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
-                ambulance_alternatives = fire_rescue_mapping.get("AMBULANCE", {})
+                ambulance_alternatives = {}
+                
+                # Chercher AMBULANCE dans toutes les catégories
+                for category_name, category_mapping in vehicle_mapping.items():
+                    if "AMBULANCE" in category_mapping:
+                        ambulance_alternatives = category_mapping["AMBULANCE"]
+                        logger.debug(f"Alternatives ambulances trouvées dans {category_name}")
+                        break
                 
                 if ambulance_alternatives:
                     # Utiliser le type générique "AMBULANCE" qui sera résolu en VSAV/ASSU/SMUR(A)
@@ -135,12 +141,14 @@ class SmartStrategy(BaseStrategy):
         cleaned_needs = {}
         excluded_types = set()
         
-        # Obtenir le mapping des alternatives
+        # Obtenir le mapping des alternatives de toutes les catégories
         vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
-        fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
-        police_mapping = vehicle_mapping.get('police', {})
-        water_rescue_mapping = vehicle_mapping.get('water_rescue', {})
-        all_mappings = {**fire_rescue_mapping, **police_mapping, **water_rescue_mapping}
+        all_mappings = {}
+        
+        # Fusionner toutes les catégories de mappings
+        for category_name, category_mapping in vehicle_mapping.items():
+            all_mappings.update(category_mapping)
+            logger.debug(f"Chargé catégorie {category_name}: {len(category_mapping)} types")
         
         # Traiter les alternatives case-insensitive et croisées
         needs_lower = {k.lower(): k for k in needs.keys()}  # Mapping lowercase -> original

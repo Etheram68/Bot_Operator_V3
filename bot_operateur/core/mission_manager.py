@@ -196,14 +196,14 @@ class MissionManager:
                 # Extraire le mapping des alternatives depuis le parser
                 vehicle_mapping = strategy.parser.vehicles_mapping.get('vehicle_mapping', {})
                 
-                # Combiner les mappings fire_rescue et police
-                fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
-                police_mapping = vehicle_mapping.get('police', {})
-                
-                alternatives_mapping = {**fire_rescue_mapping, **police_mapping}
+                # Combiner TOUTES les catégories de mappings
+                alternatives_mapping = {}
+                for category_name, category_mapping in vehicle_mapping.items():
+                    alternatives_mapping.update(category_mapping)
+                    logger.debug(f"Ajouté catégorie {category_name}: {len(category_mapping)} types au mapping des alternatives")
             
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
-            selected_count = await self.vehicle_scraper.select_closest_vehicles_by_type(vehicle_needs, alternatives_mapping)
+            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping)
             
             if selected_count == 0:
                 logger.warning(f"Aucun véhicule sélectionné pour mission {mission.id}")
