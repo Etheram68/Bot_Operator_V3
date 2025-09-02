@@ -5,15 +5,6 @@
 
   "vehicle_mapping": {
     "fire_rescue": {
-      "AMBULANCE": {
-        "primary": ["VSAV", "ASSU", "SMUR(A)"],
-        "secondary": ["Ambulance"],
-        "transport_capable": ["ASSU", "SMUR(A)"]
-      },
-      "AMBULANCE_TRANSPORT": {
-        "primary": ["Ambulance"],
-        "secondary": []
-      },
       "BEA": {
         "primary": ["BEA", "EPA"],
         "secondary": []
@@ -45,6 +36,15 @@
     },
 
     "medical": {
+      "AMBULANCE": {
+        "primary": ["VSAV", "ASSU", "SMUR(A)"],
+        "secondary": ["Ambulance"],
+        "transport_capable": ["ASSU", "SMUR(A)"]
+      },
+      "AMBULANCE_TRANSPORT": {
+        "primary": ["Ambulance"],
+        "secondary": []
+      },
       "PCDSM": {
         "primary": ["PC"],
         "secondary": []
@@ -289,7 +289,7 @@
   },
 
   "fallback_strategy": {
-    "AMBULANCE": {
+    "AMBULANCE_TRANSPORT": {
       "if_unavailable": ["AMBULANCE_TRANSPORT"],
       "priority_order": ["VSAV", "ASSU", "SMUR(A)", "Ambulance"]
     },

@@ -4,7 +4,7 @@
   "_last_updated": "2025-08-29",
   
   "vehicle_requirements": {
-    "AMBULANCE": ["Ambulances? requises?", "ambulances? nécessaires?"],
+    "AMBULANCE": ["Ambulances? requises?", "ambulances? nécessaires?", "Ambulance"],
     "AMBULANCE_TRANSPORT": ["Transport médical requis", "transport sanitaire"],
     "PCDSM": ["PC DSM nécessaires?", "poste de commandement.{0,20}DSM"],
     "DIRECTEUR_SECOURS": ["Directeur des Secours Médicaux?", "DSM requis"],
