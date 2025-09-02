@@ -45,7 +45,8 @@
     "CARS_POLICE_VR": ["[Vv]oitures? police.{0,20}VR", "police.{0,20}véhicules? radio", "[Vv]oitures? de police ou VR"],
     "FPT_SR_BEA": ["[Ff]ourgons?.{0,30}secours.{0,30}échelles?", "pompiers?.{0,40}aériens?"],
     "VR": ["VR", "véhicules? radios?"],
-    "WATER_REQUIRED": ["Eau nécessaire", "eau requise", "litres? d'eau"]
+    "WATER_REQUIRED": ["Eau nécessaire", "eau requise", "litres? d'eau"],
+    "MIN_PUMP_CAPACITY": ["Min\\. Capacité de la pompe", "Capacité minimum.{0,10}pompe", "capacité pompe minimum"]
   },
 
   "resource_indicators": {

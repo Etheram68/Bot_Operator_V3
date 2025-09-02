@@ -93,6 +93,7 @@ class RequirementParser:
                     optional=optional
                 )
                 requirements.append(requirement)
+                logger.debug(f"✅ Ajouté besoin: {requirement_type} x{quantity} ({'optionnel' if optional else 'requis'})")
         
         # Conversion des exigences de personnel vers exigences de véhicules
         requirements = self._convert_personnel_to_vehicle_requirements(requirements)
@@ -378,7 +379,7 @@ class RequirementParser:
         # Types de véhicules explicitement non-déployables
         resource_only_types = {
             "WATER_REQUIRED", "EAU_NECESSAIRE", 
-            "MIN_FIREFIGHTERS", "MIN_POLICE",
+            "MIN_FIREFIGHTERS", "MIN_POLICE", "MIN_PUMP_CAPACITY",
             "CITERNE_PROBABILITY", "VAR_PROBABILITY", 
             "BEA_PROBABILITY", "POLICE_PROBABILITY"
         }

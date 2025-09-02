@@ -53,10 +53,6 @@
         "primary": ["PC"],
         "secondary": []
       },
-      "VAR": {
-        "primary": ["VAR"],
-        "secondary": []
-      },
       "DRAGON": {
         "primary": ["Dragon", "HéliSMUR"],
         "secondary": []
@@ -82,6 +78,10 @@
       },
       "VPC": {
         "primary": ["VPC"],
+        "secondary": []
+      },
+      "VAR": {
+        "primary": ["VAR"],
         "secondary": []
       }
     },

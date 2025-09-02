@@ -74,9 +74,12 @@ class SmartStrategy(BaseStrategy):
             vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
             fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
             police_mapping = vehicle_mapping.get('police', {})
+            water_rescue_mapping = vehicle_mapping.get('water_rescue', {})
             
-            # Chercher dans les deux mappings
-            alternatives_info = fire_rescue_mapping.get(vehicle_type) or police_mapping.get(vehicle_type, {})
+            # Chercher dans tous les mappings
+            alternatives_info = (fire_rescue_mapping.get(vehicle_type) or 
+                               police_mapping.get(vehicle_type) or 
+                               water_rescue_mapping.get(vehicle_type, {}))
             
             if alternatives_info and len(alternatives_info.get('primary', [])) > 1:
                 # Si on a plusieurs alternatives primaires (comme BEA: ["BEA", "EPA"])
@@ -136,7 +139,8 @@ class SmartStrategy(BaseStrategy):
         vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
         fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
         police_mapping = vehicle_mapping.get('police', {})
-        all_mappings = {**fire_rescue_mapping, **police_mapping}
+        water_rescue_mapping = vehicle_mapping.get('water_rescue', {})
+        all_mappings = {**fire_rescue_mapping, **police_mapping, **water_rescue_mapping}
         
         # Traiter les alternatives case-insensitive et croisées
         needs_lower = {k.lower(): k for k in needs.keys()}  # Mapping lowercase -> original
