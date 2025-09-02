@@ -78,7 +78,6 @@ class RequirementParser:
         # Analyser chaque type de besoin
         for requirement_type, patterns in self.compiled_patterns.items():
             matches = self._find_matches(cleaned_text, patterns)
-            
             for quantity, optional in matches:
                 # Vérifier si c'est un indicateur de ressource plutôt qu'un véhicule
                 if self._is_resource_indicator(requirement_type, cleaned_text):

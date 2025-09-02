@@ -50,6 +50,7 @@
 
   "resource_indicators": {
     "WATER_REQUIRED": "Eau nécessaire",
+    "MIN_PUMP_CAPACITY": "Min. Capacité de la pompe",
     "CITERNE_PROBABILITY": "Chances qu'un camion-citerne soit requis",
     "MIN_FIREFIGHTERS": "Nombre minimum de pompiers requis",
     "MIN_POLICE": "Nombre minimum de policiers requis",

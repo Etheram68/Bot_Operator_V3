@@ -373,16 +373,79 @@ class MissionScraper:
         need_text_lower = need_text.lower().strip()
         return need_mapping.get(need_text_lower)
     
+    async def _extract_requirements_text_from_columns(self) -> str:
+        """Extrait le texte des besoins uniquement depuis la seconde colonne col-md-4"""
+        try:
+            # Trouver toutes les div avec class="row" qui viennent après un <h1>
+            rows = await self.page.query_selector_all("h1 ~ .row")
+            
+            for row in rows:
+                # Dans chaque row, chercher les colonnes col-md-4
+                columns = await row.query_selector_all(".col-md-4")
+                
+                if len(columns) >= 2:
+                    # Prendre la seconde colonne (index 1)
+                    second_column = columns[1]
+                    text = await second_column.inner_text()
+                    
+                    # Vérifier si cette colonne contient des informations de besoins
+                    # (éviter les colonnes vides ou avec juste des données de base)
+                    if text and (
+                        "requis" in text.lower() or 
+                        "nécessaire" in text.lower() or 
+                        "besoin" in text.lower() or
+                        len(text.strip()) > 20  # Au moins un peu de contenu
+                    ):
+                        logger.debug(f"Texte de besoins trouvé dans la seconde colonne: {text[:100]}...")
+                        return text
+            
+            # Fallback: chercher directement les div col-md-4 après h1 sans passer par row
+            h1_elements = await self.page.query_selector_all("h1")
+            for h1 in h1_elements:
+                # Trouver les col-md-4 qui suivent ce h1
+                following_columns = await self.page.evaluate(
+                    """(h1) => {
+                        const columns = [];
+                        let element = h1.nextElementSibling;
+                        while (element) {
+                            if (element.classList.contains('col-md-4')) {
+                                columns.push(element);
+                            } else if (element.classList.contains('row')) {
+                                const rowColumns = element.querySelectorAll('.col-md-4');
+                                columns.push(...Array.from(rowColumns));
+                            }
+                            element = element.nextElementSibling;
+                            if (columns.length >= 2) break;
+                        }
+                        return columns.map(col => col.textContent);
+                    }""", 
+                    h1
+                )
+                
+                if len(following_columns) >= 2:
+                    requirements_text = following_columns[1]
+                    if requirements_text and requirements_text.strip():
+                        logger.debug(f"Fallback: texte trouvé dans la seconde colonne: {requirements_text[:100]}...")
+                        return requirements_text
+            
+            logger.warning("Aucune seconde colonne col-md-4 trouvée avec des besoins")
+            return ""
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de l'extraction du texte des colonnes: {e}")
+            return ""
+    
     async def _scrape_requirements_from_current_page(self) -> List[MissionRequirement]:
         """Scrape les exigences depuis la page courante avec parser intelligent"""
         requirements = []
         
         try:
-            # Extraire tout le texte de la page pour analyse intelligente
-            page_text = await self.page.inner_text("body")
+            # Extraire le texte spécifiquement de la seconde colonne des besoins
+            requirements_text = await self._extract_requirements_text_from_columns()
+            logger.debug(f"Texte des exigences extrait: {requirements_text[:200]}...")
             
             # Utiliser le parser intelligent pour extraire les exigences
-            requirements = self.requirement_parser.parse_mission_text(page_text)
+            requirements = self.requirement_parser.parse_mission_text(requirements_text) if requirements_text else []
             
             # Fallback : méthode traditionnelle si le parser ne trouve rien
             if not requirements:
