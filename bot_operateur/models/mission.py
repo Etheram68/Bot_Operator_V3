@@ -63,21 +63,26 @@ class Mission(BaseModel):
         for req in self.requirements:
             requirements[req.vehicle_type] = req.quantity
             
-        # Ambulances pour patients (1 patient = 1 ambulance minimum)
-        ambulance_needed = max(
-            requirements.get("AMBULANCE", 0),
-            self.patient_count
-        )
-        if ambulance_needed > 0:
-            requirements["AMBULANCE"] = ambulance_needed
-            
         # Besoins spécifiques des patients - utiliser directement les types de besoins
         # La conversion vers les véhicules réels sera gérée par RequirementParser + JSON
+        patient_needs_count = 0
         for patient in self.patients:
             for need in patient.needs:
                 # Ajouter directement le besoin patient comme exigence de véhicule
                 # Le système d'alternatives gérera la conversion (ex: INTENSIVE_CARE → AMBULANCE → VSAV/ASSU/SMUR(A))
                 requirements[need] = requirements.get(need, 0) + 1
+                if need == "AMBULANCE":
+                    patient_needs_count += 1
+        
+        # Ambulances pour patients sans besoins spécifiques (1 patient = 1 ambulance minimum)
+        # Seulement si des patients n'ont pas déjà d'exigences AMBULANCE spécifiques
+        patients_without_ambulance_need = self.patient_count - patient_needs_count
+        if patients_without_ambulance_need > 0:
+            ambulance_needed = max(
+                requirements.get("AMBULANCE", 0),
+                requirements.get("AMBULANCE", 0) + patients_without_ambulance_need
+            )
+            requirements["AMBULANCE"] = ambulance_needed
                     
         return requirements
 
