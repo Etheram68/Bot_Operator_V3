@@ -387,6 +387,14 @@ class RequirementParser:
         if requirement_type.upper() in resource_only_types:
             return True
         
+        # Vérifier spécifiquement pour VSR_PROBABILITY
+        if requirement_type == "VSR":
+            # Chercher la phrase exacte de probabilité dans le texte (commençant par "Chances que")
+            probability_pattern = r"chances\s+que"
+            if re.search(probability_pattern, mission_text.lower()):
+                logger.debug(f"🚫 Détecté phrase de probabilité VSR, ignoré comme resource indicator")
+                return True
+        
         # Vérifier dans les resource_indicators du fichier de configuration
         resource_indicators = self.needs_labels.get("resource_indicators", {})
         

@@ -62,13 +62,15 @@
     "MIN_POLICE": "Nombre minimum de policiers requis",
     "VAR_PROBABILITY": "Chances qu'une assistance respiratoire soit requise",
     "BEA_PROBABILITY": "Chances qu'un moyen elévateur aérien soit requise",
-    "POLICE_PROBABILITY": "Chances que la police soit requise"
+    "POLICE_PROBABILITY": "Chances que la police soit requise",
+    "VSR_PROBABILITY": "Chances que les secours routiers soient requis"
   },
 
   "probability_thresholds": {
     "CITERNE_PROBABILITY": 30,
     "VAR_PROBABILITY": 25,
     "BEA_PROBABILITY": 40,
-    "POLICE_PROBABILITY": 50
+    "POLICE_PROBABILITY": 50,
+    "VSR_PROBABILITY": 50
   }
 }
