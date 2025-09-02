@@ -337,18 +337,20 @@ class MissionManager:
         
         return eligible
     
-    async def run_mission_cycle(self, cycles: int = -1) -> None:
+    async def run_mission_cycle(self, cycles: int = -1, max_missions: int = None) -> None:
         """Exécute des cycles de missions automatiques"""
         cycle_count = 0
         
         logger.info(f"Démarrage des cycles de missions (cycles: {'infini' if cycles < 0 else cycles})")
+        if max_missions:
+            logger.info(f"Max missions par cycle: {max_missions}")
         
         try:
             while cycles < 0 or cycle_count < cycles:
                 cycle_count += 1
                 logger.info(f"--- Cycle {cycle_count} ---")
                 
-                stats = await self.auto_deploy_missions()
+                stats = await self.auto_deploy_missions(max_missions)
                 
                 if stats["deployed"] == 0:
                     logger.info("Aucune mission déployée, pause plus longue...")

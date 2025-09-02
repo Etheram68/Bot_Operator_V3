@@ -139,10 +139,10 @@ class OperateurBot:
         self._ensure_running()
         return await self.mission_manager.auto_deploy_missions(max_missions)
     
-    async def run_continuous(self, cycles: int = -1) -> None:
+    async def run_continuous(self, cycles: int = -1, max_missions: int = None) -> None:
         """Lance le bot en mode continu"""
         self._ensure_running()
-        await self.mission_manager.run_mission_cycle(cycles)
+        await self.mission_manager.run_mission_cycle(cycles, max_missions)
     
     def _ensure_running(self) -> None:
         """Vérifie que le bot est en cours d'exécution"""

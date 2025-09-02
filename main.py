@@ -53,14 +53,16 @@ async def run_auto_mode(bot: OperateurBot, max_missions: int = None):
     logger.info(f"  - Missions ignorées: {stats['skipped']}")
 
 
-async def run_continuous_mode(bot: OperateurBot, cycles: int = -1):
+async def run_continuous_mode(bot: OperateurBot, cycles: int = -1, max_missions: int = None):
     """Exécute le mode continu"""
     
     logger.info(f"Mode continu activé (cycles: {'infini' if cycles < 0 else cycles})")
+    if max_missions:
+        logger.info(f"Limite de missions par cycle: {max_missions}")
     logger.info("Appuyez sur Ctrl+C pour arrêter")
     
     try:
-        await bot.run_continuous(cycles)
+        await bot.run_continuous(cycles, max_missions)
     except KeyboardInterrupt:
         logger.info("Arrêt demandé par l'utilisateur")
 
@@ -382,7 +384,7 @@ async def main():
             
             elif args.continuous:
                 cycles = args.cycles if args.cycles is not None else -1
-                await run_continuous_mode(bot, cycles)
+                await run_continuous_mode(bot, cycles, args.max_missions)
             
             elif args.status:
                 await show_status(bot)
