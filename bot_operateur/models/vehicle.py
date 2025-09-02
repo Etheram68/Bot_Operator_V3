@@ -3,26 +3,8 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-class VehicleType(Enum):
-    # Véhicules de base
-    POLICE_CAR = "Voiture de police"
-    AMBULANCE = "Ambulance"
-    FIRE_TRUCK = "Camion de pompiers"
-    
-    # Véhicules spécialisés
-    DRAGON = "Dragon"
-    VCT = "VCT"  # Véhicule de Commandement Tactique
-    RAM = "RAM"  # Reconnaissance et Appui au Mouvement
-    HELICOPTER = "Hélicoptère"
-    
-    # Transport
-    PRISON_VAN = "Fourgon cellulaire"
-    
-    # Sécurité
-    SECURITY_PATROL = "Patrouille de sécurité"
-    
-    # Autres
-    RESCUE_DIRECTOR = "Directeur des secours"
+# VehicleType supprimé - remplacé par une logique JSON dynamique
+# Les types de véhicules sont maintenant représentés par des strings et gérés via vehicles_v2.json
 
 
 class VehicleStatus(Enum):

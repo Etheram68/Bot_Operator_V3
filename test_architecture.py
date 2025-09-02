@@ -7,7 +7,7 @@ import asyncio
 from bot_operateur import Settings
 from bot_operateur.models.mission import Mission, MissionType
 from bot_operateur.models.vehicle import Vehicle, VehicleStatus
-from bot_operateur.models.patient import Patient, PatientNeed, PatientSeverity
+from bot_operateur.models.patient import Patient, PatientSeverity
 from bot_operateur.strategies.balanced_strategy import BalancedStrategy
 
 
@@ -28,13 +28,13 @@ def test_models():
     patient1 = Patient(
         id="1",
         severity=PatientSeverity.SEVERE,
-        needs=[PatientNeed.AMBULANCE, PatientNeed.HELICOPTER]
+        needs=["AMBULANCE", "HELICOPTER"]
     )
     
     patient2 = Patient(
         id="2", 
         severity=PatientSeverity.LIGHT,
-        needs=[PatientNeed.AMBULANCE]
+        needs=["AMBULANCE"]
     )
     
     mission.patients = [patient1, patient2]
@@ -110,7 +110,7 @@ def test_patient_logic():
     critical_patient = Patient(
         id="crit1",
         severity=PatientSeverity.CRITICAL,
-        needs=[PatientNeed.HELICOPTER, PatientNeed.INTENSIVE_CARE]
+        needs=["HELICOPTER", "INTENSIVE_CARE"]
     )
     
     print(f"  ✅ Patient critique créé")

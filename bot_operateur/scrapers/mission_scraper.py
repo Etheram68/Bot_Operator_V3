@@ -4,7 +4,7 @@ from playwright.async_api import Page
 from loguru import logger
 
 from ..models.mission import Mission, MissionType, MissionRequirement
-from ..models.patient import Patient, PatientNeed, PatientSeverity
+from ..models.patient import Patient, PatientSeverity
 from ..models.requirement_parser import RequirementParser
 from ..utils.dom_utils import DOMUtils
 from .conditions_analyzer import ConditionsAnalyzer
@@ -219,7 +219,7 @@ class MissionScraper:
                             patients.append(Patient(
                                 id=str(i),
                                 severity=PatientSeverity.MODERATE,
-                                needs=[PatientNeed.AMBULANCE]
+                                needs=["AMBULANCE"]
                             ))
                 else:
                     logger.debug("Aucun patient détecté sur cette mission")
@@ -250,7 +250,7 @@ class MissionScraper:
                 patient = Patient(
                     id=str(i),
                     severity=PatientSeverity.MODERATE,  # Par défaut
-                    needs=special_needs if special_needs else [PatientNeed.AMBULANCE]
+                    needs=special_needs if special_needs else ["AMBULANCE"]
                 )
                 patients.append(patient)
             
@@ -286,26 +286,26 @@ class MissionScraper:
         
         return 0
     
-    def _extract_patient_special_needs_from_text(self, text: str) -> List[PatientNeed]:
+    def _extract_patient_special_needs_from_text(self, text: str) -> List[str]:
         """Extrait les besoins spéciaux des patients depuis le texte"""
         needs = []
         text_lower = text.lower()
         
         # Mapping des mots-clés vers les besoins
         need_keywords = {
-            'hélicoptère': PatientNeed.HELICOPTER,
-            'helicoptere': PatientNeed.HELICOPTER,
-            'dragon': PatientNeed.HELICOPTER,
-            'samu': PatientNeed.HELICOPTER,
-            'réanimation': PatientNeed.INTENSIVE_CARE,
-            'soins intensifs': PatientNeed.INTENSIVE_CARE,
-            'brûlé': PatientNeed.BURN_UNIT,
-            'brule': PatientNeed.BURN_UNIT,
-            'grands brûlés': PatientNeed.BURN_UNIT,
-            'pédiatrie': PatientNeed.PEDIATRIC,
-            'pediatrie': PatientNeed.PEDIATRIC,
-            'enfant': PatientNeed.PEDIATRIC,
-            'directeur des secours': PatientNeed.RESCUE_DIRECTOR,
+            'hélicoptère': "HELICOPTER",
+            'helicoptere': "HELICOPTER",
+            'dragon': "HELICOPTER",
+            'samu': "HELICOPTER",
+            'réanimation': "INTENSIVE_CARE",
+            'soins intensifs': "INTENSIVE_CARE",
+            'brûlé': "BURN_UNIT",
+            'brule': "BURN_UNIT",
+            'grands brûlés': "BURN_UNIT",
+            'pédiatrie': "PEDIATRIC",
+            'pediatrie': "PEDIATRIC",
+            'enfant': "PEDIATRIC",
+            'directeur des secours': "RESCUE_DIRECTOR",
         }
         
         for keyword, need in need_keywords.items():
@@ -314,9 +314,9 @@ class MissionScraper:
         
         # Toujours inclure ambulance de base si aucun besoin spécial
         if not needs:
-            needs.append(PatientNeed.AMBULANCE)
-        elif PatientNeed.AMBULANCE not in needs:
-            needs.insert(0, PatientNeed.AMBULANCE)  # Ambulance en premier
+            needs.append("AMBULANCE")
+        elif "AMBULANCE" not in needs:
+            needs.insert(0, "AMBULANCE")  # Ambulance en premier
         
         return needs
     
@@ -343,7 +343,7 @@ class MissionScraper:
             
             # Si pas de besoins spécifiques, ajouter ambulance par défaut
             if not needs:
-                needs.append(PatientNeed.AMBULANCE)
+                needs.append("AMBULANCE")
             
             return Patient(
                 id=patient_id,
@@ -355,18 +355,18 @@ class MissionScraper:
             logger.error(f"Erreur lors de l'extraction du patient: {e}")
             return None
     
-    def _parse_patient_need(self, need_text: str) -> Optional[PatientNeed]:
-        """Parse le texte d'un besoin patient vers un PatientNeed"""
+    def _parse_patient_need(self, need_text: str) -> Optional[str]:
+        """Parse le texte d'un besoin patient vers un string"""
         need_mapping = {
-            "ambulance": PatientNeed.AMBULANCE,
-            "hélicoptère": PatientNeed.HELICOPTER,
-            "helicoptere": PatientNeed.HELICOPTER,
-            "directeur des secours": PatientNeed.RESCUE_DIRECTOR,
-            "soins intensifs": PatientNeed.INTENSIVE_CARE,
-            "unité grands brûlés": PatientNeed.BURN_UNIT,
-            "unite grands brules": PatientNeed.BURN_UNIT,
-            "pédiatrie": PatientNeed.PEDIATRIC,
-            "pediatrie": PatientNeed.PEDIATRIC
+            "ambulance": "AMBULANCE",
+            "hélicoptère": "HELICOPTER",
+            "helicoptere": "HELICOPTER",
+            "directeur des secours": "RESCUE_DIRECTOR",
+            "soins intensifs": "INTENSIVE_CARE",
+            "unité grands brûlés": "BURN_UNIT",
+            "unite grands brules": "BURN_UNIT",
+            "pédiatrie": "PEDIATRIC",
+            "pediatrie": "PEDIATRIC"
         }
         
         # Recherche insensible à la casse

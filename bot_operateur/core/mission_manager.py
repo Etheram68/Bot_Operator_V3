@@ -3,7 +3,6 @@ from typing import List, Optional, Dict
 from loguru import logger
 
 from ..models.mission import Mission, MissionStatus
-from ..models.vehicle import Vehicle
 from ..scrapers.mission_scraper import MissionScraper
 from ..scrapers.vehicle_scraper import VehicleScraper
 from ..strategies.base_strategy import BaseStrategy

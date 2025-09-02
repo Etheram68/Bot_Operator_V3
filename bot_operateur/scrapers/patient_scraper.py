@@ -2,7 +2,7 @@ from typing import List, Optional
 from playwright.async_api import Page
 from loguru import logger
 
-from ..models.patient import Patient, PatientNeed, PatientSeverity
+from ..models.patient import Patient, PatientSeverity
 from ..utils.dom_utils import DOMUtils
 
 
@@ -58,7 +58,7 @@ class PatientScraper:
                     patients.append(Patient(
                         id=str(i),
                         severity=PatientSeverity.MODERATE,
-                        needs=[PatientNeed.AMBULANCE]
+                        needs=["AMBULANCE"]
                     ))
                 logger.debug(f"Créé {patient_count} patients génériques")
             
@@ -89,7 +89,7 @@ class PatientScraper:
             
             # Si pas de besoins spécifiques, ajouter ambulance par défaut
             if not needs:
-                needs.append(PatientNeed.AMBULANCE)
+                needs.append("AMBULANCE")
             
             return Patient(
                 id=patient_id,
@@ -133,39 +133,39 @@ class PatientScraper:
         # Par défaut
         return PatientSeverity.MODERATE
     
-    def _parse_patient_need(self, need_text: str) -> Optional[PatientNeed]:
-        """Parse le texte d'un besoin patient vers un PatientNeed"""
+    def _parse_patient_need(self, need_text: str) -> Optional[str]:
+        """Parse le texte d'un besoin patient vers un string"""
         need_text = need_text.lower().strip()
         
         need_mapping = {
             # Ambulances
-            "ambulance": PatientNeed.AMBULANCE,
-            "ambulances": PatientNeed.AMBULANCE,
+            "ambulance": "AMBULANCE",
+            "ambulances": "AMBULANCE",
             
             # Hélicoptères  
-            "hélicoptère": PatientNeed.HELICOPTER,
-            "helicoptere": PatientNeed.HELICOPTER,
-            "hélicoptères": PatientNeed.HELICOPTER,
-            "helicopter": PatientNeed.HELICOPTER,
+            "hélicoptère": "HELICOPTER",
+            "helicoptere": "HELICOPTER",
+            "hélicoptères": "HELICOPTER",
+            "helicopter": "HELICOPTER",
             
             # Directeur des secours
-            "directeur des secours": PatientNeed.RESCUE_DIRECTOR,
-            "directeur secours": PatientNeed.RESCUE_DIRECTOR,
-            "chef intervention": PatientNeed.RESCUE_DIRECTOR,
+            "directeur des secours": "RESCUE_DIRECTOR",
+            "directeur secours": "RESCUE_DIRECTOR",
+            "chef intervention": "RESCUE_DIRECTOR",
             
             # Soins spécialisés
-            "soins intensifs": PatientNeed.INTENSIVE_CARE,
-            "réanimation": PatientNeed.INTENSIVE_CARE,
-            "intensive care": PatientNeed.INTENSIVE_CARE,
+            "soins intensifs": "INTENSIVE_CARE",
+            "réanimation": "INTENSIVE_CARE",
+            "intensive care": "INTENSIVE_CARE",
             
-            "unité grands brûlés": PatientNeed.BURN_UNIT,
-            "grands brûlés": PatientNeed.BURN_UNIT,
-            "burn unit": PatientNeed.BURN_UNIT,
+            "unité grands brûlés": "BURN_UNIT",
+            "grands brûlés": "BURN_UNIT",
+            "burn unit": "BURN_UNIT",
             
-            "pédiatrie": PatientNeed.PEDIATRIC,
-            "pediatrie": PatientNeed.PEDIATRIC,
-            "enfant": PatientNeed.PEDIATRIC,
-            "enfants": PatientNeed.PEDIATRIC
+            "pédiatrie": "PEDIATRIC",
+            "pediatrie": "PEDIATRIC",
+            "enfant": "PEDIATRIC",
+            "enfants": "PEDIATRIC"
         }
         
         # Recherche directe

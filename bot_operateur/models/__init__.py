@@ -1,9 +1,9 @@
 from .mission import Mission, MissionType, MissionStatus
-from .vehicle import Vehicle, VehicleType, VehicleStatus
-from .patient import Patient, PatientNeed
+from .vehicle import Vehicle, VehicleStatus
+from .patient import Patient
 
 __all__ = [
     "Mission", "MissionType", "MissionStatus",
-    "Vehicle", "VehicleType", "VehicleStatus", 
-    "Patient", "PatientNeed"
+    "Vehicle", "VehicleStatus", 
+    "Patient"
 ]
