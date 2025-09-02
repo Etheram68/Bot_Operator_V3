@@ -338,7 +338,7 @@ class VehicleScraper:
             # Si tous les besoins sont déjà satisfaits, ne rien faire
             if not adjusted_vehicle_needs:
                 logger.info("🎉 Tous les besoins sont déjà satisfaits ! Aucun véhicule supplémentaire nécessaire.")
-                return 0
+                return -1  # Code spécial pour indiquer que tous les besoins sont déjà satisfaits
             
             # Attendre que le tableau soit visible
             table_selector = self._get_vehicle_table_selector(mission_type or MissionType.NORMAL)

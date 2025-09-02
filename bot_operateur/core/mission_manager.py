@@ -228,8 +228,13 @@ class MissionManager:
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
             selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type)
             
-            if selected_count == 0:
-                logger.warning(f"Aucun véhicule sélectionné pour mission {mission.id}")
+            if selected_count == -1:
+                # Tous les besoins sont déjà satisfaits - c'est un succès !
+                logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits, aucun déploiement supplémentaire nécessaire")
+                mission.status = MissionStatus.IN_PROGRESS
+                return True
+            elif selected_count == 0:
+                logger.warning(f"❌ Aucun véhicule disponible pour satisfaire les besoins de la mission {mission.id}")
                 return False
             
             # Déployer immédiatement
