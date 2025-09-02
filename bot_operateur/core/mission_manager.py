@@ -60,6 +60,11 @@ class MissionManager:
                 mission.requirements = details.get('requirements', [])
                 mission.credits = details.get('credits')
                 
+                # Mettre à jour le titre s'il est disponible (plus complet que celui de la liste)
+                if details.get('title'):
+                    mission.title = details['title']
+                    logger.debug(f"Titre mis à jour: '{mission.title}'")
+                
                 logger.debug(
                     f"Mission {mission.id}: {len(mission.patients)} patients, "
                     f"{len(mission.requirements)} exigences, {mission.credits} crédits"
@@ -200,6 +205,25 @@ class MissionManager:
                 for category_name, category_mapping in vehicle_mapping.items():
                     alternatives_mapping.update(category_mapping)
                     logger.debug(f"Ajouté catégorie {category_name}: {len(category_mapping)} types au mapping des alternatives")
+            
+            # Logique spéciale pour les missions "Transport de patient"
+            logger.debug(f"🔍 Vérification du titre de mission: '{mission.title}'")
+            if "Transport de patient" in mission.title:
+                logger.info("🚑 Mission de transport de patient détectée - utilisation des ambulances privées")
+                # Remplacer le mapping AMBULANCE par AMBULANCE_TRANSPORT
+                if "AMBULANCE" in alternatives_mapping:
+                    # Sauvegarder le mapping original et le remplacer
+                    original_ambulance_mapping = alternatives_mapping["AMBULANCE"]
+                    if "AMBULANCE_TRANSPORT" in alternatives_mapping:
+                        alternatives_mapping["AMBULANCE"] = alternatives_mapping["AMBULANCE_TRANSPORT"]
+                        logger.debug(f"Mapping AMBULANCE remplacé par AMBULANCE_TRANSPORT: {alternatives_mapping['AMBULANCE']}")
+                    else:
+                        # Fallback si AMBULANCE_TRANSPORT n'existe pas dans le mapping
+                        alternatives_mapping["AMBULANCE"] = {
+                            "primary": ["Ambulance"],
+                            "secondary": []
+                        }
+                        logger.debug("Utilisation du mapping AMBULANCE_TRANSPORT par défaut")
             
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
             selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type)

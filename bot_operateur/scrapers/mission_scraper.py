@@ -141,6 +141,13 @@ class MissionScraper:
                 logger.info(f"Mission {mission_id} déjà accomplie - ignorée")
                 return None
 
+            # Récupérer le titre complet depuis cette page  
+            title_complete = ""
+            title_element = await self.page.query_selector("h3#missionH1 span")
+            if title_element:
+                title_complete = await title_element.inner_text()
+                logger.debug(f"Titre complet récupéré depuis la page mission: '{title_complete}'")
+
             # Scraper les patients depuis la page de mission principale
             patients = await self._scrape_patients()
 
@@ -156,10 +163,18 @@ class MissionScraper:
             await self.page.goto(help_url)
             await self.page.wait_for_load_state('networkidle')
             
+            # Récupérer le titre depuis la page de conditions (h1) si pas encore récupéré
+            if not title_complete:
+                h1_element = await self.page.query_selector("h1")
+                if h1_element:
+                    title_complete = await h1_element.inner_text()
+                    logger.debug(f"Titre complet récupéré depuis la page conditions: '{title_complete}'")
+            
             details = {
                 'patients': patients,
                 'requirements': await self._scrape_requirements_from_current_page(),
-                'credits': await self._scrape_credits()
+                'credits': await self._scrape_credits(),
+                'title': title_complete  # Titre complet récupéré depuis la page de mission
             }
             
             return details
