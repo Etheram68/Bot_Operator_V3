@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from bot_operateur import OperateurBot, Settings
+from bot_operateur.scrapers.mission_scraper import MissionScraper
 from loguru import logger
 
 
@@ -87,6 +88,114 @@ async def show_status(bot: OperateurBot):
                 print(f"  - {mission_info['id']}: {mission_info['title']} ({mission_info['status']})")
 
 
+async def analyze_missions_conditions(bot: OperateurBot, mission_ids: list = None, max_analyze: int = 5):
+    """Analyse les conditions de réalisation des missions pour enrichir la base de connaissances"""
+    
+    logger.info("🔍 Analyse des conditions de missions en cours...")
+    
+    try:
+        # Obtenir le scraper de missions
+        page = bot.browser_manager.page
+        mission_scraper = MissionScraper(page)
+        
+        if not mission_ids:
+            # Si aucune mission spécifiée, analyser les missions disponibles
+            logger.info("Récupération des missions disponibles...")
+            missions = await bot.get_missions()
+            
+            if not missions:
+                logger.warning("Aucune mission trouvée")
+                return
+            
+            # Prendre les N premières missions
+            mission_ids = [mission.id for mission in missions[:max_analyze]]
+            logger.info(f"Sélection de {len(mission_ids)} missions pour analyse")
+        
+        # Enrichir la base de connaissances
+        logger.info(f"Analyse de {len(mission_ids)} missions...")
+        result = await mission_scraper.enrich_knowledge_base(
+            mission_ids,
+            "bot_operateur/examples/needs_labels_v2.json",
+            "bot_operateur/examples/vehicles_v2.json"
+        )
+        
+        # Afficher les résultats
+        logger.info("📊 Résultats de l'analyse des conditions:")
+        logger.info(f"  - Missions analysées: {result['successful_analyses']}/{result['total_missions']}")
+        logger.info(f"  - Missions échouées: {result['failed_analyses']}")
+        
+        if result['successful_analyses'] > 0:
+            logger.info("📝 Découvertes par mission:")
+            for analysis in result['analysis_results']:
+                mission_id = analysis.get('mission_id', 'Inconnu')
+                new_patterns = len(analysis.get('new_patterns', []))
+                vehicle_mentions = len(analysis.get('vehicle_mentions', []))
+                
+                logger.info(f"  - Mission {mission_id}: {new_patterns} patterns, {vehicle_mentions} véhicules")
+                
+                # Afficher quelques exemples
+                if new_patterns > 0:
+                    examples = analysis.get('new_patterns', [])[:2]  # 2 exemples max
+                    for example in examples:
+                        logger.info(f"    → {example['type']}: {example['original_text']}")
+            
+            logger.info("✅ Base de connaissances enrichie avec succès!")
+            logger.info("📁 Fichiers mis à jour:")
+            logger.info("  - bot_operateur/examples/needs_labels_v2.json")
+            logger.info("  - bot_operateur/examples/vehicles_v2.json")
+        else:
+            logger.warning("Aucune nouvelle donnée découverte")
+            
+    except Exception as e:
+        logger.error(f"Erreur lors de l'analyse des conditions: {e}")
+        if bot.settings.log_level == "DEBUG":
+            logger.exception("Détails de l'erreur:")
+
+
+async def analyze_single_mission(bot: OperateurBot, mission_id: str):
+    """Analyse les conditions d'une mission spécifique sans enrichir les fichiers"""
+    
+    logger.info(f"🔍 Analyse détaillée de la mission {mission_id}...")
+    
+    try:
+        page = bot.browser_manager.page
+        mission_scraper = MissionScraper(page)
+        
+        # Analyser la mission
+        analysis_result = await mission_scraper.analyze_mission_conditions(mission_id)
+        
+        if analysis_result:
+            logger.info(f"✅ Analyse de la mission {mission_id} terminée")
+            logger.info(f"📄 URL des conditions: {analysis_result.get('conditions_url', 'N/A')}")
+            
+            # Afficher les découvertes
+            new_patterns = analysis_result.get('new_patterns', [])
+            vehicle_mentions = analysis_result.get('vehicle_mentions', [])
+            contextual_info = analysis_result.get('contextual_info', {})
+            
+            logger.info(f"🎯 Type de mission détecté: {contextual_info.get('mission_type', 'Inconnu')}")
+            logger.info(f"⚡ Niveau de complexité: {contextual_info.get('complexity_level', 'Inconnu')}")
+            
+            if contextual_info.get('special_circumstances'):
+                logger.info(f"⚠️  Circonstances spéciales: {', '.join(contextual_info['special_circumstances'])}")
+            
+            logger.info(f"🔍 Nouveaux patterns trouvés: {len(new_patterns)}")
+            for pattern in new_patterns[:5]:  # 5 exemples max
+                logger.info(f"  → {pattern['type']}: {pattern['original_text']}")
+            
+            logger.info(f"🚗 Mentions de véhicules: {len(vehicle_mentions)}")
+            for mention in vehicle_mentions[:5]:  # 5 exemples max
+                logger.info(f"  → {mention['name']} (fréquence: {mention['frequency']})")
+                
+        else:
+            logger.warning(f"Impossible d'analyser la mission {mission_id}")
+            
+    except Exception as e:
+        logger.error(f"Erreur lors de l'analyse de la mission {mission_id}: {e}")
+        if bot.settings.log_level == "DEBUG":
+            logger.exception("Détails de l'erreur:")
+
+
 def create_parser():
     """Crée le parseur d'arguments en ligne de commande"""
     
@@ -100,6 +209,8 @@ Exemples d'utilisation:
   python main.py --auto --max-missions 3         # Déploiement automatique (3 max)
   python main.py --continuous --cycles 10        # Mode continu (10 cycles)
   python main.py --status                        # Afficher le statut
+  python main.py --analyze-conditions            # Analyser les conditions de missions
+  python main.py --analyze-mission 12345         # Analyser une mission spécifique
         """
     )
     
@@ -115,12 +226,18 @@ Exemples d'utilisation:
                              help="Mode continu")
     action_group.add_argument("--status", action="store_true",
                              help="Afficher le statut")
+    action_group.add_argument("--analyze-conditions", action="store_true",
+                             help="Analyser les conditions des missions pour enrichir la base de connaissances")
+    action_group.add_argument("--analyze-mission", metavar="ID",
+                             help="Analyser les conditions d'une mission spécifique")
     
     # Options
     parser.add_argument("--strategy", choices=["balanced", "smart", "minimum", "optimal"],
                        help="Stratégie de déploiement")
     parser.add_argument("--max-missions", type=int, metavar="N",
                        help="Nombre maximum de missions à déployer (mode auto)")
+    parser.add_argument("--max-analyze", type=int, metavar="N", default=5,
+                       help="Nombre maximum de missions à analyser (défaut: 5)")
     parser.add_argument("--cycles", type=int, metavar="N",
                        help="Nombre de cycles à exécuter (mode continu)")
     parser.add_argument("--config", type=Path, metavar="FILE",
@@ -193,6 +310,12 @@ async def main():
             
             elif args.status:
                 await show_status(bot)
+            
+            elif getattr(args, 'analyze_conditions', False):
+                await analyze_missions_conditions(bot, max_analyze=args.max_analyze)
+            
+            elif getattr(args, 'analyze_mission', None):
+                await analyze_single_mission(bot, args.analyze_mission)
         
         logger.info("✅ Terminé")
         return 0

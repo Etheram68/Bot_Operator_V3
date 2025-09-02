@@ -7,6 +7,7 @@ from ..models.mission import Mission, MissionType, MissionRequirement
 from ..models.patient import Patient, PatientNeed, PatientSeverity
 from ..models.requirement_parser import RequirementParser
 from ..utils.dom_utils import DOMUtils
+from .conditions_analyzer import ConditionsAnalyzer
 
 
 class MissionScraper:
@@ -16,6 +17,7 @@ class MissionScraper:
         self.page = page
         self.dom_utils = DOMUtils(page)
         self.requirement_parser = RequirementParser()
+        self.conditions_analyzer = ConditionsAnalyzer(page)
     
     async def get_all_missions(self) -> List[Mission]:
         """Récupère toutes les missions disponibles de tous les types"""
@@ -401,3 +403,52 @@ class MissionScraper:
         """Extrait le premier nombre d'un texte"""
         match = re.search(r'\d+', text)
         return int(match.group()) if match else None
+    
+    async def analyze_mission_conditions(self, mission_id: str) -> Optional[Dict]:
+        """Analyse les conditions de réalisation d'une mission pour enrichir les données"""
+        try:
+            return await self.conditions_analyzer.analyze_mission_conditions(mission_id)
+        except Exception as e:
+            logger.error(f"Erreur lors de l'analyse des conditions de la mission {mission_id}: {e}")
+            return None
+    
+    async def enrich_knowledge_base(self, mission_ids: List[str], 
+                                   needs_labels_path: str = None, 
+                                   vehicles_path: str = None) -> Dict:
+        """Analyse plusieurs missions pour enrichir la base de connaissances"""
+        if not needs_labels_path:
+            needs_labels_path = "bot_operateur/examples/needs_labels_v2.json"
+        if not vehicles_path:
+            vehicles_path = "bot_operateur/examples/vehicles_v2.json"
+        
+        analysis_results = []
+        successful_analyses = 0
+        
+        for mission_id in mission_ids:
+            try:
+                logger.info(f"Analyse de la mission {mission_id}...")
+                analysis_result = await self.conditions_analyzer.analyze_mission_conditions(mission_id)
+                
+                if analysis_result:
+                    analysis_results.append(analysis_result)
+                    successful_analyses += 1
+                    logger.debug(f"Mission {mission_id} analysée avec succès")
+                else:
+                    logger.warning(f"Aucune donnée extraite de la mission {mission_id}")
+                    
+            except Exception as e:
+                logger.error(f"Erreur lors de l'analyse de la mission {mission_id}: {e}")
+                continue
+        
+        if analysis_results:
+            logger.info(f"Enrichissement de la base de connaissances avec {len(analysis_results)} analyses...")
+            await self.conditions_analyzer.enrich_json_files(
+                analysis_results, needs_labels_path, vehicles_path
+            )
+        
+        return {
+            'total_missions': len(mission_ids),
+            'successful_analyses': successful_analyses,
+            'failed_analyses': len(mission_ids) - successful_analyses,
+            'analysis_results': analysis_results
+        }
