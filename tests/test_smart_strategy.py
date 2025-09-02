@@ -3,10 +3,10 @@
 Test de la nouvelle stratégie intelligente avec les mappings réels
 """
 import asyncio
-from bot_operateur.models.mission import Mission, MissionType, MissionRequirement
-from bot_operateur.models.vehicle import Vehicle, VehicleStatus
-from bot_operateur.models.requirement_parser import RequirementParser
-from bot_operateur.strategies.smart_strategy import SmartStrategy
+from ..bot_operateur.models.mission import Mission, MissionType, MissionRequirement
+from ..bot_operateur.models.vehicle import Vehicle, VehicleStatus
+from ..bot_operateur.models.requirement_parser import RequirementParser
+from ..bot_operateur.strategies.smart_strategy import SmartStrategy
 
 
 def create_test_vehicles() -> list[Vehicle]:

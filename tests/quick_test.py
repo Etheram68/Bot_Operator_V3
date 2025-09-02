@@ -3,7 +3,7 @@
 Test rapide des corrections d'URL
 """
 import asyncio
-from bot_operateur import OperateurBot, Settings
+from ..bot_operateur import OperateurBot, Settings
 
 
 async def quick_test():

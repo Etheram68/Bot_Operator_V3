@@ -3,7 +3,7 @@
 Test de la correction des URLs de missions
 """
 import asyncio
-from bot_operateur import OperateurBot, Settings
+from ..bot_operateur import OperateurBot, Settings
 
 
 async def test_mission_url_fix():

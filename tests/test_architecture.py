@@ -4,11 +4,11 @@ Script de test pour valider l'architecture du bot sans connexion réelle
 """
 import asyncio
 
-from bot_operateur import Settings
-from bot_operateur.models.mission import Mission, MissionType
-from bot_operateur.models.vehicle import Vehicle, VehicleStatus
-from bot_operateur.models.patient import Patient, PatientSeverity
-from bot_operateur.strategies.balanced_strategy import BalancedStrategy
+from ..bot_operateur import Settings
+from ..bot_operateur.models.mission import Mission, MissionType
+from ..bot_operateur.models.vehicle import Vehicle, VehicleStatus
+from ..bot_operateur.models.patient import Patient, PatientSeverity
+from ..bot_operateur.strategies.balanced_strategy import BalancedStrategy
 
 
 def test_models():

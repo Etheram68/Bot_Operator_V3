@@ -531,9 +531,9 @@ class MissionScraper:
                                    vehicles_path: str = None) -> Dict:
         """Analyse plusieurs missions pour enrichir la base de connaissances"""
         if not needs_labels_path:
-            needs_labels_path = "bot_operateur/examples/needs_labels_v2.json"
+            needs_labels_path = "bot_operateur/data/needs_labels_v2.json"
         if not vehicles_path:
-            vehicles_path = "bot_operateur/examples/vehicles_v2.json"
+            vehicles_path = "bot_operateur/data/vehicles_v2.json"
         
         analysis_results = []
         successful_analyses = 0

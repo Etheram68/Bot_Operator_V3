@@ -10,9 +10,9 @@ from pathlib import Path
 # Ajouter le chemin du projet
 sys.path.insert(0, str(Path(__file__).parent))
 
-from bot_operateur.models.requirement_parser import RequirementParser
-from bot_operateur.models.mission import Mission, MissionRequirement, MissionType
-from bot_operateur.strategies.smart_strategy import SmartStrategy
+from ..bot_operateur.models.requirement_parser import RequirementParser
+from ..bot_operateur.models.mission import Mission, MissionRequirement, MissionType
+from ..bot_operateur.strategies.smart_strategy import SmartStrategy
 
 
 def test_police_vehicle_parsing():

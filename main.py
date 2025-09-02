@@ -117,8 +117,8 @@ async def analyze_missions_conditions(bot: OperateurBot, mission_ids: list = Non
         logger.info(f"Analyse de {len(mission_ids)} missions...")
         result = await mission_scraper.enrich_knowledge_base(
             mission_ids,
-            "bot_operateur/examples/needs_labels_v2.json",
-            "bot_operateur/examples/vehicles_v2.json"
+            "bot_operateur/data/needs_labels_v2.json",
+            "bot_operateur/data/vehicles_v2.json"
         )
         
         # Afficher les résultats
@@ -143,8 +143,8 @@ async def analyze_missions_conditions(bot: OperateurBot, mission_ids: list = Non
             
             logger.info("✅ Base de connaissances enrichie avec succès!")
             logger.info("📁 Fichiers mis à jour:")
-            logger.info("  - bot_operateur/examples/needs_labels_v2.json")
-            logger.info("  - bot_operateur/examples/vehicles_v2.json")
+            logger.info("  - bot_operateur/data/needs_labels_v2.json")
+            logger.info("  - bot_operateur/data/vehicles_v2.json")
         else:
             logger.warning("Aucune nouvelle donnée découverte")
             

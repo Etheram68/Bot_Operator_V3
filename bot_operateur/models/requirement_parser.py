@@ -20,7 +20,7 @@ class RequirementParser:
     def _load_needs_labels(self, path: str = None) -> Dict:
         """Charge le fichier de mapping des labels de besoins"""
         if path is None:
-            path = Path(__file__).parent.parent / "examples" / "needs_labels_v2.json"
+            path = Path(__file__).parent.parent / "data" / "needs_labels_v2.json"
         
         try:
             with open(path, 'r', encoding='utf-8') as f:
@@ -34,7 +34,7 @@ class RequirementParser:
     def _load_vehicles_mapping(self, path: str = None) -> Dict:
         """Charge le fichier de mapping des véhicules"""
         if path is None:
-            path = Path(__file__).parent.parent / "examples" / "vehicles_v2.json"
+            path = Path(__file__).parent.parent / "data" / "vehicles_v2.json"
         
         try:
             with open(path, 'r', encoding='utf-8') as f:

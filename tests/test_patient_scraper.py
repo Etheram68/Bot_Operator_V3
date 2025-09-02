@@ -4,8 +4,8 @@ Script de test pour vérifier le scraping des patients sur une mission spécifiq
 """
 
 import asyncio
-from bot_operateur import OperateurBot, Settings
-from bot_operateur.scrapers.mission_scraper import MissionScraper
+from ..bot_operateur import OperateurBot, Settings
+from ..bot_operateur.scrapers.mission_scraper import MissionScraper
 from loguru import logger
 
 
