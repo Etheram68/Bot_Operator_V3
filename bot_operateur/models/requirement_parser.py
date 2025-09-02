@@ -289,23 +289,45 @@ class RequirementParser:
         return consolidated
     
     def get_vehicle_alternatives(self, vehicle_type: str) -> List[str]:
-        """Retourne les alternatives possibles pour un type de véhicule"""
+        """Retourne les alternatives possibles pour un type de véhicule selon la hiérarchie primary/secondary"""
         alternatives = []
         
-        # Chercher dans fallback strategy
-        if self.vehicles_mapping.get("fallback_strategy", {}).get(vehicle_type):
-            fallback = self.vehicles_mapping["fallback_strategy"][vehicle_type]
-            
-            if "priority_order" in fallback:
-                alternatives.extend(fallback["priority_order"])
-            
-            if "if_unavailable" in fallback:
-                for alt_type in fallback["if_unavailable"]:
-                    alt_vehicles = self._map_requirement_to_vehicles(alt_type)
-                    alternatives.extend(alt_vehicles)
+        # D'abord chercher dans le vehicle_mapping (priorité aux primary puis secondary)
+        vehicle_mapping = self.vehicles_mapping.get('vehicle_mapping', {})
+        found_in_mapping = False
         
-        # Supprimer le véhicule original et les doublons
-        alternatives = [alt for alt in alternatives if alt != vehicle_type]
+        # Parcourir toutes les catégories (fire_rescue, medical, police, etc.)
+        for category_name, category_mapping in vehicle_mapping.items():
+            if vehicle_type in category_mapping:
+                mapping_info = category_mapping[vehicle_type]
+                
+                # Ajouter d'abord les véhicules primary
+                primary_vehicles = mapping_info.get('primary', [])
+                alternatives.extend(primary_vehicles)
+                
+                # Puis les véhicules secondary
+                secondary_vehicles = mapping_info.get('secondary', [])
+                alternatives.extend(secondary_vehicles)
+                
+                found_in_mapping = True
+                logger.debug(f"Alternatives pour {vehicle_type}: primary={primary_vehicles}, secondary={secondary_vehicles}")
+                break
+        
+        # Si pas trouvé dans vehicle_mapping, chercher dans fallback_strategy (compatibilité)
+        if not found_in_mapping:
+            fallback_strategy = self.vehicles_mapping.get("fallback_strategy", {})
+            if vehicle_type in fallback_strategy:
+                fallback = fallback_strategy[vehicle_type]
+                
+                if "priority_order" in fallback:
+                    alternatives.extend(fallback["priority_order"])
+                
+                if "if_unavailable" in fallback:
+                    for alt_type in fallback["if_unavailable"]:
+                        alt_vehicles = self._map_requirement_to_vehicles(alt_type)
+                        alternatives.extend(alt_vehicles)
+        
+        # Supprimer les doublons en gardant l'ordre de priorité
         seen = set()
         unique_alternatives = []
         for alt in alternatives:

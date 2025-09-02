@@ -196,6 +196,79 @@ async def analyze_single_mission(bot: OperateurBot, mission_id: str):
             logger.exception("Détails de l'erreur:")
 
 
+async def test_mission_scraping(bot: OperateurBot, mission_id: str):
+    """Test le scraping complet d'une mission spécifique (patients, exigences, etc.)"""
+    
+    logger.info(f"🧪 Test complet du scraping pour la mission {mission_id}...")
+    
+    try:
+        page = bot.browser_manager.page
+        mission_scraper = MissionScraper(page)
+        
+        # Récupérer les détails complets de la mission
+        details = await mission_scraper.get_mission_details(mission_id)
+        
+        if details:
+            logger.info("✅ Détails de mission récupérés avec succès!")
+            
+            # Afficher les patients
+            patients = details.get('patients', [])
+            logger.info(f"👥 Patients trouvés: {len(patients)}")
+            if patients:
+                ambulance_patients = 0
+                for i, patient in enumerate(patients):
+                    needs_str = ", ".join([need.value for need in patient.needs])
+                    logger.info(f"  Patient {i+1}: {patient.severity.value}, besoins: {needs_str}")
+                    # Compter les patients ayant besoin d'ambulances
+                    for need in patient.needs:
+                        if "AMBULANCE" in need.value.upper():
+                            ambulance_patients += 1
+                            break
+                logger.info(f"  → {ambulance_patients} patients nécessitent des ambulances")
+            
+            # Afficher les exigences
+            requirements = details.get('requirements', [])
+            logger.info(f"📋 Exigences trouvées: {len(requirements)}")
+            ambulance_requirements = 0
+            for req in requirements[:10]:  # Limiter à 10 exemples
+                logger.info(f"  → {req.quantity}x {req.vehicle_type}")
+                # Compter les exigences d'ambulances
+                if "AMBULANCE" in req.vehicle_type.upper() or "Ambulance" in req.vehicle_type:
+                    ambulance_requirements += req.quantity
+            
+            # Résumé de la logique attendue
+            if patients:
+                logger.info(f"🧮 Logique attendue:")
+                logger.info(f"  • Patients: {len(patients)} (nécessitant {ambulance_patients} ambulances)")
+                logger.info(f"  • Exigences: {ambulance_requirements} ambulances depuis conditions")
+                total_expected = max(ambulance_patients, ambulance_requirements)
+                logger.info(f"  • Total attendu: {total_expected} ambulances (VSAV/ASSU/SMUR(A) prioritaires)")
+            
+            # Afficher les crédits
+            credits = details.get('credits')
+            if credits:
+                logger.info(f"💰 Crédits estimés: {credits}")
+            
+            # Test de l'analyse des conditions aussi
+            logger.info("🔍 Test de l'analyse des conditions...")
+            analysis_result = await mission_scraper.analyze_mission_conditions(mission_id)
+            
+            if analysis_result:
+                new_patterns = len(analysis_result.get('new_patterns', []))
+                vehicle_mentions = len(analysis_result.get('vehicle_mentions', []))
+                logger.info(f"📊 Analyse terminée: {new_patterns} patterns, {vehicle_mentions} véhicules")
+            else:
+                logger.warning("⚠️  Impossible d'analyser les conditions")
+                
+        else:
+            logger.error(f"❌ Impossible de récupérer les détails de la mission {mission_id}")
+            
+    except Exception as e:
+        logger.error(f"❌ Erreur lors du test: {e}")
+        if bot.settings.log_level == "DEBUG":
+            logger.exception("Détails de l'erreur:")
+
+
 def create_parser():
     """Crée le parseur d'arguments en ligne de commande"""
     
@@ -211,6 +284,7 @@ Exemples d'utilisation:
   python main.py --status                        # Afficher le statut
   python main.py --analyze-conditions            # Analyser les conditions de missions
   python main.py --analyze-mission 12345         # Analyser une mission spécifique
+  python main.py --test-mission 12345            # Tester le scraping complet d'une mission
         """
     )
     
@@ -230,6 +304,8 @@ Exemples d'utilisation:
                              help="Analyser les conditions des missions pour enrichir la base de connaissances")
     action_group.add_argument("--analyze-mission", metavar="ID",
                              help="Analyser les conditions d'une mission spécifique")
+    action_group.add_argument("--test-mission", metavar="ID",
+                             help="Tester le scraping complet d'une mission spécifique (patients, exigences)")
     
     # Options
     parser.add_argument("--strategy", choices=["balanced", "smart", "minimum", "optimal"],
@@ -316,6 +392,9 @@ async def main():
             
             elif getattr(args, 'analyze_mission', None):
                 await analyze_single_mission(bot, args.analyze_mission)
+            
+            elif getattr(args, 'test_mission', None):
+                await test_mission_scraping(bot, args.test_mission)
         
         logger.info("✅ Terminé")
         return 0

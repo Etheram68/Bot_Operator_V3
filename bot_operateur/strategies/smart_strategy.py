@@ -92,21 +92,34 @@ class SmartStrategy(BaseStrategy):
                 # Pas d'alternatives ou qu'une seule option
                 needs[vehicle_type] = quantity
         
-        # Ajouter les ambulances pour les patients
+        # Ajouter les ambulances pour les patients (si pas déjà comptées dans les requirements)
         if mission.patient_count > 0:
-            # Utiliser le système d'alternatives pour les ambulances aussi
-            vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
-            fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
-            ambulance_alternatives = fire_rescue_mapping.get("AMBULANCE", {})
+            # Vérifier si on a déjà des exigences d'ambulances
+            current_ambulances = (
+                needs.get("AMBULANCE", 0) + 
+                needs.get("Ambulance", 0) + 
+                needs.get("ambulance", 0)
+            )
             
-            if ambulance_alternatives:
-                # On compte les besoins pour "AMBULANCE" (qui sera résolu en VSAV/ASSU/etc)
-                ambulance_needed = max(needs.get("AMBULANCE", 0), mission.patient_count)
-                needs["AMBULANCE"] = ambulance_needed
+            # Si on n'a pas assez d'ambulances pour les patients, en ajouter
+            if current_ambulances < mission.patient_count:
+                ambulances_needed = mission.patient_count - current_ambulances
+                
+                # Utiliser le système d'alternatives pour les ambulances
+                vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
+                fire_rescue_mapping = vehicle_mapping.get('fire_rescue', {})
+                ambulance_alternatives = fire_rescue_mapping.get("AMBULANCE", {})
+                
+                if ambulance_alternatives:
+                    # Utiliser le type générique "AMBULANCE" qui sera résolu en VSAV/ASSU/SMUR(A)
+                    needs["AMBULANCE"] = needs.get("AMBULANCE", 0) + ambulances_needed
+                    logger.debug(f"Ajout de {ambulances_needed} ambulances pour {mission.patient_count} patients")
+                else:
+                    # Fallback : utiliser le type générique
+                    needs["AMBULANCE"] = needs.get("AMBULANCE", 0) + ambulances_needed
+                    logger.debug(f"Fallback: ajout de {ambulances_needed} ambulances génériques")
             else:
-                # Fallback si pas de mapping
-                ambulance_needed = max(needs.get("Ambulance", 0), mission.patient_count)
-                needs["Ambulance"] = ambulance_needed
+                logger.debug(f"Suffisamment d'ambulances: {current_ambulances} >= {mission.patient_count}")
         
         # CORRECTION: Éliminer les doublons causés par les alternatives redondantes
         needs = self._eliminate_redundant_alternatives(needs)
@@ -256,16 +269,21 @@ class SmartStrategy(BaseStrategy):
         selected = []
         remaining_needed = needed_count
         
-        # D'abord essayer le type principal
-        primary_vehicles = vehicles_by_type.get(primary_type, [])
-        available_primary = min(len(primary_vehicles), remaining_needed)
+        # Pour les types génériques comme AMBULANCE, utiliser directement les alternatives
+        if primary_type in ["AMBULANCE", "Ambulance"] and alternatives:
+            self.logger.debug(f"Type générique {primary_type} - utilisation directe des alternatives: {alternatives}")
+            # Ne pas essayer le type générique, aller directement aux alternatives
+        else:
+            # Pour les types spécifiques, essayer d'abord le type principal
+            primary_vehicles = vehicles_by_type.get(primary_type, [])
+            available_primary = min(len(primary_vehicles), remaining_needed)
+            
+            if available_primary > 0:
+                selected.extend(primary_vehicles[:available_primary])
+                remaining_needed -= available_primary
+                self.logger.debug(f"Sélectionné {available_primary} {primary_type} (primaire)")
         
-        if available_primary > 0:
-            selected.extend(primary_vehicles[:available_primary])
-            remaining_needed -= available_primary
-            self.logger.debug(f"Sélectionné {available_primary} {primary_type} (primaire)")
-        
-        # Si pas assez, utiliser les alternatives dans l'ordre de priorité
+        # Utiliser les alternatives dans l'ordre de priorité
         for alt_type in alternatives:
             if remaining_needed <= 0:
                 break
@@ -276,7 +294,7 @@ class SmartStrategy(BaseStrategy):
             if available_alt > 0:
                 selected.extend(alt_vehicles[:available_alt])
                 remaining_needed -= available_alt
-                self.logger.debug(f"Sélectionné {available_alt} {alt_type} (alternative à {primary_type})")
+                self.logger.debug(f"Sélectionné {available_alt} {alt_type} (alternative pour {primary_type})")
         
         # Avertir si pas assez de véhicules trouvés
         if remaining_needed > 0:

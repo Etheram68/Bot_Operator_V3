@@ -141,20 +141,23 @@ class MissionScraper:
                 logger.info(f"Mission {mission_id} déjà accomplie - ignorée")
                 return None
 
+            # Scraper les patients depuis la page de mission principale
+            patients = await self._scrape_patients()
+
             # Récupération dynamique du href du bouton "Conditions"
             help_href = await self.page.get_attribute("#mission_help", "href")
             if not help_href:
                 logger.error(f"Aucun lien 'Conditions' trouvé pour la mission {mission_id}")
                 return None
 
-            # Construction de l’URL complète
+            # Construction de l'URL complète
             help_url = f"https://www.operateur112.fr{help_href}"
             logger.debug(f"URL des conditions: {help_url}")
             await self.page.goto(help_url)
             await self.page.wait_for_load_state('networkidle')
             
             details = {
-                'patients': await self._scrape_patients_from_help_page(),
+                'patients': patients,
                 'requirements': await self._scrape_requirements_from_current_page(),
                 'credits': await self._scrape_credits()
             }
@@ -170,34 +173,58 @@ class MissionScraper:
         patients = []
         
         try:
-            # Vérifier s'il y a des patients
-            patient_form = await self.page.query_selector("#patient_button_form")
-            if not patient_form:
-                return patients
+            # Vérifier s'il y a une vue complète des patients (patient_full_view)
+            patient_full_view = await self.page.query_selector("#patient_full_view")
             
-            # Compter les patients
-            patient_count_text = await patient_form.inner_text()
-            patient_count = self._extract_number_from_text(patient_count_text)
+            if patient_full_view:
+                logger.debug("Vue complète des patients détectée")
+                # Récupérer les détails des patients depuis la vue complète
+                patient_elements = await patient_full_view.query_selector_all(".mission_patient")
+                logger.debug(f"Trouvé {len(patient_elements)} éléments de patients")
+                
+                for i, element in enumerate(patient_elements):
+                    try:
+                        patient = await self._extract_patient_from_element(element, str(i))
+                        if patient:
+                            patients.append(patient)
+                            logger.debug(f"Patient {i} extrait avec besoins: {[need.value for need in patient.needs]}")
+                    except Exception as e:
+                        logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
             
-            # Récupérer les détails des patients
-            patient_elements = await self.page.query_selector_all(".mission_patient")
+            else:
+                # Fallback : vérifier s'il y a un formulaire de patients
+                patient_form = await self.page.query_selector("#patient_button_form")
+                if patient_form:
+                    logger.debug("Formulaire de patients détecté")
+                    # Compter les patients
+                    patient_count_text = await patient_form.inner_text()
+                    patient_count = self._extract_number_from_text(patient_count_text)
+                    logger.debug(f"Nombre de patients détecté: {patient_count}")
+                    
+                    # Récupérer les détails des patients depuis n'importe où sur la page
+                    patient_elements = await self.page.query_selector_all(".mission_patient")
+                    
+                    for i, element in enumerate(patient_elements):
+                        try:
+                            patient = await self._extract_patient_from_element(element, str(i))
+                            if patient:
+                                patients.append(patient)
+                        except Exception as e:
+                            logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
+                    
+                    # Si pas de détails mais on a un compte, créer des patients génériques
+                    if not patients and patient_count > 0:
+                        logger.debug(f"Création de {patient_count} patients génériques")
+                        for i in range(patient_count):
+                            patients.append(Patient(
+                                id=str(i),
+                                severity=PatientSeverity.MODERATE,
+                                needs=[PatientNeed.AMBULANCE]
+                            ))
+                else:
+                    logger.debug("Aucun patient détecté sur cette mission")
             
-            for i, element in enumerate(patient_elements):
-                try:
-                    patient = await self._extract_patient_from_element(element, str(i))
-                    if patient:
-                        patients.append(patient)
-                except Exception as e:
-                    logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
-            
-            # Si pas de détails mais on a un compte, créer des patients génériques
-            if not patients and patient_count > 0:
-                for i in range(patient_count):
-                    patients.append(Patient(
-                        id=str(i),
-                        severity=PatientSeverity.MODERATE,
-                        needs=[PatientNeed.AMBULANCE]
-                    ))
+            logger.info(f"Total de {len(patients)} patients extraits")
             
         except Exception as e:
             logger.error(f"Erreur lors du scraping des patients: {e}")
@@ -303,7 +330,13 @@ class MissionScraper:
             for alert in alert_elements:
                 alert_text = await alert.inner_text()
                 if "Il nous faut" in alert_text:
-                    need_text = alert_text.replace("Il nous faut : ", "").strip()
+                    # Gérer les différents formats possibles avec espaces normaux ou insécables
+                    need_text = alert_text
+                    # Supprimer les variations de "Il nous faut" avec différents espaces
+                    need_text = re.sub(r'Il\s+nous\s+faut\s*[:：]\s*', '', need_text, flags=re.IGNORECASE)
+                    need_text = need_text.strip()
+                    
+                    logger.debug(f"Texte de besoin extrait: '{need_text}'")
                     need = self._parse_patient_need(need_text)
                     if need:
                         needs.append(need)
@@ -325,15 +358,20 @@ class MissionScraper:
     def _parse_patient_need(self, need_text: str) -> Optional[PatientNeed]:
         """Parse le texte d'un besoin patient vers un PatientNeed"""
         need_mapping = {
-            "Ambulance": PatientNeed.AMBULANCE,
-            "Hélicoptère": PatientNeed.HELICOPTER,
-            "Directeur des secours": PatientNeed.RESCUE_DIRECTOR,
-            "Soins intensifs": PatientNeed.INTENSIVE_CARE,
-            "Unité grands brûlés": PatientNeed.BURN_UNIT,
-            "Pédiatrie": PatientNeed.PEDIATRIC
+            "ambulance": PatientNeed.AMBULANCE,
+            "hélicoptère": PatientNeed.HELICOPTER,
+            "helicoptere": PatientNeed.HELICOPTER,
+            "directeur des secours": PatientNeed.RESCUE_DIRECTOR,
+            "soins intensifs": PatientNeed.INTENSIVE_CARE,
+            "unité grands brûlés": PatientNeed.BURN_UNIT,
+            "unite grands brules": PatientNeed.BURN_UNIT,
+            "pédiatrie": PatientNeed.PEDIATRIC,
+            "pediatrie": PatientNeed.PEDIATRIC
         }
         
-        return need_mapping.get(need_text)
+        # Recherche insensible à la casse
+        need_text_lower = need_text.lower().strip()
+        return need_mapping.get(need_text_lower)
     
     async def _scrape_requirements_from_current_page(self) -> List[MissionRequirement]:
         """Scrape les exigences depuis la page courante avec parser intelligent"""

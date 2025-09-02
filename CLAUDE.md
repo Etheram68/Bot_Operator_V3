@@ -33,6 +33,7 @@ python main.py --status          # Show bot status
 python main.py --analyze-conditions                    # Analyze conditions of available missions
 python main.py --analyze-conditions --max-analyze 10   # Analyze up to 10 missions
 python main.py --analyze-mission 12345                 # Analyze conditions of specific mission
+python main.py --test-mission 12345                    # Test complete mission scraping (patients, requirements)
 
 # Debug mode (with browser UI)
 python main.py --list --no-headless --debug
