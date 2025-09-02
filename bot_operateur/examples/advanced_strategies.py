@@ -161,7 +161,7 @@ async def strategy_comparison_example():
                 
                 try:
                     # Récupérer les véhicules disponibles
-                    vehicles = await bot.mission_manager.vehicle_scraper.get_available_vehicles_for_mission(mission.id)
+                    vehicles = await bot.mission_manager.vehicle_scraper.get_available_vehicles_for_mission(mission)
                     
                     if not vehicles:
                         print("  ❌ Aucun véhicule disponible")

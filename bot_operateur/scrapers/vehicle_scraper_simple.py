@@ -2,7 +2,7 @@ from typing import List, Optional, Dict
 from playwright.async_api import Page
 from loguru import logger
 
-from ..models.mission import Mission
+from ..models.mission import Mission, MissionType
 from ..utils.dom_utils import DOMUtils
 
 
@@ -12,6 +12,13 @@ class SimpleVehicleScraper:
     def __init__(self, page: Page):
         self.page = page
         self.dom_utils = DOMUtils(page)
+    
+    def _get_vehicle_table_selector(self, mission_type: MissionType) -> str:
+        """Retourne le bon sélecteur de tableau selon le type de mission"""
+        if mission_type == MissionType.TRANSPORT:
+            return "#vehicle_show_table_body_rett"
+        else:
+            return "#vehicle_show_table_all"
     
     async def select_and_deploy_vehicles_for_mission(self, mission: Mission) -> bool:
         """Sélectionne et déploie directement les véhicules selon les exigences"""
@@ -28,7 +35,7 @@ class SimpleVehicleScraper:
             vehicle_needs = self._calculate_vehicle_needs(mission)
             
             # Sélectionner les véhicules directement dans le tableau
-            selected_count = await self._select_vehicles_by_type(vehicle_needs)
+            selected_count = await self._select_vehicles_by_type(vehicle_needs, mission.type)
             
             if selected_count == 0:
                 logger.warning(f"Aucun véhicule sélectionné pour mission {mission.id}")
@@ -117,17 +124,18 @@ class SimpleVehicleScraper:
         logger.debug(f"Besoins calculés: {needs}")
         return needs
     
-    async def _select_vehicles_by_type(self, vehicle_needs: Dict[str, int]) -> int:
+    async def _select_vehicles_by_type(self, vehicle_needs: Dict[str, int], mission_type: MissionType) -> int:
         """Sélectionne les véhicules directement dans le tableau par type"""
         total_selected = 0
         
         # Attendre que le tableau soit chargé
-        if not await self.dom_utils.wait_for_selector("#vehicle_show_table_all", timeout=10000):
+        table_selector = self._get_vehicle_table_selector(mission_type)
+        if not await self.dom_utils.wait_for_selector(table_selector, timeout=10000):
             logger.error("Tableau des véhicules non trouvé")
             return 0
         
         # Récupérer toutes les lignes de véhicules (dans l'ordre de proximité)
-        vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+        vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")
         
         if not vehicle_rows:
             logger.warning("Aucune ligne de véhicule trouvée")
@@ -235,7 +243,9 @@ class SimpleVehicleScraper:
             
             await self._load_all_vehicles()
             
-            vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+            # Pour les méthodes de debug/preview, utiliser le sélecteur par défaut
+            table_selector = self._get_vehicle_table_selector(MissionType.NORMAL)
+            vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")
             
             for row in vehicle_rows:
                 try:

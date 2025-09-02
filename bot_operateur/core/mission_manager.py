@@ -98,7 +98,7 @@ class MissionManager:
                 return False
             
             # Récupérer les véhicules disponibles
-            available_vehicles = await self.vehicle_scraper.get_available_vehicles_for_mission(mission.id)
+            available_vehicles = await self.vehicle_scraper.get_available_vehicles_for_mission(mission)
             
             if not available_vehicles:
                 logger.warning(f"Aucun véhicule disponible pour mission {mission.id}")
@@ -202,7 +202,7 @@ class MissionManager:
                     logger.debug(f"Ajouté catégorie {category_name}: {len(category_mapping)} types au mapping des alternatives")
             
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
-            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping)
+            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type)
             
             if selected_count == 0:
                 logger.warning(f"Aucun véhicule sélectionné pour mission {mission.id}")

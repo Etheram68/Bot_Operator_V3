@@ -46,7 +46,7 @@ async def test_mission_url_fix():
             
             # Tester la récupération des véhicules (utilise aussi le bon URL)
             print("\n🚗 Test de récupération des véhicules...")
-            vehicles = await bot.mission_manager.vehicle_scraper.get_available_vehicles_for_mission(test_mission.id)
+            vehicles = await bot.mission_manager.vehicle_scraper.get_available_vehicles_for_mission(detailed_mission)
             
             print(f"✅ Trouvé {len(vehicles)} véhicules disponibles")
             

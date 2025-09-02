@@ -4,6 +4,7 @@ from playwright.async_api import Page
 from loguru import logger
 
 from ..models.vehicle import Vehicle, VehicleStatus
+from ..models.mission import Mission, MissionType
 from ..utils.dom_utils import DOMUtils
 
 
@@ -14,25 +15,32 @@ class VehicleScraper:
         self.page = page
         self.dom_utils = DOMUtils(page)
     
-    async def get_available_vehicles_for_mission(self, mission_id: str) -> List[Vehicle]:
+    def _get_vehicle_table_selector(self, mission_type: MissionType) -> str:
+        """Retourne le bon sélecteur de tableau selon le type de mission"""
+        if mission_type == MissionType.TRANSPORT:
+            return "#vehicle_show_table_body_rett"
+        else:
+            return "#vehicle_show_table_all"
+    
+    async def get_available_vehicles_for_mission(self, mission: Mission) -> List[Vehicle]:
         """Récupère tous les véhicules disponibles pour une mission"""
         vehicles = []
         
         try:
             # Aller sur la page de mission
-            mission_url = f"https://www.operateur112.fr/missions/{mission_id}"
+            mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.page.goto(mission_url)
             await self.page.wait_for_load_state('networkidle')
 
             # Récupérer dynamiquement le lien "Conditions"
             help_button = await self.page.query_selector("#mission_help")
             if not help_button:
-                logger.warning(f"Bouton 'Conditions' non trouvé pour la mission {mission_id}")
+                logger.warning(f"Bouton 'Conditions' non trouvé pour la mission {mission.id}")
                 return vehicles
 
             help_href = await help_button.get_attribute("href")
             if not help_href:
-                logger.warning(f"URL 'Conditions' introuvable pour mission {mission_id}")
+                logger.warning(f"URL 'Conditions' introuvable pour mission {mission.id}")
                 return vehicles
 
             help_url = f"https://www.operateur112.fr{help_href}"
@@ -48,19 +56,20 @@ class VehicleScraper:
                     await self.page.goto(f"https://www.operateur112.fr{mission_url}")
                     await self.page.wait_for_load_state('networkidle')
                 else:
-                    logger.warning(f"URL de retour à la mission non trouvée pour {mission_id}")
+                    logger.warning(f"URL de retour à la mission non trouvée pour {mission.id}")
                     return vehicles
             else:
-                logger.warning(f"Bouton 'Afficher la mission' non trouvé pour {mission_id}")
+                logger.warning(f"Bouton 'Afficher la mission' non trouvé pour {mission.id}")
                 return vehicles
             
             # Attendre que la liste des véhicules soit chargée (sans charger tous les véhicules)
-            await self.page.wait_for_selector("#vehicle_show_table_all", timeout=10000)
+            table_selector = self._get_vehicle_table_selector(mission.type)
+            await self.page.wait_for_selector(table_selector, timeout=10000)
             
             # Récupérer les véhicules visibles (les plus proches sont déjà affichés)
-            vehicles = await self._scrape_closest_vehicles_from_table()
+            vehicles = await self._scrape_closest_vehicles_from_table(table_selector)
             
-            logger.info(f"Trouvé {len(vehicles)} véhicules proches pour la mission {mission_id}")
+            logger.info(f"Trouvé {len(vehicles)} véhicules proches pour la mission {mission.id}")
             
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des véhicules: {e}")
@@ -106,13 +115,13 @@ class VehicleScraper:
         
         return vehicles
     
-    async def _scrape_closest_vehicles_from_table(self) -> List[Vehicle]:
+    async def _scrape_closest_vehicles_from_table(self, table_selector: str) -> List[Vehicle]:
         """Scrape uniquement les véhicules visibles (les plus proches) sans charger tous les véhicules"""
         vehicles = []
         
         try:
             # Récupérer les lignes de véhicules visibles (les plus proches sont affichés en premier)
-            vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+            vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")
             
             logger.debug(f"Récupération de {len(vehicle_rows)} véhicules visibles (les plus proches)")
             
@@ -315,7 +324,7 @@ class VehicleScraper:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
     
-    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None) -> int:
+    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None) -> int:
         """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives"""
         total_selected = 0
         
@@ -332,10 +341,11 @@ class VehicleScraper:
                 return 0
             
             # Attendre que le tableau soit visible
-            await self.page.wait_for_selector("#vehicle_show_table_all", timeout=10000)
+            table_selector = self._get_vehicle_table_selector(mission_type or MissionType.NORMAL)
+            await self.page.wait_for_selector(table_selector, timeout=10000)
             
             # Récupérer les lignes de véhicules visibles (triées par proximité)
-            vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+            vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")
             
             if not vehicle_rows:
                 logger.warning("Aucune ligne de véhicule trouvée")
@@ -420,7 +430,7 @@ class VehicleScraper:
             # Si des besoins ne sont pas satisfaits, essayer de charger plus de véhicules
             if unsatisfied_needs and total_selected > 0:  # Seulement si on a déjà trouvé quelque chose
                 logger.warning(f"⚠️ Besoins non satisfaits: {unsatisfied_needs}. Tentative de chargement de véhicules supplémentaires...")
-                additional_selected = await self._load_and_select_additional_vehicles(unsatisfied_needs, alternatives_mapping)
+                additional_selected = await self._load_and_select_additional_vehicles(unsatisfied_needs, alternatives_mapping, table_selector)
                 total_selected += additional_selected
                 
                 # Mettre à jour les compteurs
@@ -627,7 +637,7 @@ class VehicleScraper:
         
         return None
     
-    async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, alternatives_mapping: dict = None) -> int:
+    async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, alternatives_mapping: dict = None, table_selector: str = None) -> int:
         """Charge tous les véhicules et sélectionne ceux manquants"""
         additional_selected = 0
         
@@ -641,7 +651,8 @@ class VehicleScraper:
             await self.page.wait_for_load_state('networkidle')
             
             # Récupérer toutes les lignes (maintenant avec plus de véhicules)
-            all_vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+            final_table_selector = table_selector or "#vehicle_show_table_all"
+            all_vehicle_rows = await self.page.query_selector_all(f"{final_table_selector} tr[id^='vehicle_element_content_']")
             logger.info(f"🔍 {len(all_vehicle_rows)} véhicules au total disponibles")
             
             # Sélectionner les véhicules manquants (sans exclusion par ID, la logique est maintenant dans les besoins ajustés)
