@@ -21,6 +21,3 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
-
-# Build directories and files
-data/
