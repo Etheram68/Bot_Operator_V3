@@ -56,6 +56,29 @@
       "DRAGON": {
         "primary": ["Dragon", "HéliSMUR"],
         "secondary": []
+      },
+      "HELICOPTER": {
+        "primary": ["Dragon", "HéliSMUR"],
+        "secondary": []
+      },
+      "RESCUE_DIRECTOR": {
+        "primary": ["PC"],
+        "secondary": []
+      },
+      "INTENSIVE_CARE": {
+        "primary": ["VSAV", "ASSU", "SMUR(A)"],
+        "secondary": ["Ambulance"],
+        "transport_capable": ["ASSU", "SMUR(A)"]
+      },
+      "BURN_UNIT": {
+        "primary": ["VSAV", "ASSU", "SMUR(A)"],
+        "secondary": ["Ambulance"],
+        "transport_capable": ["ASSU", "SMUR(A)"]
+      },
+      "PEDIATRIC": {
+        "primary": ["VSAV", "ASSU", "SMUR(A)"],
+        "secondary": ["Ambulance"],
+        "transport_capable": ["ASSU", "SMUR(A)"]
       }
     },
 

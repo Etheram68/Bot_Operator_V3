@@ -46,7 +46,12 @@
     "FPT_SR_BEA": ["[Ff]ourgons?.{0,30}secours.{0,30}échelles?", "pompiers?.{0,40}aériens?"],
     "VR": ["VR", "véhicules? radios?"],
     "WATER_REQUIRED": ["Eau nécessaire", "eau requise", "litres? d'eau"],
-    "MIN_PUMP_CAPACITY": ["Min\\. Capacité de la pompe", "Capacité minimum.{0,10}pompe", "capacité pompe minimum"]
+    "MIN_PUMP_CAPACITY": ["Min\\. Capacité de la pompe", "Capacité minimum.{0,10}pompe", "capacité pompe minimum"],
+    "INTENSIVE_CARE": ["Soins intensifs", "réanimation", "intensive care"],
+    "BURN_UNIT": ["Unité grands brûlés", "grands brûlés", "burn unit", "brûlé", "brule"],
+    "PEDIATRIC": ["Pédiatrie", "pediatrie", "enfant", "enfants"],
+    "HELICOPTER": ["Hélicoptère", "helicoptere", "dragon", "samu"],
+    "RESCUE_DIRECTOR": ["Directeur des secours", "directeur secours", "chef intervention"]
   },
 
   "resource_indicators": {

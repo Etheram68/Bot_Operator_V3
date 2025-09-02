@@ -120,9 +120,18 @@ def test_patient_logic():
     print(f"    - Priorité transport: {critical_patient.get_transport_priority()}")
     
     # Test des besoins en véhicules
+    need_to_vehicle_mapping = {
+        "AMBULANCE": "Ambulance",
+        "HELICOPTER": "Hélicoptère", 
+        "RESCUE_DIRECTOR": "Directeur des secours",
+        "INTENSIVE_CARE": "Ambulance",
+        "BURN_UNIT": "Ambulance",
+        "PEDIATRIC": "Ambulance"
+    }
+    
     for need in critical_patient.needs:
-        required_vehicle = need.get_required_vehicle()
-        print(f"    - Besoin '{need.value}' → Véhicule: {required_vehicle}")
+        required_vehicle = need_to_vehicle_mapping.get(need, "Inconnu")
+        print(f"    - Besoin '{need}' → Véhicule: {required_vehicle}")
 
 
 def test_vehicle_logic():

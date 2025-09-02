@@ -187,7 +187,7 @@ class MissionScraper:
                         patient = await self._extract_patient_from_element(element, str(i))
                         if patient:
                             patients.append(patient)
-                            logger.debug(f"Patient {i} extrait avec besoins: {[need.value for need in patient.needs]}")
+                            logger.debug(f"Patient {i} extrait avec besoins: {patient.needs}")
                     except Exception as e:
                         logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
             
