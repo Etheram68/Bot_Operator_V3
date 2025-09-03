@@ -1,4 +1,5 @@
 import re
+import json
 from typing import List, Optional, Dict
 from playwright.async_api import Page
 from loguru import logger
@@ -82,28 +83,42 @@ class MissionScraper:
                 
             mission_id = heading_id.replace("mission_panel_heading_", "")
             
-            # Extraire le titre
-            title_element = await element.query_selector("[search_attribute]")
-            title = ""
-            if title_element:
-                title = await title_element.get_attribute("search_attribute") or ""
+            # Récupérer l'élément parent qui contient tous les attributs nécessaires
+            parent_element = await element.evaluate_handle("(el) => el.closest('[data-sortable-by]')")
+            if not parent_element:
+                logger.warning(f"Pas d'élément parent avec data-sortable-by trouvé pour mission {mission_id}")
+                return None
             
-            # Extraire le lieu du titre
-            location = self._extract_location_from_title(title)
+            # Extraire tous les attributs nécessaires
+            sortable_data_raw = await parent_element.get_attribute("data-sortable-by")
+            search_attribute = await parent_element.get_attribute("search_attribute")
+            mission_type_id = await parent_element.get_attribute("mission_type_id")
             
-            # Chercher le bouton de déploiement
-            deploy_button = await element.query_selector(f"a[href='/missions/{mission_id}']")
-            deploy_url = None
-            if deploy_button:
-                deploy_url = await deploy_button.get_attribute("href")
+            if not sortable_data_raw:
+                logger.warning(f"Pas de data-sortable-by trouvé pour mission {mission_id}")
+                return None
             
-            # Chercher le lien "Conditions à remplir"
-            help_button = await element.query_selector("a#mission_help")
+            # Décoder le JSON (échappé HTML)
+            sortable_data_raw = sortable_data_raw.replace("&quot;", '"')
+            sortable_data = json.loads(sortable_data_raw)
+            
+            # Extraire les informations du JSON
+            title = sortable_data.get("caption", "")
+            credits = sortable_data.get("average_credits", 0)
+            prisoners_count_range = sortable_data.get("prisoners_count", [0, 0])
+            
+            prisoner_count = max(prisoners_count_range) if prisoners_count_range else 0
+            
+            # Extraire la localisation depuis search_attribute
+            location = self._extract_location_from_search_attribute(search_attribute, title)
+            
+            # Construire les URLs directement avec les informations disponibles
+            deploy_url = f"/missions/{mission_id}"
+            
+            # Construire l'URL des conditions avec mission_type_id et mission_id
             help_url = None
-            if help_button:
-                help_href = await help_button.get_attribute("href")
-                if help_href:
-                    help_url = f"https://www.operateur112.fr{help_href}"
+            if mission_type_id:
+                help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?mission_id={mission_id}"
             
             mission = Mission(
                 id=mission_id,
@@ -111,10 +126,11 @@ class MissionScraper:
                 type=mission_type,
                 location=location,
                 deploy_url=deploy_url,
-                help_url=help_url
+                help_url=help_url,
+                credits=credits,
+                max_prisoners=prisoner_count
             )
-            
-            logger.debug(f"Mission extraite: {mission.id} - {mission.title}")
+            logger.debug(f"Mission extraite: {mission.id} - {mission.title} - {credits} crédits - {prisoner_count} prisonniers")
             return mission
             
         except Exception as e:
@@ -122,13 +138,28 @@ class MissionScraper:
             return None
     
     def _extract_location_from_title(self, title: str) -> Optional[str]:
-        """Extrait la localisation du titre de la mission"""
+        """Extrait la localisation du titre de la mission (méthode legacy)"""
         # Pattern pour extraire le code postal et la ville
         pattern = r'(\d{5}\s+[A-Za-zÀ-ÿ\s-]+)$'
         match = re.search(pattern, title)
         return match.group(1) if match else None
     
-    async def get_mission_details(self, mission_id: str) -> Optional[Dict]:
+    def _extract_location_from_search_attribute(self, search_attribute: str, caption: str) -> Optional[str]:
+        """Extrait la localisation en soustrayant le caption du search_attribute"""
+        if not search_attribute or not caption:
+            return None
+        
+        # Retirer le caption du début de search_attribute pour obtenir la localisation
+        # Ex: "Feu de chambre 84 Rue de Mulhouse, 68350 Brunstatt-Didenheim" - "Feu de chambre" = "84 Rue de Mulhouse, 68350 Brunstatt-Didenheim"
+        location = search_attribute.replace(caption, "").strip()
+        
+        # Nettoyer les espaces en début/fin et les caractères inutiles
+        location = re.sub(r'^[,\s\-]+', '', location)  # Enlever virgules/espaces/tirets en début
+        location = re.sub(r'[,\s\-]+$', '', location)  # Enlever virgules/espaces/tirets en fin
+        
+        return location if location else None
+    
+    async def get_mission_details(self, mission_id: str, help_url: str = None) -> Optional[Dict]:
         """Récupère les détails complets d'une mission depuis la page des conditions"""
         # help_url = f"https://www.operateur112.fr/einsaetze/393?mission_id={mission_id}"
 
@@ -154,15 +185,16 @@ class MissionScraper:
             # Scraper les patients depuis la page de mission principale
             patients = await self._scrape_patients()
 
-            # Récupération dynamique du href du bouton "Conditions"
-            help_href = await self.page.get_attribute("#mission_help", "href")
-            if not help_href:
-                logger.error(f"Aucun lien 'Conditions' trouvé pour la mission {mission_id}")
-                return None
+            # Utiliser l'help_url fourni ou construire par défaut
+            if not help_url:
+                # Fallback : récupération dynamique si help_url non fourni
+                help_href = await self.page.get_attribute("#mission_help", "href")
+                if not help_href:
+                    logger.error(f"Aucun lien 'Conditions' trouvé pour la mission {mission_id}")
+                    return None
+                help_url = f"https://www.operateur112.fr{help_href}"
 
-            # Construction de l'URL complète
-            help_url = f"https://www.operateur112.fr{help_href}"
-            logger.debug(f"URL des conditions: {help_url}")
+            logger.debug(f"Navigation vers les conditions: {help_url}")
             await self.page.goto(help_url)
             await self.page.wait_for_load_state('networkidle')
             
@@ -176,7 +208,7 @@ class MissionScraper:
             details = {
                 'patients': patients,
                 'requirements': await self._scrape_requirements_from_current_page(),
-                'credits': await self._scrape_credits(),
+                'credits': None,  # Les crédits sont déjà récupérés dans _extract_mission_from_element
                 'title': title_complete  # Titre complet récupéré depuis la page de mission
             }
             
@@ -445,23 +477,6 @@ class MissionScraper:
         
         return None
     
-    async def _scrape_credits(self) -> Optional[int]:
-        """Scrape les crédits moyens de la mission"""
-        try:
-            # Chercher l'information des crédits (pattern peut varier)
-            credit_elements = await self.page.query_selector_all("*")
-            
-            for element in credit_elements:
-                text = await element.inner_text()
-                if "crédits" in text.lower():
-                    credits = extract_number_from_text(text)
-                    if credits:
-                        return credits
-            
-        except Exception as e:
-            logger.warning(f"Erreur lors du scraping des crédits: {e}")
-        
-        return None
     
     
     async def analyze_mission_conditions(self, mission_id: str) -> Optional[Dict]:

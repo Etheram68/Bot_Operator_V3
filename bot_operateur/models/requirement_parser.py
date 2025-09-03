@@ -375,7 +375,7 @@ class RequirementParser:
     
     def _is_resource_indicator(self, requirement_type: str, mission_text: str) -> bool:
         """Vérifie si c'est un indicateur de ressource plutôt qu'un véhicule"""
-        # Types de véhicules explicitement non-déployables
+        # Types de véhicules explicitement non-déployables (avec suffixe _PROBABILITY)
         resource_only_types = {
             "WATER_REQUIRED", "EAU_NECESSAIRE", 
             "MIN_FIREFIGHTERS", "MIN_POLICE", "MIN_PUMP_CAPACITY",
@@ -384,26 +384,11 @@ class RequirementParser:
             "DRAGON_PROBABILITY", "CHOUCAS_PROBABILITY"
         }
         
-        # Détecter les probabilités par mots-clés dans le texte
-        probability_keywords = ["probabilité qu'", "chances qu'", "probability that"]
-        mission_text_lower = mission_text.lower()
-        
-        # Si le texte contient des mots-clés de probabilité, c'est un indicateur
-        if any(keyword in mission_text_lower for keyword in probability_keywords):
-            logger.debug(f"🚫 Détecté phrase de probabilité pour {requirement_type}, ignoré comme resource indicator")
-            return True
-        
-        # Vérifier si le requirement_type est dans les types de ressources
+        # IMPORTANT: Ne bloquer que les types explicitement de probabilité
+        # Ne pas bloquer les vrais besoins même si le texte global contient des probabilités
         if requirement_type.upper() in resource_only_types:
+            logger.debug(f"🚫 Type de ressource non-déployable: {requirement_type}")
             return True
-        
-        # Vérifier spécifiquement pour VSR_PROBABILITY
-        if requirement_type == "VSR":
-            # Chercher la phrase exacte de probabilité dans le texte (commençant par "Chances que")
-            probability_pattern = r"chances\s+que"
-            if re.search(probability_pattern, mission_text.lower()):
-                logger.debug(f"🚫 Détecté phrase de probabilité VSR, ignoré comme resource indicator")
-                return True
         
         # Vérifier dans les resource_indicators du fichier de configuration
         resource_indicators = self.needs_labels.get("resource_indicators", {})
@@ -412,6 +397,7 @@ class RequirementParser:
         for resource_code, resource_text in resource_indicators.items():
             # Si le requirement_type correspond exactement au resource_code
             if requirement_type.upper() == resource_code.upper():
+                logger.debug(f"🚫 Resource indicator détecté: {requirement_type}")
                 return True
         
         return False

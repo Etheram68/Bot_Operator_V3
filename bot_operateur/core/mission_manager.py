@@ -52,13 +52,13 @@ class MissionManager:
         logger.debug(f"Récupération des détails pour mission {mission.id}")
         
         try:
-            details = await self.mission_scraper.get_mission_details(mission.id)
+            details = await self.mission_scraper.get_mission_details(mission.id, mission.help_url)
             if details:
                 # Mettre à jour la mission avec les détails
                 mission.patients = details.get('patients', [])
-                mission.patient_count = len(mission.patients)
+                mission.patient_count = len(mission.patients)  # Toujours calculer depuis les patients scrapés
                 mission.requirements = details.get('requirements', [])
-                mission.credits = details.get('credits')
+                # Les crédits sont déjà définis dans _extract_mission_from_element, pas besoin de les écraser
                 
                 # Mettre à jour le titre s'il est disponible (plus complet que celui de la liste)
                 if details.get('title'):
@@ -130,7 +130,7 @@ class MissionManager:
             # Déployer
             deployment_success = await self.vehicle_scraper.deploy_selected_vehicles()
             if deployment_success:
-                logger.info(f"Mission {mission.id} déployée avec succès!")
+                logger.info(f"Mission {mission.title} ({mission.id}) déployée avec succès!")
                 mission.status = MissionStatus.IN_PROGRESS
                 mission.deployed_vehicles = selected_vehicle_ids
                 return True
@@ -240,15 +240,15 @@ class MissionManager:
             # Déployer immédiatement
             deployment_success = await self.vehicle_scraper.deploy_selected_vehicles()
             if deployment_success:
-                logger.info(f"✅ Mission {mission.id} déployée avec succès en mode optimisé!")
+                logger.info(f"✅ Mission {mission.title} ({mission.id}) déployée avec succès en mode optimisé!")
                 mission.status = MissionStatus.IN_PROGRESS
                 return True
             else:
-                logger.error(f"❌ Échec du déploiement pour mission {mission.id}")
+                logger.error(f"❌ Échec du déploiement pour mission {mission.title} ({mission.id})")
                 return False
                 
         except Exception as e:
-            logger.error(f"Erreur lors du déploiement optimisé de mission {mission.id}: {e}")
+            logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
             return False
     
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
@@ -285,7 +285,7 @@ class MissionManager:
                 if deployed_count >= max_missions:
                     break
                 
-                logger.info(f"Traitement mission {mission.id}: {mission.title}")
+                logger.info(f"Traitement mission {mission.id}: ---------- {mission.title} ----------")
                 
                 # Utiliser le déploiement optimisé par défaut
                 success = await self.deploy_vehicles_for_mission_optimized(mission)

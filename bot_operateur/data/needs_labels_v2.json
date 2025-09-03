@@ -37,7 +37,7 @@
     "VTP_CRS": ["VTP nécessaires?", "véhicules? transports? personnel"],
     "BP": ["Barres?-ponts? nécessaires?", "ReBP", "remorques? barres? pont"],
     "ELE": ["ELE nécessaires?", "éclairages? mobiles?"],
-    "RLC": ["RLC", "remorques? logistiques? commandements?"],
+    "RLC": ["RLC", "Requis RLC"],
     "FPT_SR": ["[Ff]ourgons? d'incendie.{0,30}secours routiers?", "FPT.{0,10}VSR", "pompiers?.{0,20}secours"],
     "BLS_CSL": ["BLS.{0,10}CSL", "BLS\\s+ou\\s+CSL"],
     "CARS_POLICE_PATROUILLE_VR": ["[Vv]éhicules? patrouilles?.{0,20}VR", "police.{0,20}radio"],
