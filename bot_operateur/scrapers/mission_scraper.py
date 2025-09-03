@@ -8,6 +8,7 @@ from ..models.patient import Patient, PatientSeverity
 from ..models.requirement_parser import RequirementParser
 from ..utils.dom_utils import DOMUtils
 from .conditions_analyzer import ConditionsAnalyzer
+from .patient_scraper import PatientScraper
 
 
 class MissionScraper:
@@ -18,6 +19,7 @@ class MissionScraper:
         self.dom_utils = DOMUtils(page)
         self.requirement_parser = RequirementParser()
         self.conditions_analyzer = ConditionsAnalyzer(page)
+        self.patient_scraper = PatientScraper(page)  # Pour utiliser sa fonction _parse_patient_need
     
     async def get_all_missions(self) -> List[Mission]:
         """Récupère toutes les missions disponibles de tous les types"""
@@ -345,17 +347,22 @@ class MissionScraper:
             for alert in alert_elements:
                 alert_text = await alert.inner_text()
                 if "Il nous faut" in alert_text:
-                    # Gérer les différents formats possibles avec espaces normaux ou insécables
-                    need_text = alert_text
-                    # Supprimer les variations de "Il nous faut" avec différents espaces
+                    # Nettoyage du texte et suppression du préfixe
+                    need_text = alert_text.replace("\xa0", " ")  # remplacer &nbsp;
                     need_text = re.sub(r'Il\s+nous\s+faut\s*[:：]\s*', '', need_text, flags=re.IGNORECASE)
                     need_text = need_text.strip()
-                    
-                    logger.debug(f"Texte de besoin extrait: '{need_text}'")
-                    need = self._parse_patient_need(need_text)
-                    if need:
-                        needs.append(need)
-            
+
+                    # Découper par virgule
+                    parts = [p.strip() for p in need_text.split(",") if p.strip()]
+
+                    # Supprimer le suffixe "requis" éventuel
+                    parts = [re.sub(r"\s*requis$", "", p, flags=re.IGNORECASE).strip() for p in parts]
+                    logger.info(f"Besoin des patients de la mission: {parts}")
+                    # Mapper chaque besoin via la fonction du patient_scraper
+                    for part in parts:
+                        mapped = self.patient_scraper._parse_patient_need(part)
+                        if mapped:
+                            needs.append(mapped)
             # Si pas de besoins spécifiques, ajouter ambulance par défaut
             if not needs:
                 needs.append("AMBULANCE")
@@ -369,24 +376,6 @@ class MissionScraper:
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction du patient: {e}")
             return None
-    
-    def _parse_patient_need(self, need_text: str) -> Optional[str]:
-        """Parse le texte d'un besoin patient vers un string"""
-        need_mapping = {
-            "ambulance": "AMBULANCE",
-            "hélicoptère": "HELICOPTER",
-            "helicoptere": "HELICOPTER",
-            "directeur des secours": "RESCUE_DIRECTOR",
-            "soins intensifs": "INTENSIVE_CARE",
-            "unité grands brûlés": "BURN_UNIT",
-            "unite grands brules": "BURN_UNIT",
-            "pédiatrie": "PEDIATRIC",
-            "pediatrie": "PEDIATRIC"
-        }
-        
-        # Recherche insensible à la casse
-        need_text_lower = need_text.lower().strip()
-        return need_mapping.get(need_text_lower)
     
     async def _extract_requirements_text_from_columns(self) -> str:
         """Extrait le texte des besoins uniquement depuis la seconde colonne col-md-4"""

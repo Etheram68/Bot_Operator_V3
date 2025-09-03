@@ -79,10 +79,19 @@ class PatientScraper:
             for alert in alert_elements:
                 alert_text = await alert.inner_text()
                 if "Il nous faut" in alert_text:
-                    need_text = alert_text.replace("Il nous faut : ", "").replace("Il nous faut: ", "").strip()
-                    need = self._parse_patient_need(need_text)
-                    if need:
-                        needs.append(need)
+                    # Nettoyer le texte et séparer les besoins multiples
+                    need_text = alert_text.replace("Il nous faut : ", "").replace("Il nous faut: ", "")
+                    need_text = need_text.replace("Il nous faut\u00a0: ", "").strip()  # gérer les espaces insécables
+                    
+                    # Séparer les besoins multiples par virgules
+                    parts = [part.strip() for part in need_text.split(',') if part.strip()]
+                    logger.debug(f"Besoins parsés: {parts}")
+                    
+                    for part in parts:
+                        mapped = self._parse_patient_need(part)
+                        if mapped and mapped not in needs:  # éviter les doublons
+                            needs.append(mapped)
+                            logger.debug(f"Besoin ajouté: '{part}' -> {mapped}")
             
             # Extraire la gravité si disponible
             severity = await self._extract_patient_severity(element)
@@ -150,6 +159,8 @@ class PatientScraper:
             
             # Directeur des secours
             "directeur des secours": "RESCUE_DIRECTOR",
+            "directeur des secours médicaux": "RESCUE_DIRECTOR", 
+            "directeur des secours médicaux requis": "RESCUE_DIRECTOR",
             "directeur secours": "RESCUE_DIRECTOR",
             "chef intervention": "RESCUE_DIRECTOR",
             
@@ -197,6 +208,27 @@ class PatientScraper:
             logger.debug(f"Erreur lors de la récupération du nombre de patients: {e}")
         
         return 0
+    
+    def consolidate_mission_needs(self, patients: List[Patient]) -> dict:
+        """Consolide les besoins de tous les patients d'une mission"""
+        consolidated_needs = {}
+        rescue_director_requested = False
+        
+        for patient in patients:
+            for need in patient.needs:
+                if need == "RESCUE_DIRECTOR":
+                    # Un seul directeur des secours par mission
+                    rescue_director_requested = True
+                else:
+                    # Compter les autres besoins normalement
+                    consolidated_needs[need] = consolidated_needs.get(need, 0) + 1
+        
+        # Ajouter le directeur des secours si demandé (maximum 1)
+        if rescue_director_requested:
+            consolidated_needs["RESCUE_DIRECTOR"] = 1
+            logger.info("🚨 Directeur des Secours Médicaux requis (1 seul pour toute la mission)")
+        
+        return consolidated_needs
     
     async def has_patients(self) -> bool:
         """Vérifie si la mission actuelle a des patients"""

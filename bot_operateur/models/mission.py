@@ -63,16 +63,15 @@ class Mission(BaseModel):
         for req in self.requirements:
             requirements[req.vehicle_type] = req.quantity
             
-        # Besoins spécifiques des patients - utiliser directement les types de besoins
+        # Besoins spécifiques des patients - consolider pour éviter les doublons (ex: RESCUE_DIRECTOR)
         # La conversion vers les véhicules réels sera gérée par RequirementParser + JSON
         patient_needs_count = 0
-        for patient in self.patients:
-            for need in patient.needs:
-                # Ajouter directement le besoin patient comme exigence de véhicule
-                # Le système d'alternatives gérera la conversion (ex: INTENSIVE_CARE → AMBULANCE → VSAV/ASSU/SMUR(A))
-                requirements[need] = requirements.get(need, 0) + 1
-                if need == "AMBULANCE":
-                    patient_needs_count += 1
+        consolidated_patient_needs = self._consolidate_patient_needs()
+        
+        for need, count in consolidated_patient_needs.items():
+            requirements[need] = requirements.get(need, 0) + count
+            if need == "AMBULANCE":
+                patient_needs_count += count
         
         # Ambulances pour patients sans besoins spécifiques (1 patient = 1 ambulance minimum)
         # Seulement si des patients n'ont pas déjà d'exigences AMBULANCE spécifiques
@@ -92,3 +91,23 @@ class Mission(BaseModel):
             self.status == MissionStatus.AVAILABLE and
             len(self.deployed_vehicles) > 0
         )
+    
+    def _consolidate_patient_needs(self) -> Dict[str, int]:
+        """Consolide les besoins de tous les patients (RESCUE_DIRECTOR unique)"""
+        consolidated_needs = {}
+        rescue_director_requested = False
+        
+        for patient in self.patients:
+            for need in patient.needs:
+                if need == "RESCUE_DIRECTOR":
+                    # Un seul directeur des secours par mission
+                    rescue_director_requested = True
+                else:
+                    # Compter les autres besoins normalement
+                    consolidated_needs[need] = consolidated_needs.get(need, 0) + 1
+        
+        # Ajouter le directeur des secours si demandé (maximum 1)
+        if rescue_director_requested:
+            consolidated_needs["RESCUE_DIRECTOR"] = 1
+        
+        return consolidated_needs
