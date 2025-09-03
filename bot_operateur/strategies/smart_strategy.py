@@ -131,7 +131,7 @@ class SmartStrategy(BaseStrategy):
                 logger.debug(f"Suffisamment d'ambulances: {current_ambulances} >= {mission.patient_count}")
         
         # CORRECTION: Éliminer les doublons causés par les alternatives redondantes
-        needs = self._eliminate_redundant_alternatives(needs)
+        # needs = self._eliminate_redundant_alternatives(needs)
         
         self.logger.info(f"🎯 Besoins calculés avec alternatives: {needs}")
         return needs

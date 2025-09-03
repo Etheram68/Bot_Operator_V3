@@ -4,10 +4,9 @@
   "_last_updated": "2025-08-29",
   
   "vehicle_requirements": {
-    "AMBULANCE": ["Ambulances? requises?", "ambulances? nécessaires?", "Ambulance"],
+    "AMBULANCE": ["Ambulances? requises?", "ambulances? nécessaires?", "(?<!s )Ambulance(?!s)"],
     "AMBULANCE_TRANSPORT": ["Transport médical requis", "transport sanitaire"],
     "PCDSM": ["PC DSM nécessaires?", "poste de commandement.{0,20}DSM"],
-    "DIRECTEUR_SECOURS": ["Directeur des Secours Médicaux?", "DSM requis"],
     "CHEF_DE_GROUPE": ["Chefs? de groupes?(?! ou VLHR) .{0,20}requis", "Chefs? de groupes? ou VLHR requis"],
     "BEA": ["Moyens? [ÉEé]lévateurs? [Aa]ériens? requis", "BEA requis", "échelle aérienne"],
     "FPT": ["[Ff]ourgons?\\s+d[’' ]incendies?\\s*(requis)?", "FPT\\s*(requis)?"],
@@ -16,8 +15,8 @@
     "VGRIMP": ["VGRIMP", "groupe\\s+d'intervention.{0,20}milieu\\s+périlleux"],
     "VIRT": ["Véhicules?\\s+risques?\\s+technologiques?\\s*(requis)?", "VIRT", "risques?\\s+technologiques?"],
     "VTU": ["VTU\\s*(requis)?", "véhicules?\\s+tout\\s+usage"],
-    "VSR": ["Véhicules?\\s+de\\s+secours\\s+routiers?\\s*(requis)?", "VSR", "secours\\s+routier"],
-    "VPC": ["Véhicules?\\s+postes?\\s+de\\s+commandements?\\s*(requis)?", "VPC", "postes?\\s+de\\s+commandements?"],
+    "VSR": ["Véhicules?\\s+de\\s+secours\\s+routiers?\\s*(requis)?", "\\bVSR\\b", "secours\\s+routiers?\\s+(requis|nécessaires?)"],
+    "VPC": ["Véhicules?\\s+postes?\\s+de\\s+commandements?\\s*(requis)?", "\\bVPC\\s+(requis|nécessaires?)\\b", "postes?\\s+de\\s+commandements?\\s+(requis|nécessaires?)"],
     "CITERNE": ["Camions?-citernes? requis", "citernes? nécessaires?", "véhicules? citernes?"],
     "VAR": ["Assistance respiratoire requise", "VAR", "assistance ventilatoire"],
     "VLHR": ["(?<!groupe ou )VLHR requis", "(?<!ou )VLHR nécessaires?", "véhicules? liaisons? hors route"],
@@ -26,7 +25,7 @@
     "CAMION_DEVIDOIRS": ["Camions? dévidoirs nécessaires?", "dévidoirs?"],
     "BLS": ["BLS requis", "blindés? légers"],
     "VPL": ["VPL requis", "véhicules? protection littoral"],
-    "DRAGON": ["DRAGON", "hélicoptères?", "soutien aérien"],
+    "DRAGON": ["\\bDRAGON\\b", "hélicoptères?\\s+de\\s+combat", "soutien aérien"],
     "CARS_POLICE": ["Voitures? de police requises?", "voitures? de police nécessaires?", "véhicules? police", "véhicules? de police", "patrouilles? police"],
     "CARS_POLICE_PATROUILLE": ["Véhicules? de patrouilles?", "patrouilles?"],
     "CARS_DROGUE": ["Unités? cynophiles? requises?", "chiens? détection", "brigade stupéfiants"],
@@ -50,8 +49,8 @@
     "INTENSIVE_CARE": ["Soins intensifs", "réanimation", "intensive care"],
     "BURN_UNIT": ["Unité grands brûlés", "grands brûlés", "burn unit", "brûlé", "brule"],
     "PEDIATRIC": ["Pédiatrie", "pediatrie", "enfant", "enfants"],
-    "HELICOPTER": ["Hélicoptère", "helicoptere", "dragon", "samu"],
-    "RESCUE_DIRECTOR": ["Directeur des secours", "directeur secours", "chef intervention"]
+    "HELICOPTER": ["Hélicoptères? (nécessaires?|requis)", "helicoptere", "hélico", "samu"],
+    "RESCUE_DIRECTOR": ["Directeur des [Ss]ecours [Mm]édicaux?", "DSM requis", "directeur secours", "chef intervention"]
   },
 
   "resource_indicators": {

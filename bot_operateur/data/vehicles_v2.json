@@ -49,10 +49,6 @@
         "primary": ["PC"],
         "secondary": []
       },
-      "DIRECTEUR_SECOURS": {
-        "primary": ["PC"],
-        "secondary": []
-      },
       "DRAGON": {
         "primary": ["Dragon", "HéliSMUR"],
         "secondary": []
