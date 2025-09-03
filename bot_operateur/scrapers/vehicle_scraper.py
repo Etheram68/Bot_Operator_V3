@@ -588,12 +588,17 @@ class VehicleScraper:
             
             # Ensuite vérifier les alternatives si disponibles
             if alternatives_mapping and vehicle_type in alternatives_mapping:
+                # D'abord compter les véhicules primaires déployés
+                primary_deployed = already_deployed  # garde le décompte du type exact
                 alternatives = alternatives_mapping[vehicle_type].get('primary', [])
                 for alt_type in alternatives:
-                    already_deployed += deployed_by_type.get(alt_type, 0)
+                    if alt_type != vehicle_type:  # éviter de compter deux fois le même type
+                        primary_deployed += deployed_by_type.get(alt_type, 0)
+                
+                already_deployed = primary_deployed
                     
-                # Vérifier aussi les alternatives secondaires si pas de primaires
-                if already_deployed == 0:
+                # Vérifier aussi les alternatives secondaires seulement si les primaires ne suffisent pas
+                if already_deployed < needed_count:
                     alternatives = alternatives_mapping[vehicle_type].get('secondary', [])
                     for alt_type in alternatives:
                         already_deployed += deployed_by_type.get(alt_type, 0)
@@ -624,15 +629,26 @@ class VehicleScraper:
         
         # Si pas de correspondance directe, vérifier les alternatives
         if alternatives_mapping:
+            # PREMIÈRE PASSE: vérifier seulement les alternatives PRIMAIRES
             for need_type, needed_count in vehicle_needs.items():
                 already_selected = selected_counts.get(need_type, 0)
                 if needed_count > already_selected:
-                    # Vérifier si ce vehicle_type peut satisfaire ce need_type
+                    # Vérifier si ce vehicle_type peut satisfaire ce need_type via primary
                     alternatives = alternatives_mapping.get(need_type, {})
                     primary_alternatives = alternatives.get('primary', [])
+                    
+                    if vehicle_type in primary_alternatives:
+                        return (need_type, needed_count, already_selected)
+            
+            # DEUXIÈME PASSE: vérifier les alternatives SECONDAIRES seulement si aucun primaire trouvé
+            for need_type, needed_count in vehicle_needs.items():
+                already_selected = selected_counts.get(need_type, 0)
+                if needed_count > already_selected:
+                    # Vérifier si ce vehicle_type peut satisfaire ce need_type via secondary
+                    alternatives = alternatives_mapping.get(need_type, {})
                     secondary_alternatives = alternatives.get('secondary', [])
                     
-                    if vehicle_type in primary_alternatives or vehicle_type in secondary_alternatives:
+                    if vehicle_type in secondary_alternatives:
                         return (need_type, needed_count, already_selected)
         
         return None
@@ -669,20 +685,32 @@ class VehicleScraper:
                     
                     # Chercher si ce véhicule peut satisfaire un besoin non satisfait
                     matching_need = None
+                    # D'abord vérification directe
                     for need_type, needed_count in unsatisfied_needs.items():
                         if needed_count > 0:  # Encore besoin de ce type
-                            # Vérification directe
                             if vehicle_type == need_type:
                                 matching_need = need_type
                                 break
-                            
-                            # Vérification avec alternatives
-                            if alternatives_mapping:
+                    
+                    # Si pas de correspondance directe, chercher dans les alternatives PRIMAIRES en priorité
+                    if not matching_need and alternatives_mapping:
+                        for need_type, needed_count in unsatisfied_needs.items():
+                            if needed_count > 0:
                                 alternatives = alternatives_mapping.get(need_type, {})
                                 primary_alternatives = alternatives.get('primary', [])
+                                
+                                if vehicle_type in primary_alternatives:
+                                    matching_need = need_type
+                                    break
+                    
+                    # En dernier recours, chercher dans les alternatives SECONDAIRES
+                    if not matching_need and alternatives_mapping:
+                        for need_type, needed_count in unsatisfied_needs.items():
+                            if needed_count > 0:
+                                alternatives = alternatives_mapping.get(need_type, {})
                                 secondary_alternatives = alternatives.get('secondary', [])
                                 
-                                if vehicle_type in primary_alternatives or vehicle_type in secondary_alternatives:
+                                if vehicle_type in secondary_alternatives:
                                     matching_need = need_type
                                     break
                     
