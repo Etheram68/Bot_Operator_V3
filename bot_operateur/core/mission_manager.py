@@ -52,6 +52,15 @@ class MissionManager:
         logger.debug(f"Récupération des détails pour mission {mission.id}")
         
         try:
+            # D'abord aller sur la page de mission et traiter les transports
+            mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
+            await self.browser_manager.page.goto(mission_url)
+            await self.browser_manager.page.wait_for_load_state('networkidle')
+            
+            # Traiter les demandes de transport avant de lire les conditions
+            await self._handle_patient_transport_initial(mission)
+            
+            # Maintenant récupérer les détails (conditions, etc.)
             details = await self.mission_scraper.get_mission_details(mission.id, mission.help_url)
             if details:
                 # Mettre à jour la mission avec les détails
@@ -249,6 +258,136 @@ class MissionManager:
                 
         except Exception as e:
             logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
+            return False
+    
+    async def _handle_patient_transport_initial(self, mission: Mission) -> bool:
+        """Traite les demandes de transport dès l'entrée sur une mission"""
+        logger.info(f"🚑 Vérification des transports initiaux pour mission {mission.title} ({mission.id})")
+        
+        try:
+            # On est déjà sur la page de mission
+            transports_handled = 0
+            
+            while True:
+                # Chercher l'alerte de transport nécessaire (exclure les alertes de véhicules manquants)
+                transport_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger:not(.alert-missing-vehicles)')
+                
+                if not transport_alert:
+                    logger.debug("Aucune alerte de transport détectée")
+                    break
+                
+                # Vérifier si c'est bien une demande de transport
+                alert_text = await transport_alert.inner_text()
+                if "Transport nécessaire" not in alert_text:
+                    logger.debug(f"Alerte détectée mais pas de transport (contenu: '{alert_text.strip()[:50]}...')")
+                    break
+                
+                # Récupérer TOUS les liens de transport (href + texte) avant navigation
+                transport_links = await transport_alert.query_selector_all('a.btn.btn-xs.btn-success')
+                if not transport_links:
+                    logger.debug("Alerte 'Transport nécessaire' détectée mais aucun lien de navigation disponible")
+                    break
+                
+                # Extraire les informations des liens avant navigation
+                transport_data = []
+                for link in transport_links:
+                    try:
+                        href = await link.get_attribute('href')
+                        text = await link.inner_text()
+                        transport_data.append({'href': href, 'text': text})
+                    except Exception as e:
+                        logger.error(f"Erreur lors de l'extraction d'un lien de transport: {e}")
+                        continue
+                
+                if not transport_data:
+                    logger.debug("Aucun lien de transport valide trouvé")
+                    break
+                
+                logger.debug(f"🚑 {len(transport_data)} véhicule(s) avec demande de transport détecté(s)")
+                
+                # Traiter chaque véhicule de transport via son URL
+                for i, transport_info in enumerate(transport_data):
+                    try:
+                        href = transport_info['href']
+                        text = transport_info['text']
+                        logger.debug(f"🚑 Transport initial {i+1}/{len(transport_data)}: {text}")
+                        
+                        # Naviguer directement vers l'URL du transport
+                        transport_url = f"https://www.operateur112.fr{href}" if href.startswith('/') else href
+                        await self.browser_manager.page.goto(transport_url)
+                        await self.browser_manager.page.wait_for_load_state('networkidle')
+                        
+                        # Traiter le transport sur la page de sélection d'hôpital
+                        transport_success = await self._handle_hospital_selection(mission)
+                        
+                        if transport_success:
+                            transports_handled += 1
+                            logger.info(f"✅ Transport initial {transports_handled} effectué pour {text}")
+                            
+                            # Chercher le bouton "Passez au prochain véhicule"
+                            next_vehicle_button = await self.browser_manager.page.query_selector('a.btn.btn-success[id^="next-vehicle-fms-"]')
+                            
+                            if next_vehicle_button:
+                                logger.debug("🔄 Passage au prochain véhicule")
+                                await next_vehicle_button.click()
+                                await self.browser_manager.page.wait_for_load_state('networkidle')
+                            else:
+                                logger.debug("Aucun véhicule suivant pour ce transport")
+                        else:
+                            logger.warning(f"Échec du transport pour {text}")
+                                
+                    except Exception as e:
+                        logger.error(f"Erreur lors du traitement du transport initial {i+1}: {e}")
+                        continue
+                
+                # Tous les transports de cette alerte ont été traités
+                break
+            
+            if transports_handled > 0:
+                logger.info(f"🚑 {transports_handled} transport(s) initial(aux) effectué(s) pour mission {mission.title} ({mission.id})")
+                
+                # S'assurer qu'on est bien sur la page de mission pour la suite
+                mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
+                await self.browser_manager.page.goto(mission_url)
+                await self.browser_manager.page.wait_for_load_state('networkidle')
+                
+                return True
+            else:
+                return False
+                
+        except Exception as e:
+            logger.error(f"Erreur lors des transports initiaux pour mission {mission.id}: {e}")
+            return False
+    
+    async def _handle_hospital_selection(self, mission: Mission) -> bool:
+        """Gère la sélection de l'hôpital pour le transport"""
+        try:
+            # Attendre que le tableau des hôpitaux soit chargé
+            hospitals_table = await self.browser_manager.page.wait_for_selector('#own-hospitals tbody', timeout=5000)
+            
+            if not hospitals_table:
+                logger.warning("Tableau des hôpitaux non trouvé")
+                return False
+            
+            # Trouver le premier bouton de sélection d'hôpital disponible
+            hospital_button = await hospitals_table.query_selector('a.btn.btn-success')
+            
+            if not hospital_button:
+                logger.warning("Aucun hôpital disponible pour le transport")
+                return False
+            
+            # Récupérer des infos sur l'hôpital sélectionné
+            hospital_text = await hospital_button.inner_text()
+            logger.debug(f"🏥 Sélection hôpital: {hospital_text}")
+            
+            # Cliquer sur le bouton de sélection
+            await hospital_button.click()
+            await self.browser_manager.page.wait_for_load_state('networkidle')
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la sélection d'hôpital: {e}")
             return False
     
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
