@@ -4,6 +4,7 @@ from loguru import logger
 
 from ..models.patient import Patient, PatientSeverity
 from ..utils.dom_utils import DOMUtils
+from ..utils.text_utils import extract_number_from_text
 
 
 class PatientScraper:
@@ -33,12 +34,12 @@ class PatientScraper:
             patient_text_span = await self.page.query_selector("#patient_button_text")
             if patient_text_span:
                 patient_count_text = await patient_text_span.inner_text()
-                patient_count = self._extract_number_from_text(patient_count_text)
+                patient_count = extract_number_from_text(patient_count_text)
                 logger.debug(f"Texte patient trouvé: '{patient_count_text}' → {patient_count} patients")
             else:
                 # Fallback sur tout l'élément patient_form
                 patient_count_text = await patient_form.inner_text()
-                patient_count = self._extract_number_from_text(patient_count_text)
+                patient_count = extract_number_from_text(patient_count_text)
                 logger.debug(f"Fallback texte patient: '{patient_count_text}' → {patient_count} patients")
             
             # Récupérer les détails des patients
@@ -191,11 +192,6 @@ class PatientScraper:
         logger.debug(f"Besoin patient non reconnu: '{need_text}'")
         return None
     
-    def _extract_number_from_text(self, text: str) -> int:
-        """Extrait le premier nombre d'un texte"""
-        import re
-        match = re.search(r'\d+', text)
-        return int(match.group()) if match else 0
     
     async def get_patient_count_from_button(self) -> int:
         """Récupère le nombre de patients depuis le bouton patient"""
@@ -203,7 +199,7 @@ class PatientScraper:
             patient_button = await self.page.query_selector("#patient_button_form")
             if patient_button:
                 text = await patient_button.inner_text()
-                return self._extract_number_from_text(text)
+                return extract_number_from_text(text)
         except Exception as e:
             logger.debug(f"Erreur lors de la récupération du nombre de patients: {e}")
         

@@ -7,6 +7,7 @@ from ..models.mission import Mission, MissionType, MissionRequirement
 from ..models.patient import Patient, PatientSeverity
 from ..models.requirement_parser import RequirementParser
 from ..utils.dom_utils import DOMUtils
+from ..utils.text_utils import extract_number_from_text
 from .conditions_analyzer import ConditionsAnalyzer
 from .patient_scraper import PatientScraper
 
@@ -201,7 +202,7 @@ class MissionScraper:
                 
                 for i, element in enumerate(patient_elements):
                     try:
-                        patient = await self._extract_patient_from_element(element, str(i))
+                        patient = await self.patient_scraper._extract_patient_from_element(element, str(i))
                         if patient:
                             patients.append(patient)
                             logger.debug(f"Patient {i} extrait avec besoins: {patient.needs}")
@@ -215,7 +216,7 @@ class MissionScraper:
                     logger.debug("Formulaire de patients détecté")
                     # Compter les patients
                     patient_count_text = await patient_form.inner_text()
-                    patient_count = self._extract_number_from_text(patient_count_text)
+                    patient_count = extract_number_from_text(patient_count_text)
                     logger.debug(f"Nombre de patients détecté: {patient_count}")
                     
                     # Récupérer les détails des patients depuis n'importe où sur la page
@@ -223,7 +224,7 @@ class MissionScraper:
                     
                     for i, element in enumerate(patient_elements):
                         try:
-                            patient = await self._extract_patient_from_element(element, str(i))
+                            patient = await self.patient_scraper._extract_patient_from_element(element, str(i))
                             if patient:
                                 patients.append(patient)
                         except Exception as e:
@@ -336,46 +337,6 @@ class MissionScraper:
             needs.insert(0, "AMBULANCE")  # Ambulance en premier
         
         return needs
-    
-    async def _extract_patient_from_element(self, element, patient_id: str) -> Optional[Patient]:
-        """Extrait les informations d'un patient depuis un élément DOM"""
-        try:
-            # Extraire les besoins depuis les alertes
-            needs = []
-            alert_elements = await element.query_selector_all(".alert-danger")
-            
-            for alert in alert_elements:
-                alert_text = await alert.inner_text()
-                if "Il nous faut" in alert_text:
-                    # Nettoyage du texte et suppression du préfixe
-                    need_text = alert_text.replace("\xa0", " ")  # remplacer &nbsp;
-                    need_text = re.sub(r'Il\s+nous\s+faut\s*[:：]\s*', '', need_text, flags=re.IGNORECASE)
-                    need_text = need_text.strip()
-
-                    # Découper par virgule
-                    parts = [p.strip() for p in need_text.split(",") if p.strip()]
-
-                    # Supprimer le suffixe "requis" éventuel
-                    parts = [re.sub(r"\s*requis$", "", p, flags=re.IGNORECASE).strip() for p in parts]
-                    logger.info(f"Besoin des patients de la mission: {parts}")
-                    # Mapper chaque besoin via la fonction du patient_scraper
-                    for part in parts:
-                        mapped = self.patient_scraper._parse_patient_need(part)
-                        if mapped:
-                            needs.append(mapped)
-            # Si pas de besoins spécifiques, ajouter ambulance par défaut
-            if not needs:
-                needs.append("AMBULANCE")
-            
-            return Patient(
-                id=patient_id,
-                severity=PatientSeverity.MODERATE,  # Par défaut
-                needs=needs
-            )
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de l'extraction du patient: {e}")
-            return None
     
     async def _extract_requirements_text_from_columns(self) -> str:
         """Extrait le texte des besoins uniquement depuis la seconde colonne col-md-4"""
@@ -493,7 +454,7 @@ class MissionScraper:
             for element in credit_elements:
                 text = await element.inner_text()
                 if "crédits" in text.lower():
-                    credits = self._extract_number_from_text(text)
+                    credits = extract_number_from_text(text)
                     if credits:
                         return credits
             
@@ -502,10 +463,6 @@ class MissionScraper:
         
         return None
     
-    def _extract_number_from_text(self, text: str) -> Optional[int]:
-        """Extrait le premier nombre d'un texte"""
-        match = re.search(r'\d+', text)
-        return int(match.group()) if match else None
     
     async def analyze_mission_conditions(self, mission_id: str) -> Optional[Dict]:
         """Analyse les conditions de réalisation d'une mission pour enrichir les données"""
