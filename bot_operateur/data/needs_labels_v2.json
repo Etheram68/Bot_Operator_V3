@@ -23,9 +23,9 @@
     "FMOGP": ["FMOGP nécessaires?", "fourgons? moyens généraux"],
     "MOTOPOMPES": ["Motopompes nécessaires?", "motopompes?"],
     "CAMION_DEVIDOIRS": ["Camions? dévidoirs nécessaires?", "dévidoirs?"],
-    "BLS": ["BLS requis", "blindés? légers"],
-    "VPL": ["VPL requis", "véhicules? protection littoral"],
-    "DRAGON": ["\\bDRAGON\\b", "hélicoptères?\\s+de\\s+combat", "soutien aérien"],
+    "BLS": ["BLS requis"],
+    "VPL": ["VPL requis"],
+    "DRAGON": ["\\bDRAGON\\b", "hélicoptères", "soutien aérien(?! FAG)"],
     "CARS_POLICE": ["Voitures? de police requises?", "voitures? de police nécessaires?", "véhicules? police", "véhicules? de police", "patrouilles? police"],
     "CARS_POLICE_PATROUILLE": ["Véhicules? de patrouilles?", "patrouilles?"],
     "CARS_DROGUE": ["Unités? cynophiles? requises?", "chiens? détection", "brigade stupéfiants"],
@@ -39,7 +39,7 @@
     "ELE": ["ELE nécessaires?", "éclairages? mobiles?"],
     "RLC": ["RLC", "remorques? logistiques? commandements?"],
     "FPT_SR": ["[Ff]ourgons? d'incendie.{0,30}secours routiers?", "FPT.{0,10}VSR", "pompiers?.{0,20}secours"],
-    "BLS_CSL": ["BLS.{0,10}CSL", "blindés?.{0,20}compagnies? sécurité"],
+    "BLS_CSL": ["BLS.{0,10}CSL", "BLS\\s+ou\\s+CSL"],
     "CARS_POLICE_PATROUILLE_VR": ["[Vv]éhicules? patrouilles?.{0,20}VR", "police.{0,20}radio"],
     "CARS_POLICE_VR": ["[Vv]oitures? police.{0,20}VR", "police.{0,20}véhicules? radio", "[Vv]oitures? de police ou VR"],
     "FPT_SR_BEA": ["[Ff]ourgons?.{0,30}secours.{0,30}échelles?", "pompiers?.{0,40}aériens?"],
@@ -50,7 +50,9 @@
     "BURN_UNIT": ["Unité grands brûlés", "grands brûlés", "burn unit", "brûlé", "brule"],
     "PEDIATRIC": ["Pédiatrie", "pediatrie", "enfant", "enfants"],
     "HELICOPTER": ["Hélicoptères? (nécessaires?|requis)", "helicoptere", "hélico", "samu"],
-    "RESCUE_DIRECTOR": ["Directeur des [Ss]ecours [Mm]édicaux?", "DSM requis", "directeur secours", "chef intervention"]
+    "RESCUE_DIRECTOR": ["Directeur des [Ss]ecours [Mm]édicaux?", "DSM requis", "directeur secours", "chef intervention"],
+    "DRAGON_PROBABILITY": ["Probabilité qu'un soutien aérien soit requis"],
+    "CHOUCAS_PROBABILITY": ["Probabilité qu'un soutien aérien FAG soit requis"]
   },
 
   "resource_indicators": {
@@ -62,7 +64,9 @@
     "VAR_PROBABILITY": "Chances qu'une assistance respiratoire soit requise",
     "BEA_PROBABILITY": "Chances qu'un moyen elévateur aérien soit requise",
     "POLICE_PROBABILITY": "Chances que la police soit requise",
-    "VSR_PROBABILITY": "Chances que les secours routiers soient requis"
+    "VSR_PROBABILITY": "Chances que les secours routiers soient requis",
+    "DRAGON_PROBABILITY": "Probabilité qu'un soutien aérien soit requis",
+    "CHOUCAS_PROBABILITY": "Probabilité qu'un soutien aérien FAG soit requis"
   },
 
   "probability_thresholds": {
@@ -70,6 +74,8 @@
     "VAR_PROBABILITY": 25,
     "BEA_PROBABILITY": 40,
     "POLICE_PROBABILITY": 50,
-    "VSR_PROBABILITY": 50
+    "VSR_PROBABILITY": 50,
+    "DRAGON_PROBABILITY": 35,
+    "CHOUCAS_PROBABILITY": 35
   }
 }

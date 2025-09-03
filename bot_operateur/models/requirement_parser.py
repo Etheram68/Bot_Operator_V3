@@ -380,8 +380,18 @@ class RequirementParser:
             "WATER_REQUIRED", "EAU_NECESSAIRE", 
             "MIN_FIREFIGHTERS", "MIN_POLICE", "MIN_PUMP_CAPACITY",
             "CITERNE_PROBABILITY", "VAR_PROBABILITY", 
-            "BEA_PROBABILITY", "POLICE_PROBABILITY"
+            "BEA_PROBABILITY", "POLICE_PROBABILITY",
+            "DRAGON_PROBABILITY", "CHOUCAS_PROBABILITY"
         }
+        
+        # Détecter les probabilités par mots-clés dans le texte
+        probability_keywords = ["probabilité qu'", "chances qu'", "probability that"]
+        mission_text_lower = mission_text.lower()
+        
+        # Si le texte contient des mots-clés de probabilité, c'est un indicateur
+        if any(keyword in mission_text_lower for keyword in probability_keywords):
+            logger.debug(f"🚫 Détecté phrase de probabilité pour {requirement_type}, ignoré comme resource indicator")
+            return True
         
         # Vérifier si le requirement_type est dans les types de ressources
         if requirement_type.upper() in resource_only_types:
