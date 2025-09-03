@@ -178,6 +178,18 @@ class SmartStrategy(BaseStrategy):
                     if need_type in other_primary:
                         related_needs.append(other_need)
             
+            # 2b. NOUVEAU: Chercher bidirectionnellement les véhicules finaux en commun
+            my_alternatives = alternatives_info.get('primary', [need_type])
+            for other_need in needs.keys():
+                if other_need != need_type:
+                    other_alternatives_info = all_mappings.get(other_need, {})
+                    other_primary = other_alternatives_info.get('primary', [other_need])
+                    # Si on partage au moins un véhicule final, on est des alternatives
+                    common_vehicles = set(my_alternatives) & set(other_primary)
+                    if common_vehicles:
+                        related_needs.append(other_need)
+                        self.logger.debug(f"🔗 Détecté véhicules communs {common_vehicles} entre {need_type} et {other_need}")
+            
             # 3. Traiter les problèmes de casse (AMBULANCE vs Ambulance)
             need_lower = need_type.lower()
             for other_need in needs.keys():
@@ -187,7 +199,7 @@ class SmartStrategy(BaseStrategy):
             # 4. Cas spéciaux pour les groupes logiques
             special_groups = {
                 'ambulance': ['VSAV', 'ASSU', 'SMUR(A)', 'Ambulance', 'AMBULANCE'],
-                'command': ['VLHR', 'VPC', 'PC'],  # Véhicules de commandement
+                'command': ['CHEF_DE_GROUPE', 'VLHR', 'VPC', 'PC'],  # Véhicules de commandement
                 'fire': ['FPT', 'FPT(SR)', 'CCR(SR)', 'FS']  # Véhicules incendie
             }
             

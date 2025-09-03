@@ -30,7 +30,7 @@
         "secondary": []
       },
       "CHEF_DE_GROUPE": {
-        "primary": ["VLHR", "VPC"],
+        "primary": ["VPC", "VLHR"],
         "secondary": []
       }
     },
