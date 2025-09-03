@@ -121,8 +121,16 @@ class RequirementParser:
     def _find_matches(self, text: str, patterns: List[re.Pattern]) -> List[Tuple[int, bool]]:
         """Trouve les correspondances pour un type de besoin"""
         matches = []
+        matched_spans = set()  # Pour éviter les doublons de même position
+        
         for pattern in patterns:
             for match in pattern.finditer(text):
+                # Éviter les matches qui se chevauchent (même position dans le texte)
+                match_span = (match.start(), match.end())
+                if match_span in matched_spans:
+                    continue
+                matched_spans.add(match_span)
+                
                 # Extraire la quantité du match et de son contexte
                 quantity = self._extract_quantity_from_match_and_context(text, match)
                 
@@ -275,9 +283,20 @@ class RequirementParser:
         # Consolider chaque groupe
         consolidated = []
         for vehicle_type, reqs in vehicle_groups.items():
-            # Sommer les quantités, prendre le plus strict pour optionnel
-            total_quantity = sum(req.quantity for req in reqs)
-            is_optional = all(req.optional for req in reqs)
+            # Déduplicater les quantités identiques (éviter les doublons de patterns)
+            unique_reqs = []
+            seen_quantities = set()
+            
+            for req in reqs:
+                if req.quantity not in seen_quantities:
+                    unique_reqs.append(req)
+                    seen_quantities.add(req.quantity)
+                else:
+                    logger.debug(f"🔄 Dédoublonné {vehicle_type}: quantité {req.quantity} déjà vue")
+            
+            # Sommer les quantités uniques, prendre le plus strict pour optionnel
+            total_quantity = sum(req.quantity for req in unique_reqs)
+            is_optional = all(req.optional for req in unique_reqs)
             
             consolidated.append(MissionRequirement(
                 vehicle_type=vehicle_type,
@@ -341,7 +360,7 @@ class RequirementParser:
         converted_requirements = []
         
         # Types de véhicules spécialisés qui ont des exigences de personnel
-        personnel_vehicles = {'VIMP', 'VIRT'}
+        personnel_vehicles = {'VIMP'}
         
         vehicle_specs = self.vehicles_mapping.get('vehicle_specs', {})
         
@@ -381,7 +400,7 @@ class RequirementParser:
             "MIN_FIREFIGHTERS", "MIN_POLICE", "MIN_PUMP_CAPACITY",
             "CITERNE_PROBABILITY", "VAR_PROBABILITY", 
             "BEA_PROBABILITY", "POLICE_PROBABILITY",
-            "DRAGON_PROBABILITY", "CHOUCAS_PROBABILITY"
+            "DRAGON_PROBABILITY", "CHOUCAS_PROBABILITY", "VIRT_PROBABILITY"
         }
         
         # IMPORTANT: Ne bloquer que les types explicitement de probabilité

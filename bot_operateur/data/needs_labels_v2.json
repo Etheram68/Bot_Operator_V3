@@ -13,7 +13,7 @@
     "CCF": ["CCF\\s*(requis)?", "camions?[\\s-]*citernes?[\\s-]*feux"],
     "VIMP": ["Spécialistes\\s+IMP\\s*(requis)?", "VIMP", "intervention\\s+milieu\\s+périlleux"],
     "VGRIMP": ["VGRIMP", "groupe\\s+d'intervention.{0,20}milieu\\s+périlleux"],
-    "VIRT": ["Véhicules?\\s+risques?\\s+technologiques?\\s*(requis)?", "VIRT", "risques?\\s+technologiques?"],
+    "VIRT": ["Véhicules?\\s+risques?\\s+technologiques?\\s+requis", "\\bVIRT\\b(?!_PROBABILITY)"],
     "VTU": ["VTU\\s*(requis)?", "véhicules?\\s+tout\\s+usage"],
     "VSR": ["Véhicules?\\s+de\\s+secours\\s+routiers?\\s*(requis)?", "\\bVSR\\b", "secours\\s+routiers?\\s+(requis|nécessaires?)"],
     "VPC": ["Véhicules?\\s+postes?\\s+de\\s+commandements?\\s*(requis)?", "\\bVPC\\s+(requis|nécessaires?)\\b", "postes?\\s+de\\s+commandements?\\s+(requis|nécessaires?)"],
@@ -52,7 +52,8 @@
     "HELICOPTER": ["Hélicoptères? (nécessaires?|requis)", "helicoptere", "hélico", "samu"],
     "RESCUE_DIRECTOR": ["Directeur des [Ss]ecours [Mm]édicaux?", "DSM requis", "directeur secours", "chef intervention"],
     "DRAGON_PROBABILITY": ["Probabilité qu'un soutien aérien soit requis"],
-    "CHOUCAS_PROBABILITY": ["Probabilité qu'un soutien aérien FAG soit requis"]
+    "CHOUCAS_PROBABILITY": ["Probabilité qu'un soutien aérien FAG soit requis"],
+    "VIRT_PROBABILITY": ["Chances qu'un véhicule risques? technologiques? soit requis"]
   },
 
   "resource_indicators": {
@@ -66,7 +67,8 @@
     "POLICE_PROBABILITY": "Chances que la police soit requise",
     "VSR_PROBABILITY": "Chances que les secours routiers soient requis",
     "DRAGON_PROBABILITY": "Probabilité qu'un soutien aérien soit requis",
-    "CHOUCAS_PROBABILITY": "Probabilité qu'un soutien aérien FAG soit requis"
+    "CHOUCAS_PROBABILITY": "Probabilité qu'un soutien aérien FAG soit requis",
+    "VIRT_PROBABILITY": "Chances qu'un véhicule risques technologiques soit requis"
   },
 
   "probability_thresholds": {
@@ -76,6 +78,7 @@
     "POLICE_PROBABILITY": 50,
     "VSR_PROBABILITY": 50,
     "DRAGON_PROBABILITY": 35,
-    "CHOUCAS_PROBABILITY": 35
+    "CHOUCAS_PROBABILITY": 35,
+    "VIRT_PROBABILITY": 50
   }
 }
