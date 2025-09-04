@@ -10,6 +10,7 @@
 # Log files
 logs/
 *.log
+*.zip
 
 # Editor directories and files
 .venv/
