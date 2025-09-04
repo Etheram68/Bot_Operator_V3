@@ -5,6 +5,9 @@ from pathlib import Path
 from loguru import logger
 
 from .mission import MissionRequirement
+from .probability_detector import ProbabilityDetector
+from .contextual_parser import ContextualParser
+from .text_cleaner import TextCleaner
 
 
 class RequirementParser:
@@ -16,6 +19,11 @@ class RequirementParser:
         
         # Compile des regex pour optimiser les performances
         self.compiled_patterns = self._compile_patterns()
+        
+        # Composants de parsing
+        self.probability_detector = ProbabilityDetector(self.needs_labels)
+        self.contextual_parser = ContextualParser()
+        self.text_cleaner = TextCleaner()
         
     def _load_needs_labels(self, path: str = None) -> Dict:
         """Charge le fichier de mapping des labels de besoins"""
@@ -54,12 +62,14 @@ class RequirementParser:
             compiled[requirement_type] = []
             for pattern in patterns:
                 try:
-                    # Flags pour correspondance insensible à la casse et multilignes
                     compiled_pattern = re.compile(pattern, re.IGNORECASE | re.MULTILINE)
                     compiled[requirement_type].append(compiled_pattern)
+                    logger.debug(f"Pattern compilé pour {requirement_type}: {pattern}")
                 except re.error as e:
                     logger.warning(f"Pattern regex invalide pour {requirement_type}: {pattern} - {e}")
+                    continue
         
+        logger.info(f"Patterns compilés pour {len(compiled)} types de véhicules")
         return compiled
     
     def parse_mission_text(self, mission_text: str) -> List[MissionRequirement]:
@@ -81,12 +91,12 @@ class RequirementParser:
         if not mission_text or not self.compiled_patterns:
             return requirements
         
-        cleaned_text = self._clean_mission_text(mission_text)
+        cleaned_text = self.text_cleaner.clean_mission_text(mission_text)
         
         for requirement_type, patterns in self.compiled_patterns.items():
-            matches = self._find_matches_with_context(cleaned_text, patterns)
+            matches = self.contextual_parser.find_matches_with_context(cleaned_text, patterns)
             for quantity, optional, match_context in matches:
-                if self._is_resource_indicator_contextual(requirement_type, match_context, cleaned_text):
+                if self.probability_detector.is_resource_indicator(requirement_type, match_context):
                     logger.debug(f"🚫 Ignoré indicateur de ressource: {requirement_type} ({quantity})")
                     continue
                 
@@ -99,248 +109,10 @@ class RequirementParser:
                 logger.debug(f"✅ Ajouté besoin: {requirement_type} x{quantity} ({'optionnel' if optional else 'requis'})")
         
         requirements = self._convert_personnel_to_vehicle_requirements(requirements)
-        
         requirements = self._post_process_requirements(requirements)
         
         logger.debug(f"Extrait {len(requirements)} exigences du texte de mission")
         return requirements
-    
-    def _clean_mission_text(self, text: str) -> str:
-        """Nettoie et normalise le texte de mission en préservant les lignes"""
-        # Remplacer les caractères spéciaux
-        text = text.replace("'", "'").replace("'", "'")
-        text = text.replace("«", '"').replace("»", '"')
-        
-        # Supprimer les balises HTML si présentes
-        text = re.sub(r'<[^>]+>', '', text)
-        
-        # Nettoyer chaque ligne séparément pour préserver la structure
-        lines = text.split('\n')
-        cleaned_lines = []
-        for line in lines:
-            # Normaliser les espaces dans chaque ligne
-            cleaned_line = re.sub(r'\s+', ' ', line.strip())
-            if cleaned_line:  # Garder seulement les lignes non vides
-                cleaned_lines.append(cleaned_line)
-        
-        # Rejoindre avec des \n pour préserver la structure des lignes
-        return '\n'.join(cleaned_lines)
-    
-    def _find_matches_with_context(self, text: str, patterns: List[re.Pattern]) -> List[Tuple[int, bool, str]]:
-        """Trouve les correspondances avec leur contexte pour un type de besoin"""
-        matches = []
-        matched_spans = set()  # Pour éviter les doublons de même position
-        
-        for pattern in patterns:
-            for match in pattern.finditer(text):
-                # Éviter les matches qui se chevauchent (même position dans le texte)
-                match_span = (match.start(), match.end())
-                if match_span in matched_spans:
-                    continue
-                matched_spans.add(match_span)
-                
-                # Extraire la quantité du match et de son contexte
-                quantity = self._extract_quantity_from_match_and_context(text, match)
-                
-                # Déterminer si c'est optionnel (basé sur des mots-clés)
-                optional = self._is_optional_requirement(match.group())
-                
-                # Extraire seulement la ligne courante pour éviter les interférences
-                lines = text.split('\n')
-                match_pos = match.start()
-                
-                # Trouver la ligne qui contient le match
-                line_start = 0
-                current_line = ""
-                for line in lines:
-                    line_end = line_start + len(line)
-                    if line_start <= match_pos <= line_end:
-                        current_line = line.strip()
-                        break
-                    line_start = line_end + 1  # +1 pour le \n
-                
-                context = current_line
-                
-                matches.append((quantity, optional, context))
-        
-        # Si pas de quantité explicite trouvée mais pattern correspond, assumer 1
-        if not matches and any(pattern.search(text) for pattern in patterns):
-            # Prendre le premier match pour le contexte
-            first_match = None
-            for pattern in patterns:
-                match = pattern.search(text)
-                if match:
-                    first_match = match
-                    break
-            
-            if first_match:
-                # Extraire la ligne du premier match
-                lines = text.split('\n')
-                match_pos = first_match.start()
-                
-                line_start = 0
-                current_line = ""
-                for line in lines:
-                    line_end = line_start + len(line)
-                    if line_start <= match_pos <= line_end:
-                        current_line = line.strip()
-                        break
-                    line_start = line_end + 1
-                
-                context = current_line
-                matches.append((1, False, context))
-        
-        return matches
-    
-    def _find_matches(self, text: str, patterns: List[re.Pattern]) -> List[Tuple[int, bool]]:
-        """Trouve les correspondances pour un type de besoin"""
-        matches = []
-        matched_spans = set()  # Pour éviter les doublons de même position
-        
-        for pattern in patterns:
-            for match in pattern.finditer(text):
-                # Éviter les matches qui se chevauchent (même position dans le texte)
-                match_span = (match.start(), match.end())
-                if match_span in matched_spans:
-                    continue
-                matched_spans.add(match_span)
-                
-                # Extraire la quantité du match et de son contexte
-                quantity = self._extract_quantity_from_match_and_context(text, match)
-                
-                # Déterminer si c'est optionnel (basé sur des mots-clés)
-                optional = self._is_optional_requirement(match.group())
-                
-                matches.append((quantity, optional))
-        
-        # Si pas de quantité explicite trouvée mais pattern correspond, assumer 1
-        if not matches and any(pattern.search(text) for pattern in patterns):
-            matches.append((1, False))
-        
-        return matches
-    
-    def _extract_quantity_from_match_and_context(self, full_text: str, match: re.Match) -> int:
-        """Extrait la quantité numérique d'un match et de son contexte environnant"""
-        # D'abord chercher dans le match lui-même
-        match_text = match.group()
-        numbers_in_match = re.findall(r'\d+', match_text)
-        
-        if numbers_in_match:
-            return int(numbers_in_match[0])
-        
-        # Pour les tableaux HTML, chercher spécifiquement la structure <td>texte</td><td>nombre</td>
-        # Chercher la ligne complète qui contient notre match
-        lines = full_text.split('\n')
-        match_line_index = None
-        
-        # Trouver la ligne contenant notre match
-        for i, line in enumerate(lines):
-            if match.start() >= sum(len(l) + 1 for l in lines[:i]) and match.start() <= sum(len(l) + 1 for l in lines[:i+1]):
-                match_line_index = i
-                break
-        
-        if match_line_index is not None:
-            # Chercher dans cette ligne et les lignes adjacentes pour tableaux multi-lignes
-            search_lines = []
-            for i in range(max(0, match_line_index - 1), min(len(lines), match_line_index + 3)):
-                search_lines.append(lines[i])
-            
-            search_text = '\n'.join(search_lines)
-            
-            # Pattern spécifique pour tableaux HTML
-            table_pattern = r'<td[^>]*>[^<]*' + re.escape(match_text) + r'[^<]*</td>\s*<td[^>]*>\s*(\d+)\s*</td>'
-            table_match = re.search(table_pattern, search_text, re.IGNORECASE | re.DOTALL)
-            if table_match:
-                return int(table_match.group(1))
-        
-        # Fallback sur les patterns simples avec contexte réduit
-        start_pos = max(0, match.start() - 30)
-        end_pos = min(len(full_text), match.end() + 50)
-        context = full_text[start_pos:end_pos]
-        
-        # Patterns simples
-        simple_patterns = [
-            re.escape(match_text) + r'[^0-9]*(\d+)',  # Texte suivi d'un nombre
-            r'(\d+)[^0-9]*' + re.escape(match_text)   # Nombre suivi du texte
-        ]
-        
-        for pattern in simple_patterns:
-            matches = re.findall(pattern, context, re.IGNORECASE)
-            if matches:
-                try:
-                    return int(matches[0])
-                except ValueError:
-                    continue
-        
-        # Par défaut
-        return 1
-    
-    def _extract_quantity_from_match(self, match: re.Match) -> int:
-        """Extrait la quantité numérique d'un match regex (méthode legacy)"""
-        # Chercher des nombres dans le match
-        numbers = re.findall(r'\d+', match.group())
-        
-        if numbers:
-            # Prendre le premier nombre trouvé
-            return int(numbers[0])
-        
-        # Chercher des mots-nombres français
-        word_numbers = {
-            'un': 1, 'une': 1, 'deux': 2, 'trois': 3, 'quatre': 4, 'cinq': 5,
-            'six': 6, 'sept': 7, 'huit': 8, 'neuf': 9, 'dix': 10
-        }
-        
-        text_lower = match.group().lower()
-        for word, number in word_numbers.items():
-            if word in text_lower:
-                return number
-        
-        # Par défaut
-        return 1
-    
-    def _is_optional_requirement(self, text: str) -> bool:
-        """Détermine si une exigence est optionnelle"""
-        optional_keywords = [
-            'si nécessaire', 'si besoin', 'éventuellement', 'possiblement',
-            'chances que', 'probabilité', 'peut-être', 'si requis'
-        ]
-        
-        text_lower = text.lower()
-        return any(keyword in text_lower for keyword in optional_keywords)
-    
-    def _map_requirement_to_vehicles(self, requirement_type: str) -> List[str]:
-        """Mappe un type de besoin vers les véhicules réels"""
-        if not self.vehicles_mapping.get("vehicle_mapping"):
-            return [requirement_type]  # Fallback
-        
-        # Chercher dans toutes les catégories
-        vehicle_types = []
-        
-        for category, mappings in self.vehicles_mapping["vehicle_mapping"].items():
-            if requirement_type in mappings:
-                mapping = mappings[requirement_type]
-                
-                # Prioriser les véhicules primaires
-                if "primary" in mapping:
-                    vehicle_types.extend(mapping["primary"])
-                
-                # Ajouter les secondaires si nécessaire
-                if "secondary" in mapping and not vehicle_types:
-                    vehicle_types.extend(mapping["secondary"])
-        
-        # Si pas de mapping trouvé, essayer une correspondance directe
-        if not vehicle_types:
-            vehicle_types = [requirement_type]
-        
-        # Supprimer les doublons tout en préservant l'ordre
-        seen = set()
-        unique_types = []
-        for vtype in vehicle_types:
-            if vtype not in seen:
-                seen.add(vtype)
-                unique_types.append(vtype)
-        
-        return unique_types
     
     def _post_process_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
         """Post-traite les exigences pour optimiser et consolider"""
@@ -379,6 +151,43 @@ class RequirementParser:
             ))
         
         return consolidated
+    
+    def _convert_personnel_to_vehicle_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
+        """Convertit les exigences de personnel vers exigences de véhicules selon crew_size"""
+        converted_requirements = []
+        
+        # Types de véhicules spécialisés qui ont des exigences de personnel
+        personnel_vehicles = {'VIMP'}
+        
+        vehicle_specs = self.vehicles_mapping.get('vehicle_specs', {})
+        
+        for req in requirements:
+            # Vérifier si c'est un véhicule spécialisé avec personnel
+            if req.vehicle_type in personnel_vehicles:
+                # Récupérer la taille d'équipe depuis vehicle_specs
+                crew_size = vehicle_specs.get(req.vehicle_type, {}).get('crew_size')
+                
+                if crew_size and crew_size > 1:
+                    # Calculer le nombre de véhicules nécessaires
+                    vehicles_needed = max(1, (req.quantity + crew_size - 1) // crew_size)  # Arrondi supérieur
+                    
+                    logger.debug(f"🔄 Conversion personnel: {req.vehicle_type} {req.quantity} spécialistes → {vehicles_needed} véhicules (crew_size: {crew_size})")
+                    
+                    # Créer la nouvelle exigence de véhicule
+                    converted_req = MissionRequirement(
+                        vehicle_type=req.vehicle_type,  # Même type de véhicule
+                        quantity=vehicles_needed,       # Quantité ajustée
+                        optional=req.optional
+                    )
+                    converted_requirements.append(converted_req)
+                else:
+                    # Pas de crew_size défini, garder l'exigence originale
+                    converted_requirements.append(req)
+            else:
+                # Pas un véhicule spécialisé, garder l'exigence originale
+                converted_requirements.append(req)
+        
+        return converted_requirements
     
     def get_vehicle_alternatives(self, vehicle_type: str) -> List[str]:
         """Retourne les alternatives possibles pour un type de véhicule selon la hiérarchie primary/secondary"""
@@ -429,185 +238,6 @@ class RequirementParser:
         
         return unique_alternatives
     
-    def _convert_personnel_to_vehicle_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
-        """Convertit les exigences de personnel vers exigences de véhicules selon crew_size"""
-        converted_requirements = []
-        
-        # Types de véhicules spécialisés qui ont des exigences de personnel
-        personnel_vehicles = {'VIMP'}
-        
-        vehicle_specs = self.vehicles_mapping.get('vehicle_specs', {})
-        
-        for req in requirements:
-            # Vérifier si c'est un véhicule spécialisé avec personnel
-            if req.vehicle_type in personnel_vehicles:
-                # Récupérer la taille d'équipe depuis vehicle_specs
-                crew_size = vehicle_specs.get(req.vehicle_type, {}).get('crew_size')
-                
-                if crew_size and crew_size > 1:
-                    # Calculer le nombre de véhicules nécessaires
-                    vehicles_needed = max(1, (req.quantity + crew_size - 1) // crew_size)  # Arrondi supérieur
-                    
-                    logger.debug(f"🔄 Conversion personnel: {req.vehicle_type} {req.quantity} spécialistes → {vehicles_needed} véhicules (crew_size: {crew_size})")
-                    
-                    # Créer la nouvelle exigence de véhicule
-                    converted_req = MissionRequirement(
-                        vehicle_type=req.vehicle_type,  # Même type de véhicule
-                        quantity=vehicles_needed,       # Quantité ajustée
-                        optional=req.optional
-                    )
-                    converted_requirements.append(converted_req)
-                else:
-                    # Pas de crew_size défini, garder l'exigence originale
-                    converted_requirements.append(req)
-            else:
-                # Pas un véhicule spécialisé, garder l'exigence originale
-                converted_requirements.append(req)
-        
-        return converted_requirements
-    
-    def _is_resource_indicator(self, requirement_type: str, mission_text: str) -> bool:
-        """Vérifie si c'est un indicateur de ressource plutôt qu'un véhicule"""
-        # Types de véhicules explicitement non-déployables (avec suffixe _PROBABILITY)
-        resource_only_types = {
-            "WATER_REQUIRED", "EAU_NECESSAIRE", 
-            "MIN_FIREFIGHTERS", "MIN_POLICE", "MIN_PUMP_CAPACITY",
-            "CITERNE_PROBABILITY", "VAR_PROBABILITY", 
-            "BEA_PROBABILITY", "POLICE_PROBABILITY",
-            "DRAGON_PROBABILITY", "CHOUCAS_PROBABILITY", "VIRT_PROBABILITY",
-            "VLHR_PROBABILITY", "CHEF_DE_GROUPE_PROBABILITY"
-        }
-        
-        # IMPORTANT: Ne bloquer que les types explicitement de probabilité
-        # Ne pas bloquer les vrais besoins même si le texte global contient des probabilités
-        if requirement_type.upper() in resource_only_types:
-            logger.debug(f"🚫 Type de ressource non-déployable: {requirement_type}")
-            return True
-        
-        # Vérifier dans les resource_indicators du fichier de configuration
-        resource_indicators = self.needs_labels.get("resource_indicators", {})
-        
-        # Structure: {"WATER_REQUIRED": "Eau nécessaire", ...}
-        for resource_code, resource_text in resource_indicators.items():
-            # Si le requirement_type correspond exactement au resource_code
-            if requirement_type.upper() == resource_code.upper():
-                logger.debug(f"🚫 Resource indicator détecté: {requirement_type}")
-                return True
-        
-        # Vérifier si ce requirement_type spécifique correspond à une ligne de probabilité
-        # Seulement bloquer si le requirement correspond à un pattern de probabilité spécifique
-        import re
-        
-        # Patterns de probabilité avec capture du contenu
-        probability_patterns = [
-            r"chances?\s+qu[''']?un?\s+([^0-9]*?)\s+soit\s+(demandé|requis)\s*(\d+)",
-            r"probabilité\s+qu[''']?un?\s+([^0-9]*?)\s+soit\s+(demandé|requis)\s*(\d+)",
-        ]
-        
-        for prob_pattern in probability_patterns:
-            matches = re.finditer(prob_pattern, mission_text, re.IGNORECASE)
-            for match in matches:
-                prob_vehicle_text = match.group(1).strip()
-                percentage = match.group(3)
-                
-                # Vérifier si ce requirement_type correspond au véhicule mentionné dans cette probabilité
-                # Utiliser le même système de matching que pour les requirements normaux
-                if self._vehicle_matches_probability_text(requirement_type, prob_vehicle_text):
-                    logger.debug(f"🚫 Probabilité spécifique détectée pour {requirement_type}: '{prob_vehicle_text}' ({percentage}%)")
-                    return True
-        
-        return False
-    
-    def _is_resource_indicator_contextual(self, requirement_type: str, match_context: str, full_text: str) -> bool:
-        """
-        Vérifie si ce match spécifique est un indicateur de ressource basé sur son contexte.
-        
-        Args:
-            requirement_type: Type de véhicule détecté
-            match_context: Contexte local du match (ligne où il apparaît)
-            full_text: Texte complet de la mission
-            
-        Returns:
-            bool: True si c'est un indicateur de ressource (à ignorer)
-        """
-        # D'abord vérifier les types explicitement de ressources
-        resource_only_types = {
-            "WATER_REQUIRED", "EAU_NECESSAIRE", 
-            "MIN_FIREFIGHTERS", "MIN_POLICE", "MIN_PUMP_CAPACITY"
-        }
-        
-        if requirement_type.upper() in resource_only_types:
-            logger.debug(f"🚫 Type de ressource non-déployable: {requirement_type}")
-            return True
-        
-        # Vérifier dans les resource_indicators du fichier de configuration
-        resource_indicators = self.needs_labels.get("resource_indicators", {})
-        for resource_code, resource_text in resource_indicators.items():
-            if requirement_type.upper() == resource_code.upper():
-                logger.debug(f"🚫 Resource indicator détecté: {requirement_type}")
-                return True
-        
-        # Analyser le contexte local pour détecter les probabilités
-        import re
-        probability_patterns = [
-            r"chances?\s+qu[''']?un?\s+([^0-9]*?)\s+soit\s+(demandé|requis)\s*(\d+)",
-            r"probabilité\s+qu[''']?un?\s+([^0-9]*?)\s+soit\s+(demandé|requis)\s*(\d+)",
-        ]
-        
-        for prob_pattern in probability_patterns:
-            if re.search(prob_pattern, match_context, re.IGNORECASE):
-                # Ce match est dans une ligne de probabilité
-                match = re.search(prob_pattern, match_context, re.IGNORECASE)
-                if match:
-                    prob_vehicle_text = match.group(1).strip()
-                    percentage = match.group(3)
-                    
-                    if self._vehicle_matches_probability_text(requirement_type, prob_vehicle_text):
-                        logger.debug(f"🚫 Match de probabilité détecté pour {requirement_type}: '{prob_vehicle_text}' ({percentage}%)")
-                        return True
-        
-        return False
-    
-    def _vehicle_matches_probability_text(self, requirement_type: str, probability_text: str) -> bool:
-        """
-        Vérifie si un requirement_type correspond au texte d'une probabilité.
-        
-        Args:
-            requirement_type: Type de véhicule (ex: CHEF_DE_GROUPE)
-            probability_text: Texte extrait de la probabilité (ex: "Chef de Groupe")
-            
-        Returns:
-            bool: True si le requirement_type correspond au texte de probabilité
-        """
-        # Normaliser les textes pour comparaison
-        prob_text_lower = probability_text.lower().strip()
-        
-        # Mapping spécifique pour les correspondances de probabilité
-        probability_mappings = {
-            "CHEF_DE_GROUPE": ["chef de groupe", "chef de groupes", "chefs de groupe", "chefs de groupes"],
-            "VLHR": ["vlhr", "chef de groupe"], # VLHR peut être mentionné comme "Chef de Groupe" dans probabilités
-            "CITERNE": ["camion-citerne", "camion citerne", "citerne"],
-            "BEA": ["moyen elévateur aérien", "échelle aérienne", "bea"],
-            "DRAGON": ["soutien aérien", "dragon", "hélicoptère"],
-            "CHOUCAS": ["soutien aérien fag", "choucas"],
-            "VIRT": ["véhicule risques technologiques", "virt"],
-            "VAR": ["assistance respiratoire", "var"],
-        }
-        
-        # Vérifier si le requirement_type a des mappings définis
-        if requirement_type.upper() in probability_mappings:
-            for mapping in probability_mappings[requirement_type.upper()]:
-                if mapping in prob_text_lower:
-                    return True
-        
-        # Vérifier correspondance basée sur le nom du requirement_type
-        req_words = requirement_type.lower().replace('_', ' ').split()
-        for word in req_words:
-            if len(word) > 3 and word in prob_text_lower:
-                return True
-        
-        return False
-    
     def analyze_mission_complexity(self, requirements: List[MissionRequirement]) -> Dict[str, any]:
         """Analyse la complexité d'une mission basée sur ses exigences"""
         if not requirements:
@@ -642,6 +272,40 @@ class RequirementParser:
             "total_vehicles": complexity_score,
             "unique_types": len(set(req.vehicle_type for req in requirements))
         }
+    
+    def _map_requirement_to_vehicles(self, requirement_type: str) -> List[str]:
+        """Mappe un type de besoin vers les véhicules réels"""
+        if not self.vehicles_mapping.get("vehicle_mapping"):
+            return [requirement_type]  # Fallback
+        
+        # Chercher dans toutes les catégories
+        vehicle_types = []
+        
+        for category, mappings in self.vehicles_mapping["vehicle_mapping"].items():
+            if requirement_type in mappings:
+                mapping = mappings[requirement_type]
+                
+                # Prioriser les véhicules primaires
+                if "primary" in mapping:
+                    vehicle_types.extend(mapping["primary"])
+                
+                # Ajouter les secondaires si nécessaire
+                if "secondary" in mapping and not vehicle_types:
+                    vehicle_types.extend(mapping["secondary"])
+        
+        # Si pas de mapping trouvé, essayer une correspondance directe
+        if not vehicle_types:
+            vehicle_types = [requirement_type]
+        
+        # Supprimer les doublons tout en préservant l'ordre
+        seen = set()
+        unique_types = []
+        for vtype in vehicle_types:
+            if vtype not in seen:
+                seen.add(vtype)
+                unique_types.append(vtype)
+        
+        return unique_types
     
     def _identify_vehicle_category(self, vehicle_type: str) -> Optional[str]:
         """Identifie la catégorie d'un véhicule"""
