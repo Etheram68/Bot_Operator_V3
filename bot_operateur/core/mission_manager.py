@@ -61,7 +61,7 @@ class MissionManager:
             await self._handle_patient_transport_initial(mission)
             
             # Maintenant récupérer les détails (conditions, etc.)
-            details = await self.mission_scraper.get_mission_details(mission.id, mission.help_url)
+            details = await self.mission_scraper.get_mission_details(mission)
             if details:
                 # Mettre à jour la mission avec les détails
                 mission.patients = details.get('patients', [])

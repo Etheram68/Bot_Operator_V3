@@ -165,31 +165,30 @@ class MissionScraper:
         
         return location if location else None
     
-    async def get_mission_details(self, mission_id: str, help_url: str = None) -> Optional[Dict]:
+    async def get_mission_details(self, mission: 'Mission') -> Optional[Dict]:
         """Récupère les détails complets d'une mission depuis la page des conditions"""
-        # help_url = f"https://www.operateur112.fr/einsaetze/393?mission_id={mission_id}"
-
         try:
             # On va d'abord sur la page de mission principale
-            mission_url = f"https://www.operateur112.fr/missions/{mission_id}"
+            mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.page.goto(mission_url)
             await self.page.wait_for_load_state('networkidle')
 
             # Vérifier si la mission est déjà accomplie
             mission_completed = await self.page.query_selector(".alert-info.mission-success")
             if mission_completed:
-                logger.info(f"Mission {mission_id} déjà accomplie - ignorée")
+                logger.info(f"Mission {mission.id} déjà accomplie - ignorée")
                 return None
 
             # Scraper les patients depuis la page de mission principale
             patients = await self._scrape_patients()
 
-            # Utiliser l'help_url fourni ou construire par défaut
+            # Utiliser l'help_url de l'objet Mission ou fallback
+            help_url = mission.help_url
             if not help_url:
                 # Fallback : récupération dynamique si help_url non fourni
                 help_href = await self.page.get_attribute("#mission_help", "href")
                 if not help_href:
-                    logger.error(f"Aucun lien 'Conditions' trouvé pour la mission {mission_id}")
+                    logger.error(f"Aucun lien 'Conditions' trouvé pour la mission {mission.id}")
                     return None
                 help_url = f"https://www.operateur112.fr{help_href}"
 
@@ -197,13 +196,15 @@ class MissionScraper:
             await self.page.goto(help_url)
             await self.page.wait_for_load_state('networkidle')
             
-            # Récupérer le titre complet depuis cette page  
-            title_complete = ""
-            if not title_complete:
+            # Récupérer le titre complet seulement si absent ou vide dans l'objet Mission
+            title_complete = mission.title
+            if not title_complete or not title_complete.strip():
                 h1_element = await self.page.query_selector("h1")
                 if h1_element:
                     title_complete = await h1_element.inner_text()
                     logger.debug(f"Titre complet récupéré depuis la page conditions: '{title_complete}'")
+            else:
+                logger.debug(f"Titre complet récupéré depuis l'objet Mission: '{title_complete}'")
             
             details = {
                 'patients': patients,
