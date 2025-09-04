@@ -218,17 +218,42 @@ class MissionManager:
             
             logger.info(f"📋 Besoins identifiés: {vehicle_needs}")
             
-            # Vérifier les véhicules manquants depuis l'alerte et les ajouter aux besoins
+            # Vérifier les véhicules manquants depuis l'alerte et recouper avec les besoins identifiés
             try:
                 missing_vehicles_needs = await self._extract_missing_vehicles_from_alert()
                 
-                # Ajouter les véhicules manquants aux besoins existants
+                # Recouper les véhicules manquants avec les besoins existants
+                # et créer une liste des besoins issus de l'alerte (qui doivent override les vérifications)
+                alert_override_types = set()
                 if missing_vehicles_needs:
-                    for vehicle_type, quantity in missing_vehicles_needs.items():
-                        vehicle_needs[vehicle_type] = vehicle_needs.get(vehicle_type, 0) + quantity
-                        logger.info(f"🚨 Besoin supplémentaire ajouté: {vehicle_type} x{quantity} (depuis alerte)")
+                    logger.info(f"🔍 Recroisement des besoins:")
+                    logger.info(f"   Besoins identifiés: {vehicle_needs}")
+                    logger.info(f"   Besoins manquants (alerte): {missing_vehicles_needs}")
                     
-                    logger.info(f"📋 Besoins finaux avec véhicules manquants: {vehicle_needs}")
+                    for vehicle_type, alert_quantity in missing_vehicles_needs.items():
+                        original_quantity = vehicle_needs.get(vehicle_type, 0)
+                        
+                        # Marquer ce type comme provenant de l'alerte (pour override)
+                        alert_override_types.add(vehicle_type)
+                        
+                        if vehicle_type in vehicle_needs:
+                            # Le type existe déjà dans les besoins identifiés
+                            if alert_quantity != original_quantity:
+                                # L'alerte prévaut sur les conditions de réalisation
+                                vehicle_needs[vehicle_type] = alert_quantity
+                                logger.info(f"🔄 {vehicle_type}: remplacé {original_quantity} par {alert_quantity} (alerte prévaut)")
+                            else:
+                                # Même quantité, mais marquer comme alerte pour override
+                                logger.info(f"🚨 {vehicle_type}: quantité identique ({alert_quantity}) mais alerte active - override des vérifications")
+                        else:
+                            # Nouveau type de véhicule pas dans les conditions de réalisation
+                            vehicle_needs[vehicle_type] = alert_quantity
+                            logger.info(f"🆕 {vehicle_type}: ajouté {alert_quantity} (absent des conditions)")
+                    
+                    logger.info(f"📋 Besoins finaux après recroisement: {vehicle_needs}")
+                    logger.info(f"🚨 Types avec override alerte: {list(alert_override_types)}")
+                
+                # Pas besoin de stocker dans mission, on passera directement en paramètre
                 
             except Exception as e:
                 logger.error(f"Erreur lors de l'analyse des véhicules manquants: {e}")
@@ -265,7 +290,9 @@ class MissionManager:
                         logger.debug("Utilisation du mapping AMBULANCE_TRANSPORT par défaut")
             
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
-            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission)
+            # Passer alert_override_types si défini
+            alert_override_types_to_pass = alert_override_types if 'alert_override_types' in locals() else set()
+            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission, alert_override_types_to_pass)
             
             if selected_count == -1:
                 # Tous les besoins sont déjà satisfaits - c'est un succès !
@@ -595,29 +622,9 @@ class MissionManager:
             alert_text = await missing_alert.inner_text()
             logger.debug(f"Contenu alerte véhicules manquants: {alert_text.strip()}")
             
-            # Récupérer seulement les véhicules EN ROUTE pour filtrage
-            vehicles_en_route_by_type = {}
-            try:
-                driving_rows = await self.browser_manager.page.query_selector_all("#mission_vehicle_driving tbody tr")
-                for row in driving_rows:
-                    try:
-                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                        if vehicle_link:
-                            vehicle_name = await vehicle_link.inner_text()
-                            if vehicle_name:
-                                # Extraire le type : "VCT 1 Mulhouse" -> "VCT"
-                                vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
-                                if vehicle_type:
-                                    vehicles_en_route_by_type[vehicle_type] = vehicles_en_route_by_type.get(vehicle_type, 0) + 1
-                    except Exception as e:
-                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en route: {e}")
-                        continue
-                
-                if vehicles_en_route_by_type:
-                    logger.debug(f"Véhicules en route par type: {vehicles_en_route_by_type}")
-                    
-            except Exception as e:
-                logger.warning(f"Erreur lors de la récupération des véhicules en route: {e}")
+            # Récupérer seulement les véhicules EN ROUTE pour filtrage (pas ceux sur site)
+            # Car les véhicules sur site peuvent remplir d'autres fonctions
+            vehicles_en_route_by_type = await self.vehicle_scraper._get_vehicles_en_route_only_by_type()
             
             # Chercher les div avec data-requirement-type="vehicles"
             vehicle_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="vehicles"]')

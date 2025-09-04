@@ -422,7 +422,7 @@ class VehicleScraper:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
     
-    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None) -> int:
+    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None, alert_override_types: set = None) -> int:
         """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives"""
         total_selected = 0
         
@@ -431,7 +431,12 @@ class VehicleScraper:
             deployed_by_type = await self._get_already_deployed_vehicles_by_type()
             
             # Ajuster les besoins en fonction des véhicules déjà déployés
-            adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type, alternatives_mapping)
+            # Mais ignorer l'ajustement pour les types avec override d'alerte
+            alert_override_types = alert_override_types or set()
+            if alert_override_types:
+                logger.info(f"🚨 Override d'alerte actif pour: {list(alert_override_types)}")
+            
+            adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type, alternatives_mapping, alert_override_types)
             
             # Si tous les besoins sont déjà satisfaits, ne rien faire
             if not adjusted_vehicle_needs:
@@ -689,7 +694,46 @@ class VehicleScraper:
         
         return deployed_by_type
     
-    def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict, alternatives_mapping: dict = None) -> dict:
+    async def _get_vehicles_en_route_only_by_type(self) -> dict:
+        """
+        Comptabilise uniquement les véhicules EN ROUTE vers la mission par type.
+        
+        Contrairement à _get_already_deployed_vehicles_by_type qui compte aussi
+        les véhicules sur site, cette méthode ne compte que ceux en route qui
+        vont effectivement remplir la fonction demandée.
+        
+        Returns:
+            dict: Dictionnaire {type_véhicule: nombre_en_route}
+        """
+        vehicles_en_route_by_type = {}
+        
+        try:
+            # Véhicules en route vers la mission (mission_vehicle_driving) UNIQUEMENT
+            driving_rows = await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
+            for row in driving_rows:
+                try:
+                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                    if vehicle_link:
+                        vehicle_name = await vehicle_link.inner_text()
+                        if vehicle_name:
+                            # Extraire le type : "VCT 1 Mulhouse" -> "VCT"
+                            vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
+                            if vehicle_type:
+                                vehicles_en_route_by_type[vehicle_type] = vehicles_en_route_by_type.get(vehicle_type, 0) + 1
+                                logger.debug(f"🚗 Véhicule en route: {vehicle_name.strip()} -> Type: {vehicle_type}")
+                except Exception as e:
+                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en route (par type): {e}")
+                    continue
+            
+            if vehicles_en_route_by_type:
+                logger.info(f"🚗 Véhicules en route par type: {vehicles_en_route_by_type}")
+            
+        except Exception as e:
+            logger.warning(f"Erreur lors du comptage des véhicules en route par type: {e}")
+        
+        return vehicles_en_route_by_type
+    
+    def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict, alternatives_mapping: dict = None, alert_override_types: set = None) -> dict:
         """
         Ajuste les besoins en véhicules selon les déploiements existants.
         
@@ -706,8 +750,15 @@ class VehicleScraper:
             dict: Besoins ajustés restant à satisfaire
         """
         adjusted_needs = {}
+        alert_override_types = alert_override_types or set()
         
         for vehicle_type, needed_count in original_needs.items():
+            # Si ce type est dans l'override d'alerte, ne pas ajuster (garder le besoin complet)
+            if vehicle_type in alert_override_types:
+                adjusted_needs[vehicle_type] = needed_count
+                logger.info(f"🚨 {vehicle_type}: besoin {needed_count} maintenu (override alerte)")
+                continue
+            
             # Compter les véhicules déployés qui peuvent satisfaire ce besoin
             already_deployed = 0
             
