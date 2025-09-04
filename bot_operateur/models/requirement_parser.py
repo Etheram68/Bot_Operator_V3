@@ -25,7 +25,6 @@ class RequirementParser:
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                logger.debug(f"Labels de besoins chargés depuis {path}")
                 return data
         except Exception as e:
             logger.error(f"Erreur lors du chargement de {path}: {e}")
@@ -39,7 +38,6 @@ class RequirementParser:
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                logger.debug(f"Mapping véhicules chargé depuis {path}")
                 return data
         except Exception as e:
             logger.error(f"Erreur lors du chargement de {path}: {e}")
@@ -62,7 +60,6 @@ class RequirementParser:
                 except re.error as e:
                     logger.warning(f"Pattern regex invalide pour {requirement_type}: {pattern} - {e}")
         
-        logger.debug(f"Compilé {len(compiled)} types de besoins avec {sum(len(p) for p in compiled.values())} patterns")
         return compiled
     
     def parse_mission_text(self, mission_text: str) -> List[MissionRequirement]:
@@ -72,12 +69,8 @@ class RequirementParser:
         if not mission_text or not self.compiled_patterns:
             return requirements
         
-        # Log du texte analysé pour debug
-        logger.debug(f"📝 Texte de mission à analyser :\n{repr(mission_text)}")
-        
         # Nettoyer le texte
         cleaned_text = self._clean_mission_text(mission_text)
-        logger.debug(f"🧹 Texte nettoyé :\n{repr(cleaned_text)}")
         
         # Analyser chaque type de besoin
         for requirement_type, patterns in self.compiled_patterns.items():

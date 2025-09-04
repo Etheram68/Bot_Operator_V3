@@ -53,7 +53,6 @@ class MissionScraper:
         try:
             # Vérifier si le panneau existe
             if not await self.dom_utils.element_exists(panel_selector):
-                logger.debug(f"Panneau {panel_selector} non trouvé")
                 return missions
             
             # Récupérer tous les éléments de mission
@@ -202,9 +201,6 @@ class MissionScraper:
                 h1_element = await self.page.query_selector("h1")
                 if h1_element:
                     title_complete = await h1_element.inner_text()
-                    logger.debug(f"Titre complet récupéré depuis la page conditions: '{title_complete}'")
-            else:
-                logger.debug(f"Titre complet récupéré depuis l'objet Mission: '{title_complete}'")
             
             details = {
                 'patients': patients,
@@ -305,7 +301,6 @@ class MissionScraper:
                 )
                 patients.append(patient)
             
-            logger.debug(f"Extrait {len(patients)} patients depuis la page d'aide")
             
         except Exception as e:
             logger.error(f"Erreur lors du scraping des patients depuis la page d'aide: {e}")
@@ -386,8 +381,6 @@ class MissionScraper:
                     second_column = columns[1]
                     text = await second_column.inner_text()
                     
-                    # Log pour debug
-                    logger.debug(f"🔍 Colonne trouvée, contenu: {repr(text[:200])}")
                     
                     # Vérifier si cette colonne contient des informations de besoins
                     # (éviter les colonnes vides ou avec juste des données de base)
@@ -397,7 +390,6 @@ class MissionScraper:
                         "besoin" in text.lower() or
                         len(text.strip()) > 20  # Au moins un peu de contenu
                     ):
-                        logger.debug(f"✅ Colonne valide trouvée avec {len(text.splitlines())} lignes")
                         return text
             
             # Fallback: chercher directement les div col-md-4 après h1 sans passer par row
@@ -426,7 +418,6 @@ class MissionScraper:
                 if len(following_columns) >= 2:
                     requirements_text = following_columns[1]
                     if requirements_text and requirements_text.strip():
-                        logger.debug(f"Fallback: texte trouvé dans la seconde colonne: {requirements_text[:100]}...")
                         return requirements_text
             
             logger.warning("Aucune seconde colonne col-md-4 trouvée avec des besoins")

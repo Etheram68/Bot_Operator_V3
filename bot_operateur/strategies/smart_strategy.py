@@ -126,7 +126,6 @@ class SmartStrategy(BaseStrategy):
                 for category_name, category_mapping in vehicle_mapping.items():
                     if "AMBULANCE" in category_mapping:
                         ambulance_alternatives = category_mapping["AMBULANCE"]
-                        logger.debug(f"Alternatives ambulances trouvées dans {category_name}")
                         break
                 
                 if ambulance_alternatives:

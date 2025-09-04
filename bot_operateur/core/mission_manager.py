@@ -449,7 +449,6 @@ class MissionManager:
             transport_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger:not(.alert-missing-vehicles)')
             
             if not missing_vehicles_alert or not transport_alert:
-                logger.debug("Alertes requises pour transport de prisonniers non trouvées")
                 return []
             
             # Vérifier le contenu des deux alertes
@@ -499,7 +498,6 @@ class MissionManager:
                     logger.error(f"Erreur lors de l'extraction d'un lien de transport prisonnier: {e}")
                     continue
             
-            logger.debug(f"Total de {len(transport_data)} liens de transport de prisonniers trouvés")
             return transport_data
             
         except Exception as e:

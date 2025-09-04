@@ -35,12 +35,10 @@ class PatientScraper:
             if patient_text_span:
                 patient_count_text = await patient_text_span.inner_text()
                 patient_count = extract_number_from_text(patient_count_text)
-                logger.debug(f"Texte patient trouvé: '{patient_count_text}' → {patient_count} patients")
             else:
                 # Fallback sur tout l'élément patient_form
                 patient_count_text = await patient_form.inner_text()
                 patient_count = extract_number_from_text(patient_count_text)
-                logger.debug(f"Fallback texte patient: '{patient_count_text}' → {patient_count} patients")
             
             # Récupérer les détails des patients
             patient_elements = await self.page.query_selector_all(".mission_patient")
@@ -61,9 +59,7 @@ class PatientScraper:
                         severity=PatientSeverity.MODERATE,
                         needs=["AMBULANCE"]
                     ))
-                logger.debug(f"Créé {patient_count} patients génériques")
             
-            logger.debug(f"Trouvé {len(patients)} patients pour mission {mission_id}")
             
         except Exception as e:
             logger.error(f"Erreur lors du scraping des patients: {e}")

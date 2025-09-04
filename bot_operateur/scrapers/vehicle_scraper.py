@@ -545,7 +545,6 @@ class VehicleScraper:
                             vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
                             if vehicle_type:
                                 deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
-                                logger.debug(f"🔢 Véhicule déjà en mission: {vehicle_name.strip()} -> Type: {vehicle_type}")
                 except Exception as e:
                     logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission (par type): {e}")
                     continue
@@ -609,7 +608,6 @@ class VehicleScraper:
                 adjusted_needs[vehicle_type] = remaining_need
                 logger.debug(f"🎯 {vehicle_type}: besoin {needed_count} - déployé {already_deployed} = restant {remaining_need}")
             else:
-                logger.debug(f"✅ {vehicle_type}: besoin {needed_count} déjà satisfait par {already_deployed} véhicules déployés")
         
         if adjusted_needs:
             logger.info(f"🔄 Besoins ajustés: {adjusted_needs}")
