@@ -70,6 +70,8 @@ class SmartStrategy(BaseStrategy):
         
         # Traiter chaque type d'exigence avec alternatives
         for vehicle_type, quantity in requirements.items():
+            logger.debug(f"🔍 Traitement du besoin: {vehicle_type} x{quantity}")
+            
             # Obtenir les alternatives directement depuis le mapping véhicules
             vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
             
@@ -81,19 +83,27 @@ class SmartStrategy(BaseStrategy):
                     logger.debug(f"Trouvé {vehicle_type} dans catégorie {category_name}")
                     break
             
+            if not alternatives_info:
+                logger.warning(f"⚠️ Aucun mapping trouvé pour {vehicle_type} - ajout direct")
+            
             if alternatives_info and len(alternatives_info.get('primary', [])) > 1:
                 # Si on a plusieurs alternatives primaires (comme BEA: ["BEA", "EPA"])
                 # On ne garde que le type principal dans les besoins
                 primary_type = vehicle_type  # Le type demandé reste le même
                 needs[primary_type] = quantity
                 
-                self.logger.debug(
-                    f"Type {vehicle_type} avec alternatives {alternatives_info.get('primary', [])} "
-                    f"-> besoin: {primary_type}:{quantity}"
+                logger.debug(
+                    f"✅ Type {vehicle_type} avec {len(alternatives_info.get('primary', []))} alternatives primaires {alternatives_info.get('primary', [])} "
+                    f"-> besoin ajouté: {primary_type}:{quantity}"
                 )
             else:
                 # Pas d'alternatives ou qu'une seule option
                 needs[vehicle_type] = quantity
+                alternative_count = len(alternatives_info.get('primary', [])) if alternatives_info else 0
+                logger.debug(
+                    f"✅ Type {vehicle_type} avec {alternative_count} alternative(s) "
+                    f"-> besoin ajouté: {vehicle_type}:{quantity}"
+                )
         
         # Ajouter les ambulances pour les patients (si pas déjà comptées dans les requirements)
         if mission.patient_count > 0:

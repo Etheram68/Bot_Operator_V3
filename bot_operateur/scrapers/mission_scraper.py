@@ -93,6 +93,7 @@ class MissionScraper:
             sortable_data_raw = await parent_element.get_attribute("data-sortable-by")
             search_attribute = await parent_element.get_attribute("search_attribute")
             mission_type_id = await parent_element.get_attribute("mission_type_id")
+            additive_overlays = await parent_element.get_attribute("data-additive-overlays")
             
             if not sortable_data_raw:
                 logger.warning(f"Pas de data-sortable-by trouvé pour mission {mission_id}")
@@ -118,7 +119,12 @@ class MissionScraper:
             # Construire l'URL des conditions avec mission_type_id et mission_id
             help_url = None
             if mission_type_id:
-                help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?mission_id={mission_id}"
+                # Ajouter additive_overlays si présent et non vide
+                if additive_overlays and additive_overlays.strip():
+                    help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?additive_overlays={additive_overlays}&mission_id={mission_id}"
+                    logger.debug(f"🔗 URL avec additive_overlays '{additive_overlays}': {help_url}")
+                else:
+                    help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?mission_id={mission_id}"
             
             mission = Mission(
                 id=mission_id,
@@ -175,13 +181,6 @@ class MissionScraper:
                 logger.info(f"Mission {mission_id} déjà accomplie - ignorée")
                 return None
 
-            # Récupérer le titre complet depuis cette page  
-            title_complete = ""
-            title_element = await self.page.query_selector("h3#missionH1 span")
-            if title_element:
-                title_complete = await title_element.inner_text()
-                logger.debug(f"Titre complet récupéré depuis la page mission: '{title_complete}'")
-
             # Scraper les patients depuis la page de mission principale
             patients = await self._scrape_patients()
 
@@ -198,7 +197,8 @@ class MissionScraper:
             await self.page.goto(help_url)
             await self.page.wait_for_load_state('networkidle')
             
-            # Récupérer le titre depuis la page de conditions (h1) si pas encore récupéré
+            # Récupérer le titre complet depuis cette page  
+            title_complete = ""
             if not title_complete:
                 h1_element = await self.page.query_selector("h1")
                 if h1_element:
@@ -385,6 +385,9 @@ class MissionScraper:
                     second_column = columns[1]
                     text = await second_column.inner_text()
                     
+                    # Log pour debug
+                    logger.debug(f"🔍 Colonne trouvée, contenu: {repr(text[:200])}")
+                    
                     # Vérifier si cette colonne contient des informations de besoins
                     # (éviter les colonnes vides ou avec juste des données de base)
                     if text and (
@@ -393,6 +396,7 @@ class MissionScraper:
                         "besoin" in text.lower() or
                         len(text.strip()) > 20  # Au moins un peu de contenu
                     ):
+                        logger.debug(f"✅ Colonne valide trouvée avec {len(text.splitlines())} lignes")
                         return text
             
             # Fallback: chercher directement les div col-md-4 après h1 sans passer par row
