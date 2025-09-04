@@ -218,6 +218,21 @@ class MissionManager:
             
             logger.info(f"📋 Besoins identifiés: {vehicle_needs}")
             
+            # Vérifier les véhicules manquants depuis l'alerte et les ajouter aux besoins
+            try:
+                missing_vehicles_needs = await self._extract_missing_vehicles_from_alert()
+                
+                # Ajouter les véhicules manquants aux besoins existants
+                if missing_vehicles_needs:
+                    for vehicle_type, quantity in missing_vehicles_needs.items():
+                        vehicle_needs[vehicle_type] = vehicle_needs.get(vehicle_type, 0) + quantity
+                        logger.info(f"🚨 Besoin supplémentaire ajouté: {vehicle_type} x{quantity} (depuis alerte)")
+                    
+                    logger.info(f"📋 Besoins finaux avec véhicules manquants: {vehicle_needs}")
+                
+            except Exception as e:
+                logger.error(f"Erreur lors de l'analyse des véhicules manquants: {e}")
+            
             # Obtenir le mapping des alternatives depuis la stratégie
             alternatives_mapping = {}
             if hasattr(strategy, 'parser') and strategy.parser:
@@ -553,6 +568,127 @@ class MissionManager:
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des liens de transport de prisonniers: {e}")
             return []
+    
+    async def _extract_missing_vehicles_from_alert(self) -> dict:
+        """
+        Extrait les véhicules manquants depuis la div alert-missing-vehicles.
+        
+        Analyse l'alerte des véhicules manquants et retourne un dictionnaire
+        des besoins supplémentaires. Ignore les besoins seulement si des véhicules
+        correspondants sont en route (table mission_vehicle_driving), mais 
+        ajoute les besoins même si véhicules sur site (table mission_vehicle_at_mission).
+        
+        Returns:
+            dict: Besoins supplémentaires {type_véhicule: quantité}
+        """
+        missing_vehicles_needs = {}
+        
+        try:
+            # Chercher la div d'alerte des véhicules manquants
+            missing_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger.alert-missing-vehicles')
+            
+            if not missing_alert:
+                logger.debug("Aucune alerte de véhicules manquants trouvée")
+                return missing_vehicles_needs
+            
+            # Extraire le contenu de l'alerte
+            alert_text = await missing_alert.inner_text()
+            logger.debug(f"Contenu alerte véhicules manquants: {alert_text.strip()}")
+            
+            # Récupérer seulement les véhicules EN ROUTE pour filtrage
+            vehicles_en_route_by_type = {}
+            try:
+                driving_rows = await self.browser_manager.page.query_selector_all("#mission_vehicle_driving tbody tr")
+                for row in driving_rows:
+                    try:
+                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                        if vehicle_link:
+                            vehicle_name = await vehicle_link.inner_text()
+                            if vehicle_name:
+                                # Extraire le type : "VCT 1 Mulhouse" -> "VCT"
+                                vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
+                                if vehicle_type:
+                                    vehicles_en_route_by_type[vehicle_type] = vehicles_en_route_by_type.get(vehicle_type, 0) + 1
+                    except Exception as e:
+                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en route: {e}")
+                        continue
+                
+                if vehicles_en_route_by_type:
+                    logger.debug(f"Véhicules en route par type: {vehicles_en_route_by_type}")
+                    
+            except Exception as e:
+                logger.warning(f"Erreur lors de la récupération des véhicules en route: {e}")
+            
+            # Chercher les div avec data-requirement-type="vehicles"
+            vehicle_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="vehicles"]')
+            
+            for div in vehicle_requirement_divs:
+                try:
+                    div_text = await div.inner_text()
+                    logger.debug(f"Analyse div véhicules manquants: {div_text.strip()}")
+                    
+                    # Parser le texte pour extraire les véhicules manquants
+                    # Format attendu: "Véhicules manquants: 1 camion-citerne" ou "Véhicules manquants: 1 Chef de groupe, 1 camion-citerne"
+                    if "Véhicules manquants:" in div_text:
+                        # Extraire la partie après "Véhicules manquants:"
+                        missing_part = div_text.split("Véhicules manquants:")[1].strip()
+                        
+                        # Diviser par les virgules pour traiter chaque véhicule manquant séparément
+                        missing_items = [item.strip() for item in missing_part.split(',')]
+                        logger.debug(f"Éléments de véhicules manquants détectés: {missing_items}")
+                        
+                        # Utiliser le système de mapping existant depuis les fichiers JSON
+                        from ..models.requirement_parser import RequirementParser
+                        parser = RequirementParser()
+                        
+                        for missing_item in missing_items:
+                            # Utiliser la méthode existante pour parser les exigences de véhicules
+                            # On simule un texte de mission pour utiliser le parser existant
+                            simulated_text = f"Exigences de véhicules et du personnel {missing_item} requis"
+                            
+                            try:
+                                # Parser avec le système existant
+                                parsed_requirements = parser.parse_mission_text(simulated_text)
+                                
+                                found_match = False
+                                for requirement in parsed_requirements:
+                                    if requirement.quantity > 0:
+                                        vehicle_type = requirement.vehicle_type
+                                        quantity = requirement.quantity
+                                        
+                                        # Vérifier si des véhicules de ce type sont EN ROUTE (ignorer)
+                                        # Mais PAS ceux sur site (table mission_vehicle_at_mission)
+                                        should_add = True
+                                        vehicles_en_route = vehicles_en_route_by_type.get(vehicle_type, 0)
+                                        if vehicles_en_route > 0:
+                                            logger.debug(f"Ignoré {vehicle_type} x{quantity} - {vehicles_en_route} véhicules en route")
+                                            should_add = False
+                                        
+                                        if should_add:
+                                            missing_vehicles_needs[vehicle_type] = missing_vehicles_needs.get(vehicle_type, 0) + quantity
+                                            logger.info(f"🚨 Véhicule manquant ajouté aux besoins: {vehicle_type} x{quantity}")
+                                        
+                                        found_match = True
+                                        break
+                                
+                                if not found_match:
+                                    # Si aucun pattern ne correspond, logger pour analyse
+                                    logger.warning(f"Pattern de véhicule manquant non reconnu avec le parser: '{missing_item}'")
+                                    
+                            except Exception as e:
+                                logger.warning(f"Erreur lors du parsing avec RequirementParser pour '{missing_item}': {e}")
+                    
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'analyse d'une div de véhicules manquants: {e}")
+                    continue
+            
+            if missing_vehicles_needs:
+                logger.info(f"📋 Véhicules manquants détectés: {missing_vehicles_needs}")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de l'extraction des véhicules manquants: {e}")
+        
+        return missing_vehicles_needs
     
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
         """Déploie automatiquement les missions selon la configuration"""
