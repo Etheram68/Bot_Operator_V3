@@ -220,7 +220,7 @@ class MissionManager:
             
             # Vérifier les véhicules manquants depuis l'alerte et recouper avec les besoins identifiés
             try:
-                missing_vehicles_needs = await self._extract_missing_vehicles_from_alert()
+                missing_vehicles_needs = await self._extract_missing_vehicles_from_alert(mission)
                 
                 # Recouper les véhicules manquants avec les besoins existants
                 alert_override_types = set()
@@ -585,7 +585,7 @@ class MissionManager:
             logger.error(f"Erreur lors de l'extraction des liens de transport de prisonniers: {e}")
             return []
     
-    async def _extract_missing_vehicles_from_alert(self) -> dict:
+    async def _extract_missing_vehicles_from_alert(self, mission: 'Mission') -> dict:
         """
         Extrait les véhicules manquants depuis la div alert-missing-vehicles.
         
@@ -660,8 +660,9 @@ class MissionManager:
                                         break
                                 
                                 if not found_match:
-                                    # Si aucun pattern ne correspond, logger pour analyse
-                                    logger.warning(f"Pattern de véhicule manquant non reconnu avec le parser: '{missing_item}'")
+                                    # Si aucun pattern ne correspond, logger pour analyse et sauvegarder
+                                    logger.warning(f"Pattern de véhicule manquant non reconnu: '{missing_item}'")
+                                    await self._log_unrecognized_vehicle_pattern(missing_item, mission)
                                     
                             except Exception as e:
                                 logger.warning(f"Erreur lors du parsing avec RequirementParser pour '{missing_item}': {e}")
@@ -674,6 +675,47 @@ class MissionManager:
             logger.error(f"Erreur lors de l'extraction des véhicules manquants: {e}")
         
         return missing_vehicles_needs
+    
+    async def _log_unrecognized_vehicle_pattern(self, missing_item: str, mission: 'Mission') -> None:
+        """
+        Enregistre les patterns de véhicules manquants non reconnus dans un fichier.
+        
+        Permet d'enrichir ultérieurement les fichiers JSON de mapping avec
+        les nouveaux patterns découverts.
+        
+        Args:
+            missing_item: Texte du véhicule manquant non reconnu
+            mission: Mission concernée pour le contexte
+        """
+        try:
+            import os
+            import json
+            from datetime import datetime
+            
+            # Créer le dossier data s'il n'existe pas
+            data_dir = "data"
+            if not os.path.exists(data_dir):
+                os.makedirs(data_dir)
+            
+            log_file = os.path.join(data_dir, "unrecognized_vehicle_patterns.jsonl")
+            
+            # Préparer l'entrée de log
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "mission_id": mission.id if mission else "unknown",
+                "mission_title": mission.title if mission else "unknown",
+                "unrecognized_pattern": missing_item.strip(),
+                "original_div_context": missing_item  # Garder le contexte original
+            }
+            
+            # Ajouter au fichier (format JSONL - une ligne JSON par entrée)
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            
+            logger.debug(f"Pattern non reconnu sauvegardé: {missing_item}")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la sauvegarde du pattern non reconnu: {e}")
     
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
         """Déploie automatiquement les missions selon la configuration"""

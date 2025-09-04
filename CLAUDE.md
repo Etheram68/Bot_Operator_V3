@@ -37,6 +37,9 @@ python main.py --test-mission 12345                    # Test complete mission s
 
 # Debug mode (with browser UI)
 python main.py --list --no-headless --debug
+
+# Pattern analysis for unrecognized vehicles
+python bot_operateur/utils/analyze_patterns.py    # Analyze unrecognized vehicle patterns
 ```
 
 ### Mission URL Testing
@@ -83,6 +86,12 @@ This is a Python automation bot for the "Opérateur 112" emergency management ga
 
 #### Configuration (`bot_operateur/config/`)
 - `settings.py`: Pydantic-based configuration with environment variable support
+
+#### Utilities (`bot_operateur/utils/`)
+- `analyze_patterns.py`: Pattern analysis tool for unrecognized vehicle types
+- `logger.py`: Logging configuration and setup utilities
+- `retry.py`: Retry mechanisms with exponential backoff
+- `dom_utils.py`: DOM manipulation and waiting utilities
 
 ### Key Architecture Patterns
 
