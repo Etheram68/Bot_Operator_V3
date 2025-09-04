@@ -46,7 +46,7 @@
         "secondary": []
       },
       "PCDSM": {
-        "primary": ["PC", "HeliSMUR"],
+        "primary": ["PC"],
         "secondary": []
       },
       "DRAGON": {
@@ -58,7 +58,7 @@
         "secondary": []
       },
       "RESCUE_DIRECTOR": {
-        "primary": ["PC", "HeliSMUR"],
+        "primary": ["PC"],
         "secondary": []
       },
       "INTENSIVE_CARE": {
