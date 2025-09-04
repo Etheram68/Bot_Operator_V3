@@ -84,9 +84,9 @@ class RequirementParser:
         cleaned_text = self._clean_mission_text(mission_text)
         
         for requirement_type, patterns in self.compiled_patterns.items():
-            matches = self._find_matches(cleaned_text, patterns)
-            for quantity, optional in matches:
-                if self._is_resource_indicator(requirement_type, cleaned_text):
+            matches = self._find_matches_with_context(cleaned_text, patterns)
+            for quantity, optional, match_context in matches:
+                if self._is_resource_indicator_contextual(requirement_type, match_context, cleaned_text):
                     logger.debug(f"🚫 Ignoré indicateur de ressource: {requirement_type} ({quantity})")
                     continue
                 
@@ -106,18 +106,91 @@ class RequirementParser:
         return requirements
     
     def _clean_mission_text(self, text: str) -> str:
-        """Nettoie et normalise le texte de mission"""
+        """Nettoie et normalise le texte de mission en préservant les lignes"""
         # Remplacer les caractères spéciaux
         text = text.replace("'", "'").replace("'", "'")
         text = text.replace("«", '"').replace("»", '"')
         
-        # Normaliser les espaces
-        text = re.sub(r'\s+', ' ', text)
-        
         # Supprimer les balises HTML si présentes
         text = re.sub(r'<[^>]+>', '', text)
         
-        return text.strip()
+        # Nettoyer chaque ligne séparément pour préserver la structure
+        lines = text.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            # Normaliser les espaces dans chaque ligne
+            cleaned_line = re.sub(r'\s+', ' ', line.strip())
+            if cleaned_line:  # Garder seulement les lignes non vides
+                cleaned_lines.append(cleaned_line)
+        
+        # Rejoindre avec des \n pour préserver la structure des lignes
+        return '\n'.join(cleaned_lines)
+    
+    def _find_matches_with_context(self, text: str, patterns: List[re.Pattern]) -> List[Tuple[int, bool, str]]:
+        """Trouve les correspondances avec leur contexte pour un type de besoin"""
+        matches = []
+        matched_spans = set()  # Pour éviter les doublons de même position
+        
+        for pattern in patterns:
+            for match in pattern.finditer(text):
+                # Éviter les matches qui se chevauchent (même position dans le texte)
+                match_span = (match.start(), match.end())
+                if match_span in matched_spans:
+                    continue
+                matched_spans.add(match_span)
+                
+                # Extraire la quantité du match et de son contexte
+                quantity = self._extract_quantity_from_match_and_context(text, match)
+                
+                # Déterminer si c'est optionnel (basé sur des mots-clés)
+                optional = self._is_optional_requirement(match.group())
+                
+                # Extraire seulement la ligne courante pour éviter les interférences
+                lines = text.split('\n')
+                match_pos = match.start()
+                
+                # Trouver la ligne qui contient le match
+                line_start = 0
+                current_line = ""
+                for line in lines:
+                    line_end = line_start + len(line)
+                    if line_start <= match_pos <= line_end:
+                        current_line = line.strip()
+                        break
+                    line_start = line_end + 1  # +1 pour le \n
+                
+                context = current_line
+                
+                matches.append((quantity, optional, context))
+        
+        # Si pas de quantité explicite trouvée mais pattern correspond, assumer 1
+        if not matches and any(pattern.search(text) for pattern in patterns):
+            # Prendre le premier match pour le contexte
+            first_match = None
+            for pattern in patterns:
+                match = pattern.search(text)
+                if match:
+                    first_match = match
+                    break
+            
+            if first_match:
+                # Extraire la ligne du premier match
+                lines = text.split('\n')
+                match_pos = first_match.start()
+                
+                line_start = 0
+                current_line = ""
+                for line in lines:
+                    line_end = line_start + len(line)
+                    if line_start <= match_pos <= line_end:
+                        current_line = line.strip()
+                        break
+                    line_start = line_end + 1
+                
+                context = current_line
+                matches.append((1, False, context))
+        
+        return matches
     
     def _find_matches(self, text: str, patterns: List[re.Pattern]) -> List[Tuple[int, bool]]:
         """Trouve les correspondances pour un type de besoin"""
@@ -421,29 +494,117 @@ class RequirementParser:
                 logger.debug(f"🚫 Resource indicator détecté: {requirement_type}")
                 return True
         
-        # Vérifier si le texte contient des indicateurs de probabilité génériques
-        probability_indicators = [
-            r"chances?\s+qu[''']?un?\s+.*\s+soit\s+(demandé|requis)",
-            r"probabilité\s+qu[''']?un?\s+.*\s+soit\s+(demandé|requis)",
-            r"chances?\s+que\s+.*\s+(soient?|soit)\s+(demandé|requis)",
-            r"probabilité\s+que\s+.*\s+(soient?|soit)\s+(demandé|requis)"
+        # Vérifier si ce requirement_type spécifique correspond à une ligne de probabilité
+        # Seulement bloquer si le requirement correspond à un pattern de probabilité spécifique
+        import re
+        
+        # Patterns de probabilité avec capture du contenu
+        probability_patterns = [
+            r"chances?\s+qu[''']?un?\s+([^0-9]*?)\s+soit\s+(demandé|requis)\s*(\d+)",
+            r"probabilité\s+qu[''']?un?\s+([^0-9]*?)\s+soit\s+(demandé|requis)\s*(\d+)",
         ]
         
-        # Chercher le contexte autour du requirement_type dans le texte
-        # pour voir si c'est dans un contexte de probabilité
+        for prob_pattern in probability_patterns:
+            matches = re.finditer(prob_pattern, mission_text, re.IGNORECASE)
+            for match in matches:
+                prob_vehicle_text = match.group(1).strip()
+                percentage = match.group(3)
+                
+                # Vérifier si ce requirement_type correspond au véhicule mentionné dans cette probabilité
+                # Utiliser le même système de matching que pour les requirements normaux
+                if self._vehicle_matches_probability_text(requirement_type, prob_vehicle_text):
+                    logger.debug(f"🚫 Probabilité spécifique détectée pour {requirement_type}: '{prob_vehicle_text}' ({percentage}%)")
+                    return True
+        
+        return False
+    
+    def _is_resource_indicator_contextual(self, requirement_type: str, match_context: str, full_text: str) -> bool:
+        """
+        Vérifie si ce match spécifique est un indicateur de ressource basé sur son contexte.
+        
+        Args:
+            requirement_type: Type de véhicule détecté
+            match_context: Contexte local du match (ligne où il apparaît)
+            full_text: Texte complet de la mission
+            
+        Returns:
+            bool: True si c'est un indicateur de ressource (à ignorer)
+        """
+        # D'abord vérifier les types explicitement de ressources
+        resource_only_types = {
+            "WATER_REQUIRED", "EAU_NECESSAIRE", 
+            "MIN_FIREFIGHTERS", "MIN_POLICE", "MIN_PUMP_CAPACITY"
+        }
+        
+        if requirement_type.upper() in resource_only_types:
+            logger.debug(f"🚫 Type de ressource non-déployable: {requirement_type}")
+            return True
+        
+        # Vérifier dans les resource_indicators du fichier de configuration
+        resource_indicators = self.needs_labels.get("resource_indicators", {})
+        for resource_code, resource_text in resource_indicators.items():
+            if requirement_type.upper() == resource_code.upper():
+                logger.debug(f"🚫 Resource indicator détecté: {requirement_type}")
+                return True
+        
+        # Analyser le contexte local pour détecter les probabilités
         import re
-        for indicator_pattern in probability_indicators:
-            # Chercher si le pattern de probabilité contient notre type de véhicule
-            if re.search(indicator_pattern, mission_text, re.IGNORECASE):
-                # Vérifier si notre requirement_type est dans cette phrase de probabilité
-                requirement_words = requirement_type.lower().replace('_', ' ').split()
-                for word in requirement_words:
-                    if len(word) > 3 and word.lower() in mission_text.lower():
-                        # Si un mot-clé du requirement_type est dans une phrase de probabilité
-                        match = re.search(indicator_pattern, mission_text, re.IGNORECASE)
-                        if match and word.lower() in match.group().lower():
-                            logger.debug(f"🚫 Probabilité détectée pour {requirement_type}: {match.group()}")
-                            return True
+        probability_patterns = [
+            r"chances?\s+qu[''']?un?\s+([^0-9]*?)\s+soit\s+(demandé|requis)\s*(\d+)",
+            r"probabilité\s+qu[''']?un?\s+([^0-9]*?)\s+soit\s+(demandé|requis)\s*(\d+)",
+        ]
+        
+        for prob_pattern in probability_patterns:
+            if re.search(prob_pattern, match_context, re.IGNORECASE):
+                # Ce match est dans une ligne de probabilité
+                match = re.search(prob_pattern, match_context, re.IGNORECASE)
+                if match:
+                    prob_vehicle_text = match.group(1).strip()
+                    percentage = match.group(3)
+                    
+                    if self._vehicle_matches_probability_text(requirement_type, prob_vehicle_text):
+                        logger.debug(f"🚫 Match de probabilité détecté pour {requirement_type}: '{prob_vehicle_text}' ({percentage}%)")
+                        return True
+        
+        return False
+    
+    def _vehicle_matches_probability_text(self, requirement_type: str, probability_text: str) -> bool:
+        """
+        Vérifie si un requirement_type correspond au texte d'une probabilité.
+        
+        Args:
+            requirement_type: Type de véhicule (ex: CHEF_DE_GROUPE)
+            probability_text: Texte extrait de la probabilité (ex: "Chef de Groupe")
+            
+        Returns:
+            bool: True si le requirement_type correspond au texte de probabilité
+        """
+        # Normaliser les textes pour comparaison
+        prob_text_lower = probability_text.lower().strip()
+        
+        # Mapping spécifique pour les correspondances de probabilité
+        probability_mappings = {
+            "CHEF_DE_GROUPE": ["chef de groupe", "chef de groupes", "chefs de groupe", "chefs de groupes"],
+            "VLHR": ["vlhr", "chef de groupe"], # VLHR peut être mentionné comme "Chef de Groupe" dans probabilités
+            "CITERNE": ["camion-citerne", "camion citerne", "citerne"],
+            "BEA": ["moyen elévateur aérien", "échelle aérienne", "bea"],
+            "DRAGON": ["soutien aérien", "dragon", "hélicoptère"],
+            "CHOUCAS": ["soutien aérien fag", "choucas"],
+            "VIRT": ["véhicule risques technologiques", "virt"],
+            "VAR": ["assistance respiratoire", "var"],
+        }
+        
+        # Vérifier si le requirement_type a des mappings définis
+        if requirement_type.upper() in probability_mappings:
+            for mapping in probability_mappings[requirement_type.upper()]:
+                if mapping in prob_text_lower:
+                    return True
+        
+        # Vérifier correspondance basée sur le nom du requirement_type
+        req_words = requirement_type.lower().replace('_', ' ').split()
+        for word in req_words:
+            if len(word) > 3 and word in prob_text_lower:
+                return True
         
         return False
     
