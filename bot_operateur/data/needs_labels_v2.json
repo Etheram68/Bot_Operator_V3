@@ -52,7 +52,9 @@
     "RESCUE_DIRECTOR": ["Directeur des [Ss]ecours [Mm]édicaux?", "DSM requis", "directeur secours", "chef intervention"],
     "DRAGON_PROBABILITY": ["Probabilité qu'un soutien aérien soit requis"],
     "CHOUCAS_PROBABILITY": ["Probabilité qu'un soutien aérien FAG soit requis"],
-    "VIRT_PROBABILITY": ["Chances qu'un véhicule risques? technologiques? soit requis"]
+    "VIRT_PROBABILITY": ["Chances qu'un véhicule risques? technologiques? soit requis"],
+    "VLHR_PROBABILITY": ["Chances qu'un Chef de Groupe soit demandé"],
+    "CHEF_DE_GROUPE_PROBABILITY": ["Chances qu'un Chef de Groupe soit demandé"]
   },
 
   "resource_indicators": {
@@ -67,7 +69,9 @@
     "VSR_PROBABILITY": "Chances que les secours routiers soient requis",
     "DRAGON_PROBABILITY": "Probabilité qu'un soutien aérien soit requis",
     "CHOUCAS_PROBABILITY": "Probabilité qu'un soutien aérien FAG soit requis",
-    "VIRT_PROBABILITY": "Chances qu'un véhicule risques technologiques soit requis"
+    "VIRT_PROBABILITY": "Chances qu'un véhicule risques technologiques soit requis",
+    "VLHR_PROBABILITY": "Chances qu'un Chef de Groupe soit demandé",
+    "CHEF_DE_GROUPE_PROBABILITY": "Chances qu'un Chef de Groupe soit demandé"
   },
 
   "probability_thresholds": {
@@ -78,6 +82,8 @@
     "VSR_PROBABILITY": 50,
     "DRAGON_PROBABILITY": 35,
     "CHOUCAS_PROBABILITY": 35,
-    "VIRT_PROBABILITY": 50
+    "VIRT_PROBABILITY": 50,
+    "VLHR_PROBABILITY": 30,
+    "CHEF_DE_GROUPE_PROBABILITY": 30
   }
 }

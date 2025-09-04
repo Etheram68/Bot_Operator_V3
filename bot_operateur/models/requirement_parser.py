@@ -401,7 +401,8 @@ class RequirementParser:
             "MIN_FIREFIGHTERS", "MIN_POLICE", "MIN_PUMP_CAPACITY",
             "CITERNE_PROBABILITY", "VAR_PROBABILITY", 
             "BEA_PROBABILITY", "POLICE_PROBABILITY",
-            "DRAGON_PROBABILITY", "CHOUCAS_PROBABILITY", "VIRT_PROBABILITY"
+            "DRAGON_PROBABILITY", "CHOUCAS_PROBABILITY", "VIRT_PROBABILITY",
+            "VLHR_PROBABILITY", "CHEF_DE_GROUPE_PROBABILITY"
         }
         
         # IMPORTANT: Ne bloquer que les types explicitement de probabilité
@@ -419,6 +420,30 @@ class RequirementParser:
             if requirement_type.upper() == resource_code.upper():
                 logger.debug(f"🚫 Resource indicator détecté: {requirement_type}")
                 return True
+        
+        # Vérifier si le texte contient des indicateurs de probabilité génériques
+        probability_indicators = [
+            r"chances?\s+qu[''']?un?\s+.*\s+soit\s+(demandé|requis)",
+            r"probabilité\s+qu[''']?un?\s+.*\s+soit\s+(demandé|requis)",
+            r"chances?\s+que\s+.*\s+(soient?|soit)\s+(demandé|requis)",
+            r"probabilité\s+que\s+.*\s+(soient?|soit)\s+(demandé|requis)"
+        ]
+        
+        # Chercher le contexte autour du requirement_type dans le texte
+        # pour voir si c'est dans un contexte de probabilité
+        import re
+        for indicator_pattern in probability_indicators:
+            # Chercher si le pattern de probabilité contient notre type de véhicule
+            if re.search(indicator_pattern, mission_text, re.IGNORECASE):
+                # Vérifier si notre requirement_type est dans cette phrase de probabilité
+                requirement_words = requirement_type.lower().replace('_', ' ').split()
+                for word in requirement_words:
+                    if len(word) > 3 and word.lower() in mission_text.lower():
+                        # Si un mot-clé du requirement_type est dans une phrase de probabilité
+                        match = re.search(indicator_pattern, mission_text, re.IGNORECASE)
+                        if match and word.lower() in match.group().lower():
+                            logger.debug(f"🚫 Probabilité détectée pour {requirement_type}: {match.group()}")
+                            return True
         
         return False
     

@@ -225,6 +225,7 @@ class MissionManager:
                 # Recouper les véhicules manquants avec les besoins existants
                 alert_override_types = set()
                 if missing_vehicles_needs:
+                    logger.info(f"🚨   Besoins manquants (alerte): {missing_vehicles_needs}")
                     for vehicle_type, alert_quantity in missing_vehicles_needs.items():
                         original_quantity = vehicle_needs.get(vehicle_type, 0)
                         
