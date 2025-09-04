@@ -223,13 +223,8 @@ class MissionManager:
                 missing_vehicles_needs = await self._extract_missing_vehicles_from_alert()
                 
                 # Recouper les véhicules manquants avec les besoins existants
-                # et créer une liste des besoins issus de l'alerte (qui doivent override les vérifications)
                 alert_override_types = set()
                 if missing_vehicles_needs:
-                    logger.info(f"🔍 Recroisement des besoins:")
-                    logger.info(f"   Besoins identifiés: {vehicle_needs}")
-                    logger.info(f"   Besoins manquants (alerte): {missing_vehicles_needs}")
-                    
                     for vehicle_type, alert_quantity in missing_vehicles_needs.items():
                         original_quantity = vehicle_needs.get(vehicle_type, 0)
                         
@@ -242,18 +237,12 @@ class MissionManager:
                                 # L'alerte prévaut sur les conditions de réalisation
                                 vehicle_needs[vehicle_type] = alert_quantity
                                 logger.info(f"🔄 {vehicle_type}: remplacé {original_quantity} par {alert_quantity} (alerte prévaut)")
-                            else:
-                                # Même quantité, mais marquer comme alerte pour override
-                                logger.info(f"🚨 {vehicle_type}: quantité identique ({alert_quantity}) mais alerte active - override des vérifications")
                         else:
                             # Nouveau type de véhicule pas dans les conditions de réalisation
                             vehicle_needs[vehicle_type] = alert_quantity
-                            logger.info(f"🆕 {vehicle_type}: ajouté {alert_quantity} (absent des conditions)")
+                            logger.info(f"🆕 {vehicle_type}: ajouté {alert_quantity} (depuis alerte)")
                     
-                    logger.info(f"📋 Besoins finaux après recroisement: {vehicle_needs}")
-                    logger.info(f"🚨 Types avec override alerte: {list(alert_override_types)}")
-                
-                # Pas besoin de stocker dans mission, on passera directement en paramètre
+                    logger.info(f"📋 Besoins finaux avec alertes: {vehicle_needs}")
                 
             except Exception as e:
                 logger.error(f"Erreur lors de l'analyse des véhicules manquants: {e}")
@@ -618,10 +607,6 @@ class MissionManager:
                 logger.debug("Aucune alerte de véhicules manquants trouvée")
                 return missing_vehicles_needs
             
-            # Extraire le contenu de l'alerte
-            alert_text = await missing_alert.inner_text()
-            logger.debug(f"Contenu alerte véhicules manquants: {alert_text.strip()}")
-            
             # Récupérer seulement les véhicules EN ROUTE pour filtrage (pas ceux sur site)
             # Car les véhicules sur site peuvent remplir d'autres fonctions
             vehicles_en_route_by_type = await self.vehicle_scraper._get_vehicles_en_route_only_by_type()
@@ -632,7 +617,6 @@ class MissionManager:
             for div in vehicle_requirement_divs:
                 try:
                     div_text = await div.inner_text()
-                    logger.debug(f"Analyse div véhicules manquants: {div_text.strip()}")
                     
                     # Parser le texte pour extraire les véhicules manquants
                     # Format attendu: "Véhicules manquants: 1 camion-citerne" ou "Véhicules manquants: 1 Chef de groupe, 1 camion-citerne"
@@ -642,7 +626,6 @@ class MissionManager:
                         
                         # Diviser par les virgules pour traiter chaque véhicule manquant séparément
                         missing_items = [item.strip() for item in missing_part.split(',')]
-                        logger.debug(f"Éléments de véhicules manquants détectés: {missing_items}")
                         
                         # Utiliser le système de mapping existant depuis les fichiers JSON
                         from ..models.requirement_parser import RequirementParser
@@ -668,12 +651,10 @@ class MissionManager:
                                         should_add = True
                                         vehicles_en_route = vehicles_en_route_by_type.get(vehicle_type, 0)
                                         if vehicles_en_route > 0:
-                                            logger.debug(f"Ignoré {vehicle_type} x{quantity} - {vehicles_en_route} véhicules en route")
                                             should_add = False
                                         
                                         if should_add:
                                             missing_vehicles_needs[vehicle_type] = missing_vehicles_needs.get(vehicle_type, 0) + quantity
-                                            logger.info(f"🚨 Véhicule manquant ajouté aux besoins: {vehicle_type} x{quantity}")
                                         
                                         found_match = True
                                         break
@@ -688,9 +669,6 @@ class MissionManager:
                 except Exception as e:
                     logger.error(f"Erreur lors de l'analyse d'une div de véhicules manquants: {e}")
                     continue
-            
-            if missing_vehicles_needs:
-                logger.info(f"📋 Véhicules manquants détectés: {missing_vehicles_needs}")
             
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des véhicules manquants: {e}")

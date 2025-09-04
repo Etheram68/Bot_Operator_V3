@@ -433,9 +433,6 @@ class VehicleScraper:
             # Ajuster les besoins en fonction des véhicules déjà déployés
             # Mais ignorer l'ajustement pour les types avec override d'alerte
             alert_override_types = alert_override_types or set()
-            if alert_override_types:
-                logger.info(f"🚨 Override d'alerte actif pour: {list(alert_override_types)}")
-            
             adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type, alternatives_mapping, alert_override_types)
             
             # Si tous les besoins sont déjà satisfaits, ne rien faire
@@ -725,9 +722,6 @@ class VehicleScraper:
                     logger.debug(f"Erreur lors de l'extraction d'un véhicule en route (par type): {e}")
                     continue
             
-            if vehicles_en_route_by_type:
-                logger.info(f"🚗 Véhicules en route par type: {vehicles_en_route_by_type}")
-            
         except Exception as e:
             logger.warning(f"Erreur lors du comptage des véhicules en route par type: {e}")
         
@@ -756,7 +750,6 @@ class VehicleScraper:
             # Si ce type est dans l'override d'alerte, ne pas ajuster (garder le besoin complet)
             if vehicle_type in alert_override_types:
                 adjusted_needs[vehicle_type] = needed_count
-                logger.info(f"🚨 {vehicle_type}: besoin {needed_count} maintenu (override alerte)")
                 continue
             
             # Compter les véhicules déployés qui peuvent satisfaire ce besoin
