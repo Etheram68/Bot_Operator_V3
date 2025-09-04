@@ -737,6 +737,7 @@ class VehicleScraper:
                 adjusted_needs[vehicle_type] = remaining_need
                 logger.debug(f"🎯 {vehicle_type}: besoin {needed_count} - déployé {already_deployed} = restant {remaining_need}")
             else:
+                logger.debug(f"✅ {vehicle_type}: besoin {needed_count} déjà satisfait par {already_deployed} véhicules déployés")
         
         if adjusted_needs:
             logger.info(f"🔄 Besoins ajustés: {adjusted_needs}")
