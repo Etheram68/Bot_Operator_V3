@@ -294,30 +294,36 @@ class MissionManager:
                     try:
                         href = await link.get_attribute('href')
                         text = await link.inner_text()
-                        transport_data.append({'href': href, 'text': text})
+                        transport_data.append({'href': href, 'text': text, 'type': 'patient'})
                     except Exception as e:
                         logger.error(f"Erreur lors de l'extraction d'un lien de transport: {e}")
                         continue
                 
-                # Si pas de liens de transport sanitaire, vérifier les transports de prisonniers
+                # Vérifier TOUJOURS les transports de prisonniers (même s'il y a des transports sanitaires)
+                logger.debug("Vérification des transports de prisonniers...")
+                prisoner_transport_data = await self._extract_prisoner_transport_links(mission)
+                if prisoner_transport_data:
+                    logger.debug(f"🚔 {len(prisoner_transport_data)} véhicule(s) avec transport de prisonniers détecté(s)")
+                    transport_data.extend(prisoner_transport_data)  # Ajouter aux transports sanitaires
+                
+                # Si aucun transport trouvé, continuer le traitement normal de la mission
                 if not transport_data:
-                    logger.debug("Aucun lien de transport sanitaire trouvé, vérification des transports de prisonniers...")
-                    prisoner_transport_data = await self._extract_prisoner_transport_links(mission)
-                    if prisoner_transport_data:
-                        logger.debug(f"🚔 {len(prisoner_transport_data)} véhicule(s) avec transport de prisonniers détecté(s)")
-                        transport_data = prisoner_transport_data
-                    else:
-                        logger.debug("Aucun transport de prisonniers trouvé")
-                        break
-                else:
-                    logger.debug(f"🚑 {len(transport_data)} véhicule(s) avec demande de transport sanitaire détecté(s)")
+                    logger.debug("Aucun transport (sanitaire ou prisonniers) disponible, poursuite du traitement de la mission")
+                    break
+                
+                if len([t for t in transport_data if t.get('type') == 'patient']) > 0:
+                    logger.debug(f"🚑 {len([t for t in transport_data if t.get('type') == 'patient'])} transport(s) sanitaire(s) détecté(s)")
+                if len([t for t in transport_data if t.get('type') == 'prisoner']) > 0:
+                    logger.debug(f"🚔 {len([t for t in transport_data if t.get('type') == 'prisoner'])} transport(s) de prisonniers détecté(s)")
                 
                 # Traiter chaque véhicule de transport via son URL
                 for i, transport_info in enumerate(transport_data):
                     try:
                         href = transport_info['href']
                         text = transport_info['text']
-                        logger.debug(f"🚑 Transport initial {i+1}/{len(transport_data)}: {text}")
+                        transport_type = transport_info.get('type', 'patient')
+                        transport_emoji = "🚔" if transport_type == 'prisoner' else "🚑"
+                        logger.debug(f"{transport_emoji} Transport initial {i+1}/{len(transport_data)}: {text}")
                         
                         # Naviguer directement vers l'URL du transport
                         transport_url = f"https://www.operateur112.fr{href}" if href.startswith('/') else href
@@ -325,7 +331,6 @@ class MissionManager:
                         await self.browser_manager.page.wait_for_load_state('networkidle')
                         
                         # Traiter selon le type de transport
-                        transport_type = transport_info.get('type', 'medical')  # Par défaut médical
                         
                         if transport_type == 'prisoner':
                             # Pour les prisonniers, traitement différent (sélection prison)

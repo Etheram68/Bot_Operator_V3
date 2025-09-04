@@ -38,7 +38,7 @@
     "medical": {
       "AMBULANCE": {
         "primary": ["VSAV", "ASSU", "SMUR(A)"],
-        "secondary": ["Ambulance"],
+        "secondary": [],
         "transport_capable": ["ASSU", "SMUR(A)"]
       },
       "AMBULANCE_TRANSPORT": {
