@@ -9,30 +9,53 @@ from ..utils.dom_utils import DOMUtils
 
 
 class VehicleScraper:
-    """Scraper spécialisé pour extraire les informations des véhicules"""
+    """
+    Scraper spécialisé pour la gestion des véhicules d'urgence.
+    
+    Permet d'extraire les informations des véhicules disponibles,
+    de les sélectionner et de les déployer sur les missions.
+    
+    Attributes:
+        page: Page web Playwright
+        dom_utils: Utilitaires pour la manipulation du DOM
+    """
     
     def __init__(self, page: Page):
         self.page = page
         self.dom_utils = DOMUtils(page)
     
     def _get_vehicle_table_selector(self, mission_type: MissionType) -> str:
-        """Retourne le bon sélecteur de tableau selon le type de mission"""
+        """
+        Retourne le sélecteur CSS du tableau de véhicules approprié.
+        
+        Args:
+            mission_type: Type de mission (transport ou autre)
+            
+        Returns:
+            str: Sélecteur CSS du tableau de véhicules
+        """
         if mission_type == MissionType.TRANSPORT:
             return "#vehicle_show_table_body_rett"
         else:
             return "#vehicle_show_table_all"
     
     async def get_available_vehicles_for_mission(self, mission: Mission) -> List[Vehicle]:
-        """Récupère tous les véhicules disponibles pour une mission"""
+        """
+        Récupère tous les véhicules disponibles pour une mission spécifique.
+        
+        Args:
+            mission: Mission pour laquelle récupérer les véhicules
+            
+        Returns:
+            List[Vehicle]: Liste des véhicules disponibles
+        """
         vehicles = []
         
         try:
-            # Aller sur la page de mission
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.page.goto(mission_url)
             await self.page.wait_for_load_state('networkidle')
 
-            # Récupérer dynamiquement le lien "Conditions"
             help_button = await self.page.query_selector("#mission_help")
             if not help_button:
                 logger.warning(f"Bouton 'Conditions' non trouvé pour la mission {mission.id}")
@@ -77,7 +100,13 @@ class VehicleScraper:
         return vehicles
     
     async def _load_all_vehicles(self) -> None:
-        """Charge tous les véhicules manquants si nécessaire"""
+        """
+        Charge tous les véhicules manquants depuis le serveur.
+        
+        Recherche et clique sur le bouton de chargement des véhicules manquants
+        pour récupérer l'ensemble des véhicules disponibles, y compris
+        ceux plus éloignés géographiquement.
+        """
         try:
             # Chercher le bouton pour charger les véhicules manquants
             missing_vehicles_button = await self.page.query_selector(".missing_vehicles_load")
@@ -94,7 +123,15 @@ class VehicleScraper:
             logger.warning(f"Erreur lors du chargement des véhicules manquants: {e}")
     
     async def _scrape_vehicles_from_table(self) -> List[Vehicle]:
-        """Scrape les véhicules depuis le tableau"""
+        """
+        Extrait tous les véhicules depuis le tableau principal.
+        
+        Analyse toutes les lignes du tableau des véhicules disponibles
+        et extrait leurs informations complètes.
+        
+        Returns:
+            List[Vehicle]: Liste complète des véhicules extraits du tableau
+        """
         vehicles = []
         
         try:
@@ -116,7 +153,19 @@ class VehicleScraper:
         return vehicles
     
     async def _scrape_closest_vehicles_from_table(self, table_selector: str) -> List[Vehicle]:
-        """Scrape uniquement les véhicules visibles (les plus proches) sans charger tous les véhicules"""
+        """
+        Extrait uniquement les véhicules visibles les plus proches.
+        
+        Récupère seulement les véhicules déjà affichés dans le tableau
+        sans déclencher le chargement des véhicules plus éloignés.
+        Cette approche optimise les performances en priorisant la proximité.
+        
+        Args:
+            table_selector: Sélecteur CSS du tableau de véhicules à analyser
+            
+        Returns:
+            List[Vehicle]: Liste des véhicules les plus proches disponibles
+        """
         vehicles = []
         
         try:
@@ -140,7 +189,19 @@ class VehicleScraper:
         return vehicles
     
     async def _extract_vehicle_from_row(self, row) -> Optional[Vehicle]:
-        """Extrait les informations d'un véhicule depuis une ligne du tableau"""
+        """
+        Extrait les informations complètes d'un véhicule depuis une ligne.
+        
+        Analyse une ligne du tableau HTML pour extraire l'ID, le type,
+        la disponibilité et les informations complémentaires d'un véhicule.
+        
+        Args:
+            row: Élément HTML représentant une ligne du tableau de véhicules
+            
+        Returns:
+            Optional[Vehicle]: Objet Vehicle avec toutes les informations
+                              extraites, ou None si l'extraction échoue
+        """
         try:
             # Extraire l'ID du véhicule
             row_id = await row.get_attribute("id")
@@ -186,7 +247,18 @@ class VehicleScraper:
             return None
     
     async def _extract_vehicle_location(self, row) -> Optional[str]:
-        """Extrait la localisation du véhicule depuis la ligne"""
+        """
+        Extrait la localisation géographique du véhicule.
+        
+        Recherche dans les cellules de la ligne une information de localisation
+        au format code postal + nom de ville (ex: "68100 Mulhouse").
+        
+        Args:
+            row: Élément HTML représentant une ligne du tableau de véhicules
+            
+        Returns:
+            Optional[str]: Localisation du véhicule ou None si non trouvée
+        """
         try:
             # Chercher dans les cellules de la ligne
             cells = await row.query_selector_all("td")
@@ -203,7 +275,20 @@ class VehicleScraper:
         return None
     
     async def _extract_fuel_level(self, row) -> Optional[int]:
-        """Extrait le niveau de carburant du véhicule"""
+        """
+        Extrait le niveau de carburant du véhicule en pourcentage.
+        
+        Recherche les indicateurs visuels de niveau de carburant (barres
+        de progression, attributs aria-valuenow, styles CSS avec width)
+        pour déterminer le niveau actuel.
+        
+        Args:
+            row: Élément HTML représentant une ligne du tableau de véhicules
+            
+        Returns:
+            Optional[int]: Niveau de carburant en pourcentage (0-100)
+                          ou 100 par défaut si non trouvé
+        """
         try:
             # Chercher des indicateurs de niveau de carburant
             fuel_indicators = await row.query_selector_all(".progress-bar, .fuel-indicator")
@@ -227,7 +312,20 @@ class VehicleScraper:
         return 100  # Par défaut
     
     async def _extract_vehicle_condition(self, row) -> Optional[str]:
-        """Extrait l'état du véhicule"""
+        """
+        Extrait l'état de condition du véhicule.
+        
+        Recherche les badges ou indicateurs d'état pour déterminer
+        la condition générale du véhicule (excellent, bon, moyen, etc.).
+        
+        Args:
+            row: Élément HTML représentant une ligne du tableau de véhicules
+            
+        Returns:
+            Optional[str]: État du véhicule en anglais standardisé
+                          (excellent, good, average, poor, maintenance, repair)
+                          ou "excellent" par défaut
+        """
         try:
             # Chercher des badges ou indicateurs d'état
             badges = await row.query_selector_all(".badge, .label")
@@ -468,7 +566,15 @@ class VehicleScraper:
             return 0
     
     async def _get_already_deployed_vehicles(self) -> List[str]:
-        """Récupère les IDs des véhicules déjà déployés sur la mission ou en route"""
+        """
+        Récupère la liste des IDs des véhicules déjà mobilisés.
+        
+        Analyse les tableaux de véhicules déjà présents sur la mission
+        et ceux en route pour éviter leur redéploiement.
+        
+        Returns:
+            List[str]: Liste des IDs de véhicules à exclure de la sélection
+        """
         excluded_vehicle_ids = []
         excluded_names = []  # Pour le debug
         
@@ -529,7 +635,16 @@ class VehicleScraper:
         return excluded_vehicle_ids
     
     async def _get_already_deployed_vehicles_by_type(self) -> dict:
-        """Compte les véhicules déjà déployés par type pour ajuster les besoins"""
+        """
+        Comptabilise les véhicules déployés par type de véhicule.
+        
+        Analyse les véhicules déjà présents sur la mission et en route
+        pour déterminer combien de chaque type sont déjà mobilisés,
+        permettant d'ajuster les besoins restants.
+        
+        Returns:
+            dict: Dictionnaire {type_véhicule: nombre_déployé}
+        """
         deployed_by_type = {}
         
         try:
@@ -575,7 +690,21 @@ class VehicleScraper:
         return deployed_by_type
     
     def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict, alternatives_mapping: dict = None) -> dict:
-        """Ajuste les besoins en soustrayant les véhicules déjà déployés (avec alternatives)"""
+        """
+        Ajuste les besoins en véhicules selon les déploiements existants.
+        
+        Soustrait des besoins originaux les véhicules déjà déployés,
+        en tenant compte des alternatives possibles (ex: un VSAV peut
+        remplacer une AMBULANCE).
+        
+        Args:
+            original_needs: Besoins originaux par type de véhicule
+            deployed_by_type: Véhicules déjà déployés par type
+            alternatives_mapping: Mapping des véhicules alternatifs possibles
+            
+        Returns:
+            dict: Besoins ajustés restant à satisfaire
+        """
         adjusted_needs = {}
         
         for vehicle_type, needed_count in original_needs.items():
@@ -617,7 +746,24 @@ class VehicleScraper:
         return adjusted_needs
     
     def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, mission: 'Mission' = None):
-        """Trouve si un véhicule peut satisfaire un besoin (avec alternatives)"""
+        """
+        Détermine si un véhicule peut satisfaire un besoin spécifique.
+        
+        Vérifie d'abord une correspondance directe, puis explore les
+        alternatives primaires et secondaires. Adapte le mapping pour
+        les transferts interhospitaliers.
+        
+        Args:
+            vehicle_type: Type du véhicule candidat
+            vehicle_needs: Besoins restants par type de véhicule
+            selected_counts: Nombre de véhicules déjà sélectionnés par type
+            alternatives_mapping: Mapping des alternatives possibles
+            mission: Mission courante pour adaptation contextuelle
+            
+        Returns:
+            tuple: (type_besoin, quantité_nécessaire, déjà_sélectionné)
+                   ou None si aucune correspondance
+        """
         
         # Vérifier si c'est un transfert interhospitalier et adapter le mapping pour AMBULANCE
         is_hospital_transfer = mission and mission.title and "Transfert interhospitalier" in mission.title
@@ -667,7 +813,22 @@ class VehicleScraper:
         return None
     
     async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, alternatives_mapping: dict = None, table_selector: str = None, mission: 'Mission' = None) -> int:
-        """Charge tous les véhicules et sélectionne ceux manquants"""
+        """
+        Charge tous les véhicules disponibles et sélectionne ceux manquants.
+        
+        Déclenche le chargement complet des véhicules (y compris éloignés)
+        puis sélectionne automatiquement ceux nécessaires pour satisfaire
+        les besoins non comblés par la sélection initiale.
+        
+        Args:
+            unsatisfied_needs: Besoins restants par type de véhicule
+            alternatives_mapping: Mapping des alternatives possibles
+            table_selector: Sélecteur du tableau de véhicules
+            mission: Mission courante pour adaptation contextuelle
+            
+        Returns:
+            int: Nombre de véhicules supplémentaires sélectionnés
+        """
         additional_selected = 0
         
         try:

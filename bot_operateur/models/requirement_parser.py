@@ -63,39 +63,43 @@ class RequirementParser:
         return compiled
     
     def parse_mission_text(self, mission_text: str) -> List[MissionRequirement]:
-        """Parse le texte d'une mission pour extraire les exigences"""
+        """
+        Analyse intelligente du texte de mission pour extraire les exigences.
+        
+        Utilise des patterns regex avancés pour détecter les besoins en véhicules,
+        distinguer les exigences des indicateurs de ressources et gérer les
+        probabilités vs demandes concrètes.
+        
+        Args:
+            mission_text: Texte brut de la mission à analyser
+            
+        Returns:
+            List[MissionRequirement]: Liste des exigences extraites
+        """
         requirements = []
         
         if not mission_text or not self.compiled_patterns:
             return requirements
         
-        # Nettoyer le texte
         cleaned_text = self._clean_mission_text(mission_text)
         
-        # Analyser chaque type de besoin
         for requirement_type, patterns in self.compiled_patterns.items():
             matches = self._find_matches(cleaned_text, patterns)
             for quantity, optional in matches:
-                # Vérifier si c'est un indicateur de ressource plutôt qu'un véhicule
                 if self._is_resource_indicator(requirement_type, cleaned_text):
                     logger.debug(f"🚫 Ignoré indicateur de ressource: {requirement_type} ({quantity})")
                     continue
                 
-                # Créer une exigence unique avec le type de besoin générique
-                # Le vehicle_scraper se chargera de choisir les véhicules les plus proches
-                # parmi les alternatives disponibles
                 requirement = MissionRequirement(
-                    vehicle_type=requirement_type,  # Type générique (ex: "CARS_POLICE")
-                    quantity=quantity,              # Quantité exacte demandée
+                    vehicle_type=requirement_type,
+                    quantity=quantity,
                     optional=optional
                 )
                 requirements.append(requirement)
                 logger.debug(f"✅ Ajouté besoin: {requirement_type} x{quantity} ({'optionnel' if optional else 'requis'})")
         
-        # Conversion des exigences de personnel vers exigences de véhicules
         requirements = self._convert_personnel_to_vehicle_requirements(requirements)
         
-        # Post-traitement pour éviter les doublons et optimiser
         requirements = self._post_process_requirements(requirements)
         
         logger.debug(f"Extrait {len(requirements)} exigences du texte de mission")

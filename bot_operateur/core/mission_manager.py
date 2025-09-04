@@ -13,7 +13,20 @@ from ..config.settings import Settings
 
 
 class MissionManager:
-    """Gestionnaire principal des missions"""
+    """
+    Gestionnaire principal des missions d'urgence.
+    
+    Coordonne le scraping des missions, leur analyse et leur déploiement
+    en utilisant différentes stratégies de sélection de véhicules.
+    
+    Attributes:
+        browser_manager: Gestionnaire du navigateur web
+        settings: Configuration de l'application
+        mission_scraper: Scraper pour extraire les missions
+        vehicle_scraper: Scraper pour gérer les véhicules
+        strategies: Stratégies de déploiement disponibles
+        active_missions: Liste des missions en cours
+    """
     
     def __init__(self, browser_manager: BrowserManager, settings: Settings):
         self.browser_manager = browser_manager
@@ -21,26 +34,26 @@ class MissionManager:
         self.mission_scraper = MissionScraper(browser_manager.page)
         self.vehicle_scraper = VehicleScraper(browser_manager.page)
         
-        # Stratégies disponibles
         self.strategies = {
             "balanced": BalancedStrategy(),
             "smart": SmartStrategy(),
         }
         
-        # Missions en cours
         self.active_missions: List[Mission] = []
         
     async def get_all_missions(self) -> List[Mission]:
-        """Récupère toutes les missions disponibles"""
+        """
+        Récupère toutes les missions disponibles depuis l'interface web.
+        
+        Returns:
+            List[Mission]: Liste des missions trouvées, vide en cas d'erreur
+        """
         logger.info("Récupération de toutes les missions...")
         
         try:
-            # S'assurer qu'on est sur la page principale
             await self.browser_manager.navigate_to(f"{self.settings.game_url}/")
-            
             missions = await self.mission_scraper.get_all_missions()
             logger.info(f"Trouvé {len(missions)} missions au total")
-            
             return missions
             
         except Exception as e:
@@ -48,28 +61,30 @@ class MissionManager:
             return []
     
     async def get_mission_details(self, mission: Mission) -> Optional[Mission]:
-        """Enrichit une mission avec ses détails complets"""
+        """
+        Enrichit une mission avec ses détails complets (patients, exigences).
+        
+        Args:
+            mission: Mission à enrichir
+            
+        Returns:
+            Mission enrichie ou None si la mission est terminée/inaccessible
+        """
         logger.debug(f"Récupération des détails pour mission {mission.id}")
         
         try:
-            # D'abord aller sur la page de mission et traiter les transports
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.browser_manager.page.goto(mission_url)
             await self.browser_manager.page.wait_for_load_state('networkidle')
             
-            # Traiter les demandes de transport avant de lire les conditions
             await self._handle_patient_transport_initial(mission)
             
-            # Maintenant récupérer les détails (conditions, etc.)
             details = await self.mission_scraper.get_mission_details(mission)
             if details:
-                # Mettre à jour la mission avec les détails
                 mission.patients = details.get('patients', [])
-                mission.patient_count = len(mission.patients)  # Toujours calculer depuis les patients scrapés
+                mission.patient_count = len(mission.patients)
                 mission.requirements = details.get('requirements', [])
-                # Les crédits sont déjà définis dans _extract_mission_from_element, pas besoin de les écraser
                 
-                # Mettre à jour le titre s'il est disponible (plus complet que celui de la liste)
                 if details.get('title'):
                     mission.title = details['title']
                     logger.debug(f"Titre mis à jour: '{mission.title}'")
@@ -261,7 +276,18 @@ class MissionManager:
             return False
     
     async def _handle_patient_transport_initial(self, mission: Mission) -> bool:
-        """Traite les demandes de transport dès l'entrée sur une mission"""
+        """
+        Gère automatiquement les demandes de transport (patients/prisonniers) en début de mission.
+        
+        Détecte et traite les alertes de transport avant de lire les conditions,
+        supportant à la fois les transports sanitaires et les transports de prisonniers.
+        
+        Args:
+            mission: Mission à traiter
+            
+        Returns:
+            bool: True si traitement réussi (ou aucun transport), False en cas d'erreur
+        """
         logger.info(f"🚑 Vérification des transports initiaux pour mission {mission.title} ({mission.id})")
         
         try:
@@ -380,7 +406,15 @@ class MissionManager:
             return False
     
     async def _handle_hospital_selection(self, mission: Mission) -> bool:
-        """Gère la sélection de l'hôpital pour le transport"""
+        """
+        Sélectionne automatiquement le premier hôpital disponible pour un transport sanitaire.
+        
+        Args:
+            mission: Mission en cours
+            
+        Returns:
+            bool: True si sélection réussie, False sinon
+        """
         try:
             # Attendre que le tableau des hôpitaux soit chargé
             hospitals_table = await self.browser_manager.page.wait_for_selector('#own-hospitals tbody', timeout=5000)
@@ -411,11 +445,16 @@ class MissionManager:
             return False
     
     async def _handle_prison_selection(self, mission: Mission) -> bool:
-        """Gère la sélection de la prison pour le transport de prisonniers"""
+        """
+        Sélectionne automatiquement la première prison disponible pour un transport de prisonniers.
+        
+        Args:
+            mission: Mission en cours
+            
+        Returns:
+            bool: True si sélection réussie, False sinon
+        """
         try:
-            # Pour les prisonniers, chercher un tableau ou interface similaire
-            # En attendant de connaître la structure exacte, on utilise la même logique
-            # mais avec des logs différents
             
             # Attendre que la page de sélection soit chargée
             await self.browser_manager.page.wait_for_load_state('networkidle')
@@ -442,7 +481,18 @@ class MissionManager:
             return False
     
     async def _extract_prisoner_transport_links(self, mission: Mission) -> list:
-        """Extrait les liens de transport de prisonniers depuis les véhicules"""
+        """
+        Extrait les liens de transport de prisonniers depuis le tableau des véhicules.
+        
+        Recherche les cellules de sélection de prison dans le DOM et extrait
+        les liens de transport pour chaque véhicule de police disponible.
+        
+        Args:
+            mission: Mission en cours
+            
+        Returns:
+            list: Liste des données de transport (href, text, type, vehicle_id)
+        """
         try:
             # Vérifier qu'il y a bien les deux alertes requises pour les prisonniers
             missing_vehicles_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger.alert-missing-vehicles')
@@ -596,7 +646,18 @@ class MissionManager:
         return stats
     
     def _filter_eligible_missions(self, missions: List[Mission]) -> List[Mission]:
-        """Filtre les missions éligibles au déploiement automatique"""
+        """
+        Filtre les missions selon les critères de déploiement automatique.
+        
+        Applique les filtres configurés : statut disponible, seuil de crédits minimum,
+        et autres critères définis dans les settings.
+        
+        Args:
+            missions: Liste des missions à filtrer
+            
+        Returns:
+            List[Mission]: Missions éligibles au déploiement
+        """
         eligible = []
         
         for mission in missions:

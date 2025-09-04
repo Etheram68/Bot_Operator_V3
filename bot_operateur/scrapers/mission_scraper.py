@@ -14,28 +14,40 @@ from .patient_scraper import PatientScraper
 
 
 class MissionScraper:
-    """Scraper spécialisé pour extraire les informations des missions"""
+    """
+    Scraper spécialisé pour l'extraction des missions d'urgence.
+    
+    Gère la récupération des missions depuis l'interface web,
+    l'extraction de leurs détails (patients, exigences) et leur analyse.
+    
+    Attributes:
+        page: Page web Playwright
+        dom_utils: Utilitaires pour la manipulation du DOM
+        requirement_parser: Analyseur intelligent des exigences de mission
+        conditions_analyzer: Analyseur des conditions de mission
+        patient_scraper: Scraper pour les informations patients
+    """
     
     def __init__(self, page: Page):
         self.page = page
         self.dom_utils = DOMUtils(page)
         self.requirement_parser = RequirementParser()
         self.conditions_analyzer = ConditionsAnalyzer(page)
-        self.patient_scraper = PatientScraper(page)  # Pour utiliser sa fonction _parse_patient_need
+        self.patient_scraper = PatientScraper(page)
     
     async def get_all_missions(self) -> List[Mission]:
-        """Récupère toutes les missions disponibles de tous les types"""
+        """
+        Récupère toutes les missions disponibles de tous les types.
+        
+        Returns:
+            List[Mission]: Liste de toutes les missions trouvées
+        """
         missions = []
         
-        # Types de missions et leurs sélecteurs
         mission_panels = {
             MissionType.NORMAL: "#mission_list",
             MissionType.TRANSPORT: "#mission_list_krankentransporte", 
             MissionType.SECURITY: "#mission_list_sicherheitswache",
-            # MissionType.ALLIANCE: "#mission_list_alliance",
-            # MissionType.ALLIANCE_EVENT: "#mission_list_alliance_event",
-            # MissionType.ALLIANCE_TRANSPORT: "#mission_list_krankentransporte_alliance",
-            # MissionType.ALLIANCE_SECURITY: "#mission_list_sicherheitswache_alliance"
         }
         
         for mission_type, selector in mission_panels.items():
@@ -102,23 +114,16 @@ class MissionScraper:
             sortable_data_raw = sortable_data_raw.replace("&quot;", '"')
             sortable_data = json.loads(sortable_data_raw)
             
-            # Extraire les informations du JSON
             title = sortable_data.get("caption", "")
             credits = sortable_data.get("average_credits", 0)
             prisoners_count_range = sortable_data.get("prisoners_count", [0, 0])
             
             prisoner_count = max(prisoners_count_range) if prisoners_count_range else 0
-            
-            # Extraire la localisation depuis search_attribute
             location = self._extract_location_from_search_attribute(search_attribute, title)
-            
-            # Construire les URLs directement avec les informations disponibles
             deploy_url = f"/missions/{mission_id}"
             
-            # Construire l'URL des conditions avec mission_type_id et mission_id
             help_url = None
             if mission_type_id:
-                # Ajouter additive_overlays si présent et non vide
                 if additive_overlays and additive_overlays.strip():
                     help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?additive_overlays={additive_overlays}&mission_id={mission_id}"
                     logger.debug(f"🔗 URL avec additive_overlays '{additive_overlays}': {help_url}")

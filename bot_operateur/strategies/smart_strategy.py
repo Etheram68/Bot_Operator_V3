@@ -8,7 +8,20 @@ from ..models.requirement_parser import RequirementParser
 
 
 class SmartStrategy(BaseStrategy):
-    """Stratégie intelligente utilisant les mappings réels de véhicules et la proximité"""
+    """
+    Stratégie intelligente de déploiement de véhicules.
+    
+    Utilise des mappings réels de véhicules, la sélection basée sur la proximité
+    (premiers véhicules = plus proches), les alternatives automatiques et 
+    l'adaptation selon la complexité de la mission.
+    
+    Features:
+        - Reconnaissance des véhicules réels depuis vehicles_v2.json
+        - Alternatives automatiques (VSAV → ASSU → Ambulance)
+        - Sélection par proximité (premiers listés = plus proches)
+        - Gestion adaptative de la complexité
+        - Évitement de la surdéploiement
+    """
     
     def __init__(self):
         super().__init__("smart")
@@ -19,34 +32,35 @@ class SmartStrategy(BaseStrategy):
         mission: Mission, 
         available_vehicles: List[Vehicle]
     ) -> List[str]:
-        """Sélectionne les véhicules selon les mappings réels et la proximité"""
+        """
+        Sélectionne les véhicules selon les mappings réels et la proximité.
         
-        # Filtrer les véhicules disponibles
+        Args:
+            mission: Mission à équiper
+            available_vehicles: Véhicules disponibles
+            
+        Returns:
+            List[str]: IDs des véhicules sélectionnés
+        """
         available = self._filter_available_vehicles(available_vehicles)
         if not available:
             self.logger.warning("Aucun véhicule disponible")
             return []
         
-        # Analyser la complexité de la mission
         complexity = self.parser.analyze_mission_complexity(mission.requirements)
         self.logger.info(f"Mission complexity: {complexity['complexity']} (score: {complexity['score']})")
         
-        # Grouper les véhicules par type ET par proximité (le premier est le plus proche)
         vehicles_by_type = self._group_vehicles_by_type_and_proximity(available)
-        
-        # Obtenir les exigences avec alternatives
         vehicle_selections = self._plan_vehicle_selections(mission.requirements, vehicles_by_type)
         
         selected_vehicles = []
         
-        # Sélectionner selon le plan
         for vehicle_type, needed_count, alternatives in vehicle_selections:
             selected = self._select_vehicles_with_alternatives(
                 vehicle_type, needed_count, alternatives, vehicles_by_type
             )
             selected_vehicles.extend(selected)
         
-        # Ajouter des véhicules de support selon la complexité
         if complexity['complexity'] in ['complex', 'major_incident']:
             support_vehicles = self._add_support_vehicles_by_complexity(
                 mission, selected_vehicles, vehicles_by_type, complexity
@@ -70,7 +84,7 @@ class SmartStrategy(BaseStrategy):
         
         # Traiter chaque type d'exigence avec alternatives
         for vehicle_type, quantity in requirements.items():
-            logger.debug(f"🔍 Traitement du besoin: {vehicle_type} x{quantity}")
+            logger.debug(f"Traitement du besoin: {vehicle_type} x{quantity}")
             
             # Obtenir les alternatives directement depuis le mapping véhicules
             vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
@@ -93,7 +107,7 @@ class SmartStrategy(BaseStrategy):
                 needs[primary_type] = quantity
                 
                 logger.debug(
-                    f"✅ Type {vehicle_type} avec {len(alternatives_info.get('primary', []))} alternatives primaires {alternatives_info.get('primary', [])} "
+                    f"Type {vehicle_type} avec {len(alternatives_info.get('primary', []))} alternatives primaires {alternatives_info.get('primary', [])} "
                     f"-> besoin ajouté: {primary_type}:{quantity}"
                 )
             else:
@@ -101,7 +115,7 @@ class SmartStrategy(BaseStrategy):
                 needs[vehicle_type] = quantity
                 alternative_count = len(alternatives_info.get('primary', [])) if alternatives_info else 0
                 logger.debug(
-                    f"✅ Type {vehicle_type} avec {alternative_count} alternative(s) "
+                    f"Type {vehicle_type} avec {alternative_count} alternative(s) "
                     f"-> besoin ajouté: {vehicle_type}:{quantity}"
                 )
         
@@ -142,11 +156,23 @@ class SmartStrategy(BaseStrategy):
         # CORRECTION: Éliminer les doublons causés par les alternatives redondantes
         # needs = self._eliminate_redundant_alternatives(needs)
         
-        self.logger.info(f"🎯 Besoins calculés avec alternatives: {needs}")
+        self.logger.info(f"Besoins calculés avec alternatives: {needs}")
         return needs
     
     def _eliminate_redundant_alternatives(self, needs: dict) -> dict:
-        """Élimine les besoins redondants causés par les alternatives"""
+        """
+        Élimine les besoins redondants causés par les alternatives.
+        
+        Identifie les groupes de types de véhicules qui sont des alternatives
+        les uns des autres et ne conserve que le besoin maximal de chaque groupe
+        pour éviter le surdéploiement.
+        
+        Args:
+            needs: Dictionnaire des besoins bruts par type de véhicule
+            
+        Returns:
+            dict: Besoins nettoyés sans redondances
+        """
         cleaned_needs = {}
         excluded_types = set()
         
@@ -197,7 +223,7 @@ class SmartStrategy(BaseStrategy):
                     common_vehicles = set(my_alternatives) & set(other_primary)
                     if common_vehicles:
                         related_needs.append(other_need)
-                        self.logger.debug(f"🔗 Détecté véhicules communs {common_vehicles} entre {need_type} et {other_need}")
+                        self.logger.debug(f"Détecté véhicules communs {common_vehicles} entre {need_type} et {other_need}")
             
             # 3. Traiter les problèmes de casse (AMBULANCE vs Ambulance)
             need_lower = need_type.lower()
@@ -240,7 +266,7 @@ class SmartStrategy(BaseStrategy):
             max_needed = max(needs[t] for t in group_types if t in needs)
             cleaned_needs[group_key] = max_needed
             
-            self.logger.debug(f"🔧 Groupe d'alternatives {group_types} -> {group_key}: {max_needed}")
+            self.logger.debug(f"Groupe d'alternatives {group_types} -> {group_key}: {max_needed}")
         
         # Ajouter les types qui n'ont pas d'alternatives redondantes
         for need_type, quantity in needs.items():
@@ -248,14 +274,26 @@ class SmartStrategy(BaseStrategy):
                 cleaned_needs[need_type] = quantity
         
         if len(cleaned_needs) != len(needs):
-            self.logger.info(f"🧹 Nettoyage des doublons: {len(needs)} -> {len(cleaned_needs)} besoins")
+            self.logger.info(f"Nettoyage des doublons: {len(needs)} -> {len(cleaned_needs)} besoins")
             self.logger.debug(f"   Avant: {needs}")
             self.logger.debug(f"   Après: {cleaned_needs}")
         
         return cleaned_needs
     
     def _group_vehicles_by_type_and_proximity(self, vehicles: List[Vehicle]) -> Dict[str, List[Vehicle]]:
-        """Groupe les véhicules par type en préservant l'ordre de proximité"""
+        """
+        Groupe les véhicules par type en préservant l'ordre de proximité.
+        
+        Organise les véhicules disponibles par type tout en maintenant
+        l'ordre original qui reflète la proximité géographique (les premiers
+        véhicules de la liste sont les plus proches).
+        
+        Args:
+            vehicles: Liste des véhicules disponibles triés par proximité
+            
+        Returns:
+            Dict[str, List[Vehicle]]: Véhicules groupés par type, ordre de proximité préservé
+        """
         groups = {}
         
         for vehicle in vehicles:
@@ -276,7 +314,21 @@ class SmartStrategy(BaseStrategy):
         return groups
     
     def _plan_vehicle_selections(self, requirements: List, vehicles_by_type: Dict) -> List[Tuple[str, int, List[str]]]:
-        """Planifie la sélection de véhicules avec alternatives"""
+        """
+        Planifie la sélection de véhicules en intégrant les alternatives.
+        
+        Pour chaque exigence de la mission, détermine le type de véhicule
+        principal nécessaire, la quantité requise et les alternatives possibles
+        pour optimiser la sélection.
+        
+        Args:
+            requirements: Liste des exigences de véhicules de la mission
+            vehicles_by_type: Véhicules disponibles groupés par type
+            
+        Returns:
+            List[Tuple[str, int, List[str]]]: Plans de sélection
+                                             (type, quantité, alternatives)
+        """
         selections = []
         
         for req in requirements:
@@ -297,7 +349,22 @@ class SmartStrategy(BaseStrategy):
         alternatives: List[str],
         vehicles_by_type: Dict[str, List[Vehicle]]
     ) -> List[Vehicle]:
-        """Sélectionne des véhicules avec système de fallback"""
+        """
+        Sélectionne des véhicules avec système de fallback intelligent.
+        
+        Essaie d'abord de satisfaire le besoin avec le type principal,
+        puis utilise les alternatives dans l'ordre de priorité si
+        nécessaire. Gère les types génériques comme AMBULANCE.
+        
+        Args:
+            primary_type: Type de véhicule principal demandé
+            needed_count: Nombre de véhicules nécessaires
+            alternatives: Liste des types alternatifs par ordre de priorité
+            vehicles_by_type: Véhicules disponibles groupés par type
+            
+        Returns:
+            List[Vehicle]: Véhicules sélectionnés (primaires + alternatives)
+        """
         
         selected = []
         remaining_needed = needed_count
@@ -345,7 +412,22 @@ class SmartStrategy(BaseStrategy):
         vehicles_by_type: Dict[str, List[Vehicle]],
         complexity: Dict
     ) -> List[Vehicle]:
-        """Ajoute des véhicules de support selon la complexité"""
+        """
+        Ajoute des véhicules de support adaptatifs selon la complexité.
+        
+        Enrichit la sélection de base avec des véhicules de commandement,
+        de support logistique et médical selon le niveau de complexité
+        déterminé par l'analyse de la mission.
+        
+        Args:
+            mission: Mission à équiper
+            current_selection: Véhicules déjà sélectionnés
+            vehicles_by_type: Véhicules disponibles groupés par type
+            complexity: Analyse de complexité de la mission
+            
+        Returns:
+            List[Vehicle]: Véhicules de support supplémentaires
+        """
         
         support_vehicles = []
         selected_types = {v.type for v in current_selection}
@@ -394,7 +476,18 @@ class SmartStrategy(BaseStrategy):
         return support_vehicles
     
     def _log_smart_selection_summary(self, mission: Mission, selected_vehicles: List[Vehicle], complexity: Dict) -> None:
-        """Log un résumé détaillé de la sélection intelligente"""
+        """
+        Affiche un résumé détaillé de la sélection intelligente.
+        
+        Génère un rapport complet incluant la complexité analysée,
+        la répartition des véhicules par type avec ordre de proximité
+        et les catégories d'intervention impliquées.
+        
+        Args:
+            mission: Mission équipée
+            selected_vehicles: Véhicules finalement sélectionnés
+            complexity: Résultat de l'analyse de complexité
+        """
         
         self.logger.info(f"=== Sélection intelligente pour mission {mission.id} ===")
         self.logger.info(f"Titre: {mission.title}")
