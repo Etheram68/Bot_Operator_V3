@@ -50,11 +50,11 @@
         "secondary": []
       },
       "DRAGON": {
-        "primary": ["Dragon", "HéliSMUR"],
+        "primary": ["Dragon", "HeliSMUR"],
         "secondary": []
       },
       "HELICOPTER": {
-        "primary": ["Dragon", "HéliSMUR"],
+        "primary": ["Dragon", "HeliSMUR"],
         "secondary": []
       },
       "RESCUE_DIRECTOR": {
