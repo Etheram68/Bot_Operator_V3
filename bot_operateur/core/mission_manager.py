@@ -235,7 +235,7 @@ class MissionManager:
                         logger.debug("Utilisation du mapping AMBULANCE_TRANSPORT par défaut")
             
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
-            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type)
+            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission)
             
             if selected_count == -1:
                 # Tous les besoins sont déjà satisfaits - c'est un succès !

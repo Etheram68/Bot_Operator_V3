@@ -324,7 +324,7 @@ class VehicleScraper:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
     
-    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None) -> int:
+    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None) -> int:
         """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives"""
         total_selected = 0
         
@@ -376,7 +376,7 @@ class VehicleScraper:
                         continue
                     
                     # Chercher si ce véhicule peut satisfaire un besoin (utiliser adjusted_vehicle_needs)
-                    matching_need = self._find_matching_need(vehicle_type, adjusted_vehicle_needs, selected_counts, alternatives_mapping)
+                    matching_need = self._find_matching_need(vehicle_type, adjusted_vehicle_needs, selected_counts, alternatives_mapping, mission)
                     
                     if matching_need:
                         need_type, needed_count, already_selected = matching_need
@@ -430,7 +430,7 @@ class VehicleScraper:
             # Si des besoins ne sont pas satisfaits, essayer de charger plus de véhicules
             if unsatisfied_needs and total_selected > 0:  # Seulement si on a déjà trouvé quelque chose
                 logger.warning(f"⚠️ Besoins non satisfaits: {unsatisfied_needs}. Tentative de chargement de véhicules supplémentaires...")
-                additional_selected = await self._load_and_select_additional_vehicles(unsatisfied_needs, alternatives_mapping, table_selector)
+                additional_selected = await self._load_and_select_additional_vehicles(unsatisfied_needs, alternatives_mapping, table_selector, mission)
                 total_selected += additional_selected
                 
                 # Mettre à jour les compteurs
@@ -618,8 +618,23 @@ class VehicleScraper:
         
         return adjusted_needs
     
-    def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None):
+    def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, mission: 'Mission' = None):
         """Trouve si un véhicule peut satisfaire un besoin (avec alternatives)"""
+        
+        # Vérifier si c'est un transfert interhospitalier et adapter le mapping pour AMBULANCE
+        is_hospital_transfer = mission and mission.title and "Transfert interhospitalier" in mission.title
+        if is_hospital_transfer and alternatives_mapping:
+            # Créer une copie du mapping pour modification locale
+            alternatives_mapping = alternatives_mapping.copy()
+            if 'AMBULANCE' in alternatives_mapping:
+                ambulance_mapping = alternatives_mapping['AMBULANCE'].copy()
+                # Pour les transferts interhospitaliers, utiliser transport_capable au lieu de primary
+                if 'transport_capable' in ambulance_mapping:
+                    ambulance_mapping['primary'] = ambulance_mapping['transport_capable']
+                    ambulance_mapping['secondary'] = []  # Pas de fallback pour les transferts
+                    alternatives_mapping['AMBULANCE'] = ambulance_mapping
+                    logger.debug(f"🚑 Transfert interhospitalier détecté: utilisation des véhicules transport_capable pour AMBULANCE: {ambulance_mapping['transport_capable']}")
+        
         # D'abord vérifier la correspondance directe
         if vehicle_type in vehicle_needs:
             needed_count = vehicle_needs[vehicle_type]
@@ -653,7 +668,7 @@ class VehicleScraper:
         
         return None
     
-    async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, alternatives_mapping: dict = None, table_selector: str = None) -> int:
+    async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, alternatives_mapping: dict = None, table_selector: str = None, mission: 'Mission' = None) -> int:
         """Charge tous les véhicules et sélectionne ceux manquants"""
         additional_selected = 0
         
@@ -694,9 +709,20 @@ class VehicleScraper:
                     
                     # Si pas de correspondance directe, chercher dans les alternatives PRIMAIRES en priorité
                     if not matching_need and alternatives_mapping:
+                        # Adapter le mapping pour les transferts interhospitaliers
+                        working_mapping = alternatives_mapping
+                        is_hospital_transfer = mission and mission.title and "Transfert interhospitalier" in mission.title
+                        if is_hospital_transfer and 'AMBULANCE' in alternatives_mapping:
+                            working_mapping = alternatives_mapping.copy()
+                            ambulance_mapping = working_mapping['AMBULANCE'].copy()
+                            if 'transport_capable' in ambulance_mapping:
+                                ambulance_mapping['primary'] = ambulance_mapping['transport_capable']
+                                ambulance_mapping['secondary'] = []
+                                working_mapping['AMBULANCE'] = ambulance_mapping
+                        
                         for need_type, needed_count in unsatisfied_needs.items():
                             if needed_count > 0:
-                                alternatives = alternatives_mapping.get(need_type, {})
+                                alternatives = working_mapping.get(need_type, {})
                                 primary_alternatives = alternatives.get('primary', [])
                                 
                                 if vehicle_type in primary_alternatives:
@@ -707,7 +733,7 @@ class VehicleScraper:
                     if not matching_need and alternatives_mapping:
                         for need_type, needed_count in unsatisfied_needs.items():
                             if needed_count > 0:
-                                alternatives = alternatives_mapping.get(need_type, {})
+                                alternatives = working_mapping.get(need_type, {})
                                 secondary_alternatives = alternatives.get('secondary', [])
                                 
                                 if vehicle_type in secondary_alternatives:
