@@ -693,12 +693,12 @@ class MissionManager:
             import json
             from datetime import datetime
             
-            # Créer le dossier data s'il n'existe pas
-            data_dir = "data"
-            if not os.path.exists(data_dir):
-                os.makedirs(data_dir)
+            # Utiliser le dossier data existant dans bot_operateur
+            from pathlib import Path
+            data_dir = Path(__file__).parent.parent / "data"
+            data_dir.mkdir(exist_ok=True)
             
-            log_file = os.path.join(data_dir, "unrecognized_vehicle_patterns.jsonl")
+            log_file = data_dir / "unrecognized_vehicle_patterns.jsonl"
             
             # Préparer l'entrée de log
             log_entry = {

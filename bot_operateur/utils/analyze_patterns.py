@@ -14,7 +14,10 @@ from datetime import datetime
 def analyze_patterns():
     """Analyse les patterns non reconnus et génère des statistiques."""
     
-    log_file = os.path.join("data", "unrecognized_vehicle_patterns.jsonl")
+    # Chemin vers le dossier data dans bot_operateur
+    from pathlib import Path
+    data_dir = Path(__file__).parent.parent / "data"
+    log_file = data_dir / "unrecognized_vehicle_patterns.jsonl"
     
     if not os.path.exists(log_file):
         print("❌ Aucun fichier de patterns trouvé.")
