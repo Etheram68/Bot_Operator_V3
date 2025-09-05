@@ -104,8 +104,8 @@
   "personnel_vehicle_mapping": {
     "_description": "Mapping des types de personnel générique vers les véhicules appropriés",
     "pompiers": {
-      "vehicles": ["FPT", "FPT(SR)", "CCR(SR)", "CCF(M)", "CCF(S)", "FS", "VPC", "VTP(ers)"],
-      "priority": ["VTP(ers)", "FPT", "CCR(SR)", "CCF(M)", "FPT(SR)", "FS"],
+      "vehicles": ["FPT", "FPT(SR)", "CCR(SR)", "CCF(M)", "CCF(S)", "FS", "VPC", "VTP(ers)", "VPI"],
+      "priority": ["VTP(ers)", "FPT", "CCR(SR)", "CCF(M)", "FPT(SR)", "FS", "VPI"],
       "description": "Personnel pompier standard"
     },
     "policiers": {
@@ -152,7 +152,7 @@
     "water_vehicles": {
       "large_capacity": ["CCF(S)", "CCGC", "FMOGP"],
       "medium_capacity": ["CEEM", "CCF(M)", "FPT", "FPT(SR)", "CCR(SR)"],
-      "small_capacity": [],
+      "small_capacity": ["VPI"],
       "bonus_vehicles": ["FDGP", "RLC"]
     }
   }

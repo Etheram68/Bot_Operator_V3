@@ -11,11 +11,11 @@
       },
       "FPT": {
         "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
-        "secondary": ["FS"]
+        "secondary": ["FS", "VPI"]
       },
       "FPT_BEA": {
         "primary": ["FPT", "FPT(SR)", "CCR(SR)", "BEA", "EPA"],
-        "secondary": ["FS"]
+        "secondary": ["FS", "VPI"]
       },
       "FPT_CONSTRAINED": {
         "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
@@ -100,7 +100,7 @@
         "secondary": []
       },
       "VTU": {
-        "primary": ["FS"],
+        "primary": ["FS", "VPI"],
         "secondary": []
       },
       "VPC": {
@@ -213,7 +213,7 @@
     "combined_requirements": {
       "FPT_SR": {
         "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR"],
-        "secondary": ["FS"]
+        "secondary": ["FS", "VPI"]
       },
       "BLS_CSL": {
         "primary": ["BLS", "CSL"],
@@ -221,7 +221,7 @@
         "availability_limited": true
       },
       "FPT_SR_BEA": {
-        "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR", "BEA", "EPA"],
+        "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR", "BEA", "EPA", "VPI"],
         "secondary": []
       }
     }
@@ -262,6 +262,11 @@
     "CCGC": {
       "crew_size": 2,
       "water_capacity_l": 11000
+    },
+    "VPI": {
+      "crew_size": 4,
+      "water_capacity_l": 400,
+      "pump_capacity_l_min": 1000
     },
     "FS": {
       "crew_size": 3,
