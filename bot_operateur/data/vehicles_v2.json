@@ -21,6 +21,14 @@
         "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
         "secondary": []
       },
+      "CCF_CONSTRAINED": {
+        "primary": ["CCF(M)", "CCF(S)", "CCR(SR)"],
+        "secondary": ["FMOGP"]
+      },
+      "CITERNE_CONSTRAINED": {
+        "primary": ["CCGC", "CCF(S)", "FMOGP", "CCR(SR)"],
+        "secondary": []
+      },
       "CCF": {
         "primary": ["CCF(M)", "CCF(S)", "CCR(SR)"],
         "secondary": ["FMOGP"]
@@ -204,6 +212,18 @@
         "primary": ["VPL"],
         "secondary": []
       },
+      "AMBULANCE_CONSTRAINED": {
+        "primary": ["AMBULANCE"],
+        "secondary": []
+      },
+      "VIMP_CONSTRAINED": {
+        "primary": ["VIMP"],
+        "secondary": []
+      },
+      "VIRT_CONSTRAINED": {
+        "primary": ["VIRT"],
+        "secondary": []
+      },
       "CHOUCAS": {
         "primary": ["Choucas"],
         "secondary": []
@@ -214,6 +234,10 @@
       "FPT_SR": {
         "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR"],
         "secondary": ["FS", "VPI"]
+      },
+      "FPT_SR_CONSTRAINED": {
+        "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR"],
+        "secondary": []
       },
       "BLS_CSL": {
         "primary": ["BLS", "CSL"],
@@ -309,6 +333,9 @@
     },
     "VPL": {
       "crew_size": 3
+    },
+    "AMBULANCE": {
+      "crew_size": 2
     }
   },
 
