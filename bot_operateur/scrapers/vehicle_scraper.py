@@ -492,6 +492,13 @@ class VehicleScraper:
                         checkbox = await row.query_selector(".vehicle_checkbox")
                         
                         if checkbox and not await checkbox.is_disabled():
+                            # Vérifier si le véhicule tracteur est disponible (pour les remorques)
+                            tractor_available = await self._check_tractor_availability(row)
+                            if not tractor_available:
+                                full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
+                                logger.warning(f"⚠️  {full_caption} ignoré: Véhicule tracteur non disponible")
+                                continue  # Passer au véhicule suivant
+                            
                             # Sélectionner ce véhicule
                             await checkbox.check()
                             
@@ -979,6 +986,12 @@ class VehicleScraper:
                         checkbox = await row.query_selector(".vehicle_checkbox")
                         
                         if checkbox and not await checkbox.is_checked() and not await checkbox.is_disabled():
+                            # Vérifier si le véhicule tracteur est disponible (pour les remorques)
+                            tractor_available = await self._check_tractor_availability(row)
+                            if not tractor_available:
+                                logger.warning(f"⚠️  {vehicle_caption} ignoré: Véhicule tracteur non disponible")
+                                continue  # Passer au véhicule suivant
+                                
                             # Sélectionner ce véhicule
                             await checkbox.check()
                             additional_selected += 1
@@ -1008,3 +1021,39 @@ class VehicleScraper:
         except Exception as e:
             logger.error(f"Erreur lors du chargement de véhicules supplémentaires: {e}")
             return 0
+    
+    async def _check_tractor_availability(self, vehicle_row) -> bool:
+        """
+        Vérifie si le véhicule tracteur est disponible pour une remorque.
+        
+        Args:
+            vehicle_row: L'élément DOM de la ligne du véhicule
+            
+        Returns:
+            bool: True si le véhicule est disponible (pas de remorque ou tracteur disponible)
+        """
+        try:
+            # Chercher le message d'erreur de tracteur non disponible
+            # Le sélecteur recherche les éléments avec la classe "text-danger" et un nom de classe contenant "vehicle_not_tractive_message"
+            tractor_error_message = await vehicle_row.query_selector('small.text-danger[class*="vehicle_not_tractive_message"]')
+            
+            if tractor_error_message:
+                # Vérifier si le message est affiché (style="display: inline;" ou visible)
+                style = await tractor_error_message.get_attribute('style')
+                if style and 'display: inline' in style:
+                    # Le message d'erreur est affiché, le tracteur n'est pas disponible
+                    return False
+                    
+                # Vérifier aussi via is_visible (au cas où le style serait différent)
+                is_visible = await tractor_error_message.is_visible()
+                if is_visible:
+                    return False
+            
+            # Aucun message d'erreur visible, le véhicule est disponible
+            return True
+            
+        except Exception as e:
+            logger.debug(f"Erreur lors de la vérification du tracteur: {e}")
+            # En cas d'erreur, par sécurité, considérer le véhicule comme disponible
+            # pour ne pas bloquer la sélection des véhicules normaux
+            return True
