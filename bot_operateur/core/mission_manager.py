@@ -278,10 +278,17 @@ class MissionManager:
                     
                     # Ajouter les véhicules supplémentaires calculés pour les besoins non-véhicules (eau, personnel, etc.)
                     # Ces véhicules sont stockés dans missing_vehicles_needs mais pas encore dans vehicle_needs
-                    for vehicle_type, quantity in missing_vehicles_needs.items():
-                        if vehicle_type not in alert_override_types:  # Ne pas dupliquer ceux déjà traités
-                            vehicle_needs[vehicle_type] = vehicle_needs.get(vehicle_type, 0) + quantity
-                            logger.info(f"🆕 {vehicle_type}: ajouté {quantity} (calculé depuis besoins supplémentaires)")
+                    for vehicle_key, quantity in missing_vehicles_needs.items():
+                        if vehicle_key not in alert_override_types:  # Ne pas dupliquer ceux déjà traités
+                            # Gérer les véhicules avec contraintes
+                            if vehicle_key.endswith('_CONSTRAINED'):
+                                # Retirer le suffixe pour avoir le vrai nom du véhicule
+                                real_vehicle_type = vehicle_key.replace('_CONSTRAINED', '')
+                                vehicle_needs[real_vehicle_type] = vehicle_needs.get(real_vehicle_type, 0) + quantity
+                                logger.info(f"🔒 {real_vehicle_type}: ajouté {quantity} (avec contraintes capacité)")
+                            else:
+                                vehicle_needs[vehicle_key] = vehicle_needs.get(vehicle_key, 0) + quantity
+                                logger.info(f"🆕 {vehicle_key}: ajouté {quantity} (calculé depuis besoins supplémentaires)")
                     
                     if missing_vehicles_needs:
                         logger.info(f"📋 Besoins finaux avec suppléments: {vehicle_needs}")
@@ -321,9 +328,10 @@ class MissionManager:
                         logger.debug("Utilisation du mapping AMBULANCE_TRANSPORT par défaut")
             
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
-            # Passer alert_override_types si défini
+            # Passer alert_override_types et constrained_vehicles si définis
             alert_override_types_to_pass = alert_override_types if 'alert_override_types' in locals() else set()
-            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission, alert_override_types_to_pass)
+            constrained_vehicles_to_pass = constrained_vehicles if 'constrained_vehicles' in locals() else set()
+            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission, alert_override_types_to_pass, constrained_vehicles_to_pass)
             
             if selected_count == -1:
                 # Tous les besoins sont déjà satisfaits - c'est un succès !
@@ -717,13 +725,17 @@ class MissionManager:
             other_needs = await self._extract_other_missing_needs_from_alert(mission)
             if other_needs:
                 logger.info(f"🚨 Besoins supplémentaires détectés: {other_needs}")
-                # Calculer les véhicules nécessaires pour satisfaire ces besoins
+                # Calculer les véhicules nécessaires pour satisfaire ces besoins avec contraintes
                 additional_vehicles = await self._calculate_vehicles_for_missing_needs(other_needs)
                 if additional_vehicles:
                     logger.info(f"💡 Véhicules calculés pour les besoins: {additional_vehicles}")
-                    # Ajouter aux besoins de véhicules
+                    # IMPORTANT: Ces véhicules ont des contraintes spécifiques (eau/personnel)
+                    # Ils ne peuvent PAS être remplacés par des alternatives sans les bonnes capacités
                     for vehicle_type, quantity in additional_vehicles.items():
-                        missing_vehicles_needs[vehicle_type] = missing_vehicles_needs.get(vehicle_type, 0) + quantity
+                        # Marquer comme véhicules avec contraintes en ajoutant un suffixe
+                        constrained_key = f"{vehicle_type}_CONSTRAINED"
+                        missing_vehicles_needs[constrained_key] = missing_vehicles_needs.get(constrained_key, 0) + quantity
+                        logger.debug(f"🔒 Véhicule avec contraintes: {constrained_key} = {quantity}")
             
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des véhicules manquants: {e}")
@@ -1014,11 +1026,13 @@ class MissionManager:
         
         logger.info(f"💧 Eau nécessaire: {remaining_water_needed}L (total: {water_needed_l}L - sur site: {current_water_capacity}L)")
         
-        # Créer une liste des véhicules avec leurs capacités effectives
+        # Créer une liste SEULEMENT des véhicules avec capacité d'eau réelle
+        # IMPORTANT: Pour les besoins d'eau, seuls les véhicules avec water_capacity_l > 0 sont valides
+        # Ne pas utiliser les véhicules de remplacement sans eau (ex: FS n'a pas d'eau)
         water_vehicles = []
         for vehicle_type, specs in vehicle_specs.items():
             water_capacity = specs.get('water_capacity_l', 0)
-            if water_capacity > 0:
+            if water_capacity > 0:  # OBLIGATOIRE: seulement les véhicules avec capacité d'eau
                 # Appliquer le bonus de stockage d'eau si applicable
                 extra_pct = specs.get('extra_water_storage_pct', 0)
                 effective_capacity = water_capacity * (1 + extra_pct / 100)
@@ -1207,12 +1221,13 @@ class MissionManager:
         
         logger.info(f"👥 Personnel {personnel_type} nécessaire: {remaining_personnel_needed} (total: {personnel_needed} - en route: {current_personnel_capacity})")
         
-        # Créer une liste des véhicules avec leurs capacités d'équipage
+        # Créer une liste SEULEMENT des véhicules qui ont des capacités d'équipage définies
+        # IMPORTANT: Ne pas inclure les véhicules de remplacement sans crew_size pour les besoins personnel
         personnel_vehicles = []
         for vehicle_type in appropriate_vehicles:
             if vehicle_type in vehicle_specs:
                 crew_size = vehicle_specs[vehicle_type].get('crew_size', 0)
-                if crew_size > 0:
+                if crew_size > 0:  # OBLIGATOIRE: seulement les véhicules avec équipage défini
                     is_priority = vehicle_type in priority_vehicles
                     priority_index = priority_vehicles.index(vehicle_type) if is_priority else len(priority_vehicles)
                     
@@ -1222,6 +1237,10 @@ class MissionManager:
                         'is_priority': is_priority,
                         'priority_index': priority_index
                     })
+                else:
+                    logger.debug(f"👥 {vehicle_type} exclu pour personnel (crew_size=0 ou non défini)")
+            else:
+                logger.debug(f"👥 {vehicle_type} exclu pour personnel (pas dans vehicle_specs)")
         
         # Trier par priorité puis par crew_size décroissant
         personnel_vehicles.sort(key=lambda x: (x['priority_index'], -x['crew_size']))

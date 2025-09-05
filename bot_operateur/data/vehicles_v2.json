@@ -17,6 +17,10 @@
         "primary": ["FPT", "FPT(SR)", "CCR(SR)", "BEA", "EPA"],
         "secondary": ["FS"]
       },
+      "FPT_CONSTRAINED": {
+        "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
+        "secondary": []
+      },
       "CCF": {
         "primary": ["CCF(M)", "CCF(S)", "CCR(SR)"],
         "secondary": ["FMOGP"]
@@ -193,6 +197,10 @@
 
     "civil_security": {
       "VPL": {
+        "primary": ["VPL"],
+        "secondary": []
+      },
+      "VPL_CONSTRAINED": {
         "primary": ["VPL"],
         "secondary": []
       },

@@ -105,7 +105,7 @@
     "_description": "Mapping des types de personnel générique vers les véhicules appropriés",
     "pompiers": {
       "vehicles": ["FPT", "FPT(SR)", "CCR(SR)", "CCF(M)", "CCF(S)", "FS", "VPC", "VTP(ers)"],
-      "priority": ["VTP(ers)", "FPT", "CCR(SR)", "CCF(M)"],
+      "priority": ["VTP(ers)", "FPT", "CCR(SR)", "CCF(M)", "FPT(SR)", "FS"],
       "description": "Personnel pompier standard"
     },
     "policiers": {

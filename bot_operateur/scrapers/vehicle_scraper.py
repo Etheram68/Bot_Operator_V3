@@ -422,7 +422,7 @@ class VehicleScraper:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
     
-    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None, alert_override_types: set = None) -> int:
+    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None, alert_override_types: set = None, constrained_vehicles: set = None) -> int:
         """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives"""
         total_selected = 0
         
@@ -433,6 +433,9 @@ class VehicleScraper:
             # Ajuster les besoins en fonction des véhicules déjà déployés
             # Mais ignorer l'ajustement pour les types avec override d'alerte
             alert_override_types = alert_override_types or set()
+            constrained_vehicles = constrained_vehicles or set()
+            if constrained_vehicles:
+                logger.info(f"🔒 Véhicules avec contraintes de capacité: {list(constrained_vehicles)}")
             adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type, alternatives_mapping, alert_override_types)
             
             # Si tous les besoins sont déjà satisfaits, ne rien faire
@@ -476,7 +479,7 @@ class VehicleScraper:
                         continue
                     
                     # Chercher si ce véhicule peut satisfaire un besoin (utiliser adjusted_vehicle_needs)
-                    matching_need = self._find_matching_need(vehicle_type, adjusted_vehicle_needs, selected_counts, alternatives_mapping, mission)
+                    matching_need = self._find_matching_need(vehicle_type, adjusted_vehicle_needs, selected_counts, alternatives_mapping, mission, constrained_vehicles)
                     
                     if matching_need:
                         need_type, needed_count, already_selected = matching_need
@@ -790,7 +793,7 @@ class VehicleScraper:
         
         return adjusted_needs
     
-    def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, mission: 'Mission' = None):
+    def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, mission: 'Mission' = None, constrained_vehicles: set = None):
         """
         Détermine si un véhicule peut satisfaire un besoin spécifique.
         
@@ -824,6 +827,8 @@ class VehicleScraper:
                     alternatives_mapping['AMBULANCE'] = ambulance_mapping
                     logger.debug(f"🚑 Transfert interhospitalier détecté: utilisation des véhicules transport_capable pour AMBULANCE: {ambulance_mapping['transport_capable']}")
         
+        constrained_vehicles = constrained_vehicles or set()
+        
         # D'abord vérifier la correspondance directe
         if vehicle_type in vehicle_needs:
             needed_count = vehicle_needs[vehicle_type]
@@ -832,11 +837,17 @@ class VehicleScraper:
                 return (vehicle_type, needed_count, already_selected)
         
         # Si pas de correspondance directe, vérifier les alternatives
+        # MAIS seulement si le véhicule demandé n'a pas de contraintes de capacité
         if alternatives_mapping:
             # PREMIÈRE PASSE: vérifier seulement les alternatives PRIMAIRES
             for need_type, needed_count in vehicle_needs.items():
                 already_selected = selected_counts.get(need_type, 0)
                 if needed_count > already_selected:
+                    # Vérifier si ce need_type a des contraintes de capacité
+                    if need_type in constrained_vehicles:
+                        logger.debug(f"🔒 {need_type} a des contraintes - pas d'alternatives permises")
+                        continue  # Passer ce besoin - seul le véhicule exact peut le satisfaire
+                    
                     # Vérifier si ce vehicle_type peut satisfaire ce need_type via primary
                     alternatives = alternatives_mapping.get(need_type, {})
                     primary_alternatives = alternatives.get('primary', [])
@@ -848,6 +859,11 @@ class VehicleScraper:
             for need_type, needed_count in vehicle_needs.items():
                 already_selected = selected_counts.get(need_type, 0)
                 if needed_count > already_selected:
+                    # Vérifier si ce need_type a des contraintes de capacité
+                    if need_type in constrained_vehicles:
+                        logger.debug(f"🔒 {need_type} a des contraintes - pas d'alternatives secondaires permises")
+                        continue  # Passer ce besoin - seul le véhicule exact peut le satisfaire
+                    
                     # Vérifier si ce vehicle_type peut satisfaire ce need_type via secondary
                     alternatives = alternatives_mapping.get(need_type, {})
                     secondary_alternatives = alternatives.get('secondary', [])
