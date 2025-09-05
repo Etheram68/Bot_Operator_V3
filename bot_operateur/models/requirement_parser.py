@@ -109,10 +109,61 @@ class RequirementParser:
                 logger.debug(f"✅ Ajouté besoin: {requirement_type} x{quantity} ({'optionnel' if optional else 'requis'})")
         
         requirements = self._convert_personnel_to_vehicle_requirements(requirements)
+        requirements = self._deduplicate_overlapping_requirements(requirements)
         requirements = self._post_process_requirements(requirements)
         
         logger.debug(f"Extrait {len(requirements)} exigences du texte de mission")
         return requirements
+    
+    def _deduplicate_overlapping_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
+        """
+        Supprime les doublons quand un pattern spécifique et un pattern générique matchent le même texte.
+        
+        Priorité donnée aux patterns les plus spécifiques (plus longs ou contenant des combinaisons).
+        
+        Args:
+            requirements: Liste des exigences à dédupliquer
+            
+        Returns:
+            List[MissionRequirement]: Liste déduplicatée
+        """
+        if not requirements:
+            return requirements
+        
+        # Définir les overlaps connus (spécifique -> générique)
+        overlap_rules = {
+            # Patterns combinés qui ont priorité sur les patterns simples
+            'BLS_CSL': ['BLS'],  # "BLS ou CSL" doit primer sur "BLS"
+            'FPT_SR': ['FPT', 'VSR'],  # "Fourgons d'incendie secours routiers" prime sur FPT et VSR séparés
+            'FPT_BEA': ['FPT', 'BEA'],  # "Fourgons d'incendie ou moyens elévateur aérien"
+            'FPT_SR_BEA': ['FPT', 'VSR', 'BEA', 'FPT_SR', 'FPT_BEA'],  # Super-combinaison
+            'CARS_POLICE_VR': ['CARS_POLICE', 'VR_CRS'],  # Voitures de police avec VR
+            'CARS_POLICE_PATROUILLE_VR': ['CARS_POLICE', 'CARS_POLICE_PATROUILLE', 'VR_CRS'],
+            'CHEF_DE_GROUPE': ['VLHR'],  # "Chefs de groupe ou VLHR" peut parfois primer
+        }
+        
+        # Identifier les types présents
+        present_types = {req.vehicle_type for req in requirements}
+        
+        # Types à supprimer (génériques remplacés par spécifiques)
+        types_to_remove = set()
+        
+        for specific_type, generic_types in overlap_rules.items():
+            if specific_type in present_types:
+                # Le type spécifique est présent, supprimer les génériques
+                for generic_type in generic_types:
+                    if generic_type in present_types:
+                        types_to_remove.add(generic_type)
+                        logger.debug(f"🔄 Déduplication: {specific_type} remplace {generic_type}")
+        
+        # Filtrer les requirements
+        deduplicated = [req for req in requirements if req.vehicle_type not in types_to_remove]
+        
+        if len(deduplicated) != len(requirements):
+            removed_count = len(requirements) - len(deduplicated)
+            logger.info(f"🧹 Supprimé {removed_count} doublon(s) dans les exigences")
+        
+        return deduplicated
     
     def _post_process_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
         """Post-traite les exigences pour optimiser et consolider"""

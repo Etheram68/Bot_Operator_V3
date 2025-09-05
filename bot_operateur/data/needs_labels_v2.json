@@ -24,7 +24,7 @@
     "FMOGP": ["FMOGP nécessaires?", "fourgons? moyens généraux", "\\bFMOGP\\b(?!_PROBABILITY)"],
     "MOTOPOMPES": ["Motopompes nécessaires?", "motopompes?"],
     "CAMION_DEVIDOIRS": ["Camions? dévidoirs nécessaires?", "dévidoirs?"],
-    "BLS": ["BLS requis", "\\bBLS\\b(?!_PROBABILITY)"],
+    "BLS": ["BLS requis", "\\bBLS\\b(?!\\s+ou\\s+CSL)(?!_PROBABILITY)"],
     "VPL": ["VPL requis", "\\bVPL\\b(?!_PROBABILITY)"],
     "DRAGON": ["\\bDRAGON\\b", "hélicoptères", "soutien aérien(?! FAG)"],
     "CARS_POLICE": ["Voitures? de police requises?", "voitures? de police nécessaires?", "véhicules? police", "véhicules? de police", "patrouilles? police"],
