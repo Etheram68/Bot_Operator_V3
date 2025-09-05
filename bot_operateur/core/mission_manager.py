@@ -728,6 +728,9 @@ class MissionManager:
                         if need_info:
                             other_needs[need_info['type']] = need_info['quantity']
                             logger.info(f"Besoin détecté: {need_info['type']} = {need_info['quantity']}")
+                        else:
+                            # Si le pattern n'est pas reconnu, le sauvegarder pour analyse future
+                            await self._log_unrecognized_missing_pattern(missing_part, mission)
                         
                 except Exception as e:
                     logger.error(f"Erreur lors de l'analyse d'une div de besoins autres: {e}")
@@ -785,7 +788,7 @@ class MissionManager:
             quantity = int(personnel_match.group(1))
             return {'type': 'personnel_general', 'quantity': quantity}
         
-        # Si aucun pattern ne correspond
+        # Si aucun pattern ne correspond, logger pour analyse future
         logger.warning(f"Pattern de besoin non reconnu: '{text}'")
         return None
     
@@ -1095,6 +1098,95 @@ class MissionManager:
         # TODO: Analyser les véhicules déjà sur site pour calculer leur capacité d'eau totale
         # Pour l'instant, on assume qu'il n'y a pas d'eau sur site pour être sûr d'envoyer des véhicules
         return 0
+    
+    async def _log_unrecognized_missing_pattern(self, missing_text: str, mission: 'Mission') -> None:
+        """
+        Enregistre les patterns de besoins "Il nous manque" non reconnus dans un fichier.
+        
+        Permet d'enrichir ultérieurement le système de parsing avec les nouveaux patterns
+        découverts lors des missions réelles.
+        
+        Args:
+            missing_text: Texte du besoin manquant non reconnu (après "Il nous manque:")
+            mission: Mission concernée pour le contexte
+        """
+        try:
+            import os
+            import json
+            from datetime import datetime
+            
+            # Utiliser le même dossier data que pour les véhicules non reconnus
+            from pathlib import Path
+            data_dir = Path(__file__).parent.parent / "data"
+            data_dir.mkdir(exist_ok=True)
+            
+            log_file = data_dir / "unrecognized_missing_patterns.jsonl"
+            
+            # Préparer l'entrée de log
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "mission_id": mission.id if mission else "unknown",
+                "mission_title": mission.title if mission else "unknown",
+                "pattern_type": "missing_need",
+                "unrecognized_text": missing_text.strip(),
+                "full_context": f"Il nous manque: {missing_text.strip()}",
+                "suggested_categories": self._suggest_pattern_category(missing_text)
+            }
+            
+            # Ajouter au fichier (format JSONL - une ligne JSON par entrée)
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            
+            logger.info(f"💾 Pattern 'Il nous manque' non reconnu sauvegardé: '{missing_text}'")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la sauvegarde du pattern non reconnu: {e}")
+    
+    def _suggest_pattern_category(self, text: str) -> list:
+        """
+        Suggère des catégories possibles pour un pattern non reconnu.
+        
+        Args:
+            text: Texte à analyser
+            
+        Returns:
+            list: Liste des catégories suggérées
+        """
+        suggestions = []
+        text_lower = text.lower()
+        
+        # Suggestions basées sur des mots-clés (ordre important pour éviter les faux positifs)
+        
+        # D'abord vérifier les catégories spécifiques avant l'eau (pour éviter "500 L de carburant" → water)
+        if any(word in text_lower for word in ['carburant', 'essence', 'diesel', 'fuel']):
+            suggestions.append('fuel')
+        elif any(word in text_lower for word in ['eau', 'litre', 'water']) or (
+            ' l ' in text_lower and 'eau' in text_lower
+        ):
+            suggestions.append('water')
+        
+        if any(word in text_lower for word in ['pompier', 'secouriste', 'équipier', 'firefighter']):
+            suggestions.append('personnel_pompiers')
+        
+        if any(word in text_lower for word in ['police', 'gendarme', 'agent']):
+            suggestions.append('personnel_police')
+        
+        if any(word in text_lower for word in ['médecin', 'infirmier', 'samu', 'medical']):
+            suggestions.append('personnel_medical')
+        
+        # Suggestions pour matériel/équipement
+        if any(word in text_lower for word in ['équipement', 'matériel', 'outil', 'equipment', 'mousse']):
+            suggestions.append('equipment')
+        
+        # Suggestions pour temps/durée
+        if any(word in text_lower for word in ['heure', 'minute', 'temps', 'time']):
+            suggestions.append('time')
+        
+        # Si aucune suggestion spécifique, catégorie générale
+        if not suggestions:
+            suggestions.append('unknown')
+        
+        return suggestions
     
     async def _log_unrecognized_vehicle_pattern(self, missing_item: str, mission: 'Mission') -> None:
         """
