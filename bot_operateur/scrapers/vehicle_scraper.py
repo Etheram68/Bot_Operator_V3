@@ -422,7 +422,7 @@ class VehicleScraper:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
     
-    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None, alert_override_types: set = None, constrained_vehicles: set = None) -> int:
+    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None, alert_override_types: set = None, constrained_vehicles: set = None, constrained_alternatives: dict = None) -> int:
         """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives"""
         total_selected = 0
         
@@ -434,8 +434,12 @@ class VehicleScraper:
             # Mais ignorer l'ajustement pour les types avec override d'alerte
             alert_override_types = alert_override_types or set()
             constrained_vehicles = constrained_vehicles or set()
+            constrained_alternatives = constrained_alternatives or {}
+            
             if constrained_vehicles:
                 logger.info(f"🔒 Véhicules avec contraintes de capacité: {list(constrained_vehicles)}")
+            if constrained_alternatives:
+                logger.info(f"🔄 Alternatives par capacité disponibles: {constrained_alternatives}")
             adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type, alternatives_mapping, alert_override_types)
             
             # Si tous les besoins sont déjà satisfaits, ne rien faire
@@ -479,7 +483,7 @@ class VehicleScraper:
                         continue
                     
                     # Chercher si ce véhicule peut satisfaire un besoin (utiliser adjusted_vehicle_needs)
-                    matching_need = self._find_matching_need(vehicle_type, adjusted_vehicle_needs, selected_counts, alternatives_mapping, mission, constrained_vehicles)
+                    matching_need = self._find_matching_need(vehicle_type, adjusted_vehicle_needs, selected_counts, alternatives_mapping, mission, constrained_vehicles, constrained_alternatives)
                     
                     if matching_need:
                         need_type, needed_count, already_selected = matching_need
@@ -793,7 +797,7 @@ class VehicleScraper:
         
         return adjusted_needs
     
-    def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, mission: 'Mission' = None, constrained_vehicles: set = None):
+    def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, mission: 'Mission' = None, constrained_vehicles: set = None, constrained_alternatives: dict = None):
         """
         Détermine si un véhicule peut satisfaire un besoin spécifique.
         
@@ -828,6 +832,7 @@ class VehicleScraper:
                     logger.debug(f"🚑 Transfert interhospitalier détecté: utilisation des véhicules transport_capable pour AMBULANCE: {ambulance_mapping['transport_capable']}")
         
         constrained_vehicles = constrained_vehicles or set()
+        constrained_alternatives = constrained_alternatives or {}
         
         # D'abord vérifier la correspondance directe
         if vehicle_type in vehicle_needs:
@@ -835,6 +840,15 @@ class VehicleScraper:
             already_selected = selected_counts.get(vehicle_type, 0)
             if needed_count > already_selected:
                 return (vehicle_type, needed_count, already_selected)
+        
+        # Vérifier si ce vehicle_type est une alternative par capacité pour un véhicule contraint
+        for constrained_vehicle, alternatives in constrained_alternatives.items():
+            if vehicle_type in alternatives and constrained_vehicle in vehicle_needs:
+                needed_count = vehicle_needs[constrained_vehicle]
+                already_selected = selected_counts.get(constrained_vehicle, 0)
+                if needed_count > already_selected:
+                    logger.info(f"🔄 Utilisation de {vehicle_type} comme alternative à {constrained_vehicle}")
+                    return (constrained_vehicle, needed_count, already_selected)
         
         # Si pas de correspondance directe, vérifier les alternatives
         # MAIS seulement si le véhicule demandé n'a pas de contraintes de capacité

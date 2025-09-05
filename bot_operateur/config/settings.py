@@ -38,6 +38,9 @@ class Settings(BaseModel):
     max_concurrent_missions: int = Field(default=5, description="Nombre max de missions simultanées")
     mission_cooldown: int = Field(default=30, description="Cooldown entre missions (secondes)")
     
+    # Optimisation des déploiements
+    vehicle_threshold: int = Field(default=3, description="Seuil critique de véhicules pour forcer l'utilisation d'un véhicule plus gros")
+    
     @classmethod
     def from_env(cls) -> "Settings":
         """Crée une instance Settings depuis les variables d'environnement"""
@@ -62,7 +65,9 @@ class Settings(BaseModel):
             min_credits_threshold=int(os.getenv("MIN_CREDITS_THRESHOLD", "1000")),
             
             max_concurrent_missions=int(os.getenv("MAX_CONCURRENT_MISSIONS", "5")),
-            mission_cooldown=int(os.getenv("MISSION_COOLDOWN", "30"))
+            mission_cooldown=int(os.getenv("MISSION_COOLDOWN", "30")),
+            
+            vehicle_threshold=int(os.getenv("VEHICLE_THRESHOLD", "3"))
         )
     
     def validate_credentials(self) -> bool:

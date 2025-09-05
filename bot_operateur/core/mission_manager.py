@@ -290,8 +290,30 @@ class MissionManager:
                                 vehicle_needs[vehicle_key] = vehicle_needs.get(vehicle_key, 0) + quantity
                                 logger.info(f"🆕 {vehicle_key}: ajouté {quantity} (calculé depuis besoins supplémentaires)")
                     
+                    # Créer la liste des véhicules avec contraintes et leurs alternatives pour le vehicle_scraper
+                    constrained_vehicles = set()
+                    constrained_alternatives = {}
+                    
+                    for vehicle_key in missing_vehicles_needs.keys():
+                        if vehicle_key.endswith('_CONSTRAINED'):
+                            real_vehicle_type = vehicle_key.replace('_CONSTRAINED', '')
+                            constrained_vehicles.add(real_vehicle_type)
+                            
+                            # Trouver les alternatives pour ce véhicule depuis additional_vehicles_info
+                            if 'additional_vehicles_info' in locals():
+                                for vehicle_info in additional_vehicles_info:
+                                    if vehicle_info['primary'] == real_vehicle_type:
+                                        constrained_alternatives[real_vehicle_type] = vehicle_info['alternatives']
+                                        logger.debug(f"🔒 {real_vehicle_type} alternatives: {vehicle_info['alternatives']}")
+                                        break
+                            
+                            logger.debug(f"🔒 Véhicule à contraintes: {real_vehicle_type}")
+                    
                     if missing_vehicles_needs:
                         logger.info(f"📋 Besoins finaux avec suppléments: {vehicle_needs}")
+                        if constrained_vehicles:
+                            logger.info(f"🔒 Véhicules avec contraintes de capacité: {list(constrained_vehicles)}")
+                            logger.info(f"🔄 Alternatives par capacité: {constrained_alternatives}")
                 
             except Exception as e:
                 logger.error(f"Erreur lors de l'analyse des véhicules manquants: {e}")
@@ -331,7 +353,8 @@ class MissionManager:
             # Passer alert_override_types et constrained_vehicles si définis
             alert_override_types_to_pass = alert_override_types if 'alert_override_types' in locals() else set()
             constrained_vehicles_to_pass = constrained_vehicles if 'constrained_vehicles' in locals() else set()
-            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission, alert_override_types_to_pass, constrained_vehicles_to_pass)
+            constrained_alternatives_to_pass = constrained_alternatives if 'constrained_alternatives' in locals() else {}
+            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission, alert_override_types_to_pass, constrained_vehicles_to_pass, constrained_alternatives_to_pass)
             
             if selected_count == -1:
                 # Tous les besoins sont déjà satisfaits - c'est un succès !
@@ -726,16 +749,19 @@ class MissionManager:
             if other_needs:
                 logger.info(f"🚨 Besoins supplémentaires détectés: {other_needs}")
                 # Calculer les véhicules nécessaires pour satisfaire ces besoins avec contraintes
-                additional_vehicles = await self._calculate_vehicles_for_missing_needs(other_needs)
-                if additional_vehicles:
-                    logger.info(f"💡 Véhicules calculés pour les besoins: {additional_vehicles}")
-                    # IMPORTANT: Ces véhicules ont des contraintes spécifiques (eau/personnel)
-                    # Ils ne peuvent PAS être remplacés par des alternatives sans les bonnes capacités
-                    for vehicle_type, quantity in additional_vehicles.items():
-                        # Marquer comme véhicules avec contraintes en ajoutant un suffixe
-                        constrained_key = f"{vehicle_type}_CONSTRAINED"
+                additional_vehicles_info = await self._calculate_vehicles_for_missing_needs_with_fallback(other_needs)
+                if additional_vehicles_info:
+                    logger.info(f"💡 Véhicules calculés avec alternatives: {additional_vehicles_info}")
+                    # IMPORTANT: Ces véhicules ont des contraintes spécifiques avec alternatives par capacité
+                    for vehicle_info in additional_vehicles_info:
+                        primary_vehicle = vehicle_info['primary']
+                        quantity = vehicle_info['quantity']
+                        alternatives = vehicle_info['alternatives']
+                        
+                        # Marquer comme véhicules avec contraintes
+                        constrained_key = f"{primary_vehicle}_CONSTRAINED"
                         missing_vehicles_needs[constrained_key] = missing_vehicles_needs.get(constrained_key, 0) + quantity
-                        logger.debug(f"🔒 Véhicule avec contraintes: {constrained_key} = {quantity}")
+                        logger.info(f"🔒 {primary_vehicle}: {quantity} véhicule(s) avec alternatives: {alternatives}")
             
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des véhicules manquants: {e}")
@@ -933,6 +959,280 @@ class MissionManager:
         
         return personnel_needs
     
+    async def _calculate_vehicles_for_missing_needs_with_fallback(self, other_needs: dict) -> list:
+        """
+        Calcule les véhicules nécessaires avec alternatives par capacité croissante.
+        
+        Args:
+            other_needs: Besoins à satisfaire {type: quantité}
+            
+        Returns:
+            list: Liste de {primary, quantity, alternatives, need_type} avec fallback par capacité
+        """
+        vehicles_info = []
+        
+        try:
+            # Charger les spécifications des véhicules depuis vehicles_v2.json
+            from ..models.requirement_parser import RequirementParser
+            parser = RequirementParser()
+            vehicle_specs = parser.vehicles_mapping.get('vehicle_specs', {})
+            
+            for need_type, needed_quantity in other_needs.items():
+                vehicle_info = await self._find_vehicles_for_need_with_fallback(need_type, needed_quantity, vehicle_specs)
+                if vehicle_info:
+                    vehicles_info.append(vehicle_info)
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du calcul des véhicules avec fallback: {e}")
+        
+        return vehicles_info
+    
+    async def _find_vehicles_for_need_with_fallback(self, need_type: str, needed_quantity: int, vehicle_specs: dict) -> dict:
+        """
+        Trouve le véhicule optimal et ses alternatives par capacité croissante.
+        
+        Args:
+            need_type: Type de besoin ('water_l', 'personnel_pompiers', etc.)
+            needed_quantity: Quantité nécessaire
+            vehicle_specs: Spécifications des véhicules
+            
+        Returns:
+            dict: {primary, quantity, alternatives, need_type} ou None
+        """
+        if need_type == 'water_l':
+            return await self._find_water_vehicle_with_fallback(needed_quantity, vehicle_specs)
+        elif need_type.startswith('personnel_'):
+            personnel_type = need_type.replace('personnel_', '')
+            if personnel_type.isupper() and len(personnel_type) <= 4:
+                # Personnel spécialisé
+                return self._find_specialized_personnel_vehicle_with_fallback(personnel_type, needed_quantity, vehicle_specs)
+            else:
+                # Personnel générique
+                return await self._find_personnel_vehicle_with_fallback(personnel_type, needed_quantity, vehicle_specs)
+        
+        return None
+    
+    async def _find_water_vehicle_with_fallback(self, water_needed_l: int, vehicle_specs: dict) -> dict:
+        """
+        Trouve le véhicule d'eau optimal et ses alternatives par capacité croissante.
+        
+        Returns:
+            dict: {primary: str, quantity: int, alternatives: list, need_type: str}
+        """
+        # Calculer le véhicule optimal comme avant
+        vehicles_needed = await self._calculate_water_vehicles(water_needed_l, vehicle_specs)
+        
+        if not vehicles_needed:
+            return None
+        
+        # Prendre le premier véhicule comme primaire
+        primary_vehicle = list(vehicles_needed.keys())[0]
+        primary_quantity = vehicles_needed[primary_vehicle]
+        
+        # Générer les alternatives par capacité croissante
+        alternatives = self._generate_water_alternatives(water_needed_l, vehicle_specs, primary_vehicle)
+        
+        return {
+            'primary': primary_vehicle,
+            'quantity': primary_quantity,
+            'alternatives': alternatives,
+            'need_type': 'water'
+        }
+    
+    def _generate_water_alternatives(self, water_needed_l: int, vehicle_specs: dict, exclude_primary: str) -> list:
+        """
+        Génère une liste d'alternatives par capacité croissante pour l'eau.
+        
+        Returns:
+            list: Liste de véhicules ordonés par capacité croissante
+        """
+        water_vehicles = []
+        
+        for vehicle_type, specs in vehicle_specs.items():
+            if vehicle_type == exclude_primary:
+                continue
+                
+            water_capacity = specs.get('water_capacity_l', 0)
+            if water_capacity >= water_needed_l:  # Seulement les véhicules suffisants
+                extra_pct = specs.get('extra_water_storage_pct', 0)
+                effective_capacity = water_capacity * (1 + extra_pct / 100)
+                
+                water_vehicles.append({
+                    'type': vehicle_type,
+                    'capacity': int(effective_capacity)
+                })
+        
+        # Trier par capacité croissante
+        water_vehicles.sort(key=lambda x: x['capacity'])
+        
+        # Retourner seulement les types de véhicules
+        return [v['type'] for v in water_vehicles]
+    
+    async def _find_personnel_vehicle_with_fallback(self, personnel_type: str, needed_quantity: int, vehicle_specs: dict) -> dict:
+        """
+        Trouve le véhicule de personnel optimal et ses alternatives par capacité croissante.
+        
+        Args:
+            personnel_type: Type de personnel ('pompiers', 'policiers', 'medical')
+            needed_quantity: Nombre de personnel nécessaire
+            vehicle_specs: Spécifications des véhicules
+            
+        Returns:
+            dict: {primary: str, quantity: int, alternatives: list, need_type: str}
+        """
+        # Calculer le véhicule optimal comme avant
+        vehicles_needed = await self._calculate_personnel_vehicles(personnel_type, needed_quantity, vehicle_specs)
+        
+        if not vehicles_needed:
+            return None
+        
+        # Prendre le premier véhicule comme primaire
+        primary_vehicle = list(vehicles_needed.keys())[0]
+        primary_quantity = vehicles_needed[primary_vehicle]
+        
+        # Générer les alternatives par capacité croissante
+        alternatives = self._generate_personnel_alternatives(personnel_type, needed_quantity, vehicle_specs, primary_vehicle)
+        
+        return {
+            'primary': primary_vehicle,
+            'quantity': primary_quantity,
+            'alternatives': alternatives,
+            'need_type': f'personnel_{personnel_type}'
+        }
+    
+    def _find_specialized_personnel_vehicle_with_fallback(self, personnel_code: str, needed_quantity: int, vehicle_specs: dict) -> dict:
+        """
+        Trouve le véhicule de personnel spécialisé optimal et ses alternatives par capacité croissante.
+        
+        Args:
+            personnel_code: Code du personnel spécialisé (PLG, SAV, GRI, etc.)
+            needed_quantity: Nombre de personnel nécessaire
+            vehicle_specs: Spécifications des véhicules
+            
+        Returns:
+            dict: {primary: str, quantity: int, alternatives: list, need_type: str}
+        """
+        # Calculer le véhicule optimal comme avant
+        vehicles_needed = self._calculate_specialized_personnel_vehicles(personnel_code, needed_quantity, vehicle_specs)
+        
+        if not vehicles_needed:
+            return None
+        
+        # Prendre le premier véhicule comme primaire
+        primary_vehicle = list(vehicles_needed.keys())[0]
+        primary_quantity = vehicles_needed[primary_vehicle]
+        
+        # Générer les alternatives par capacité croissante (pour personnel spécialisé c'est plus simple)
+        alternatives = self._generate_specialized_personnel_alternatives(personnel_code, needed_quantity, vehicle_specs, primary_vehicle)
+        
+        return {
+            'primary': primary_vehicle,
+            'quantity': primary_quantity,
+            'alternatives': alternatives,
+            'need_type': f'personnel_{personnel_code}'
+        }
+    
+    def _generate_personnel_alternatives(self, personnel_type: str, needed_quantity: int, vehicle_specs: dict, exclude_primary: str) -> list:
+        """
+        Génère une liste d'alternatives par capacité croissante pour le personnel générique.
+        
+        Args:
+            personnel_type: Type de personnel ('pompiers', 'policiers', 'medical')
+            needed_quantity: Nombre de personnel nécessaire
+            vehicle_specs: Spécifications des véhicules
+            exclude_primary: Véhicule primaire à exclure
+            
+        Returns:
+            list: Liste de véhicules ordonés par capacité croissante
+        """
+        # Obtenir le mapping du personnel vers les véhicules
+        try:
+            from ..models.requirement_parser import RequirementParser
+            parser = RequirementParser()
+            config = parser.missing_config
+            
+            personnel_mapping = config.get('personnel_vehicle_mapping', {})
+            if personnel_type not in personnel_mapping:
+                return []
+            
+            # Obtenir tous les véhicules possibles pour ce type de personnel
+            possible_vehicles = personnel_mapping[personnel_type].get('vehicles', [])
+            
+            # Filtrer et trier par capacité
+            vehicle_alternatives = []
+            
+            for vehicle_type in possible_vehicles:
+                if vehicle_type == exclude_primary:
+                    continue
+                    
+                crew_size = vehicle_specs.get(vehicle_type, {}).get('crew_size', 0)
+                if crew_size >= needed_quantity:  # Seulement les véhicules suffisants
+                    vehicle_alternatives.append({
+                        'type': vehicle_type,
+                        'capacity': crew_size
+                    })
+            
+            # Trier par capacité croissante
+            vehicle_alternatives.sort(key=lambda x: x['capacity'])
+            
+            # Retourner seulement les types de véhicules
+            return [v['type'] for v in vehicle_alternatives]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération des alternatives personnel: {e}")
+            return []
+    
+    def _generate_specialized_personnel_alternatives(self, personnel_code: str, needed_quantity: int, vehicle_specs: dict, exclude_primary: str) -> list:
+        """
+        Génère une liste d'alternatives par capacité croissante pour le personnel spécialisé.
+        
+        Pour le personnel spécialisé, il n'y a généralement qu'un type de véhicule (ex: PLG -> VPL).
+        Donc les alternatives sont limitées.
+        
+        Args:
+            personnel_code: Code du personnel spécialisé (PLG, SAV, etc.)
+            needed_quantity: Nombre de personnel nécessaire
+            vehicle_specs: Spécifications des véhicules
+            exclude_primary: Véhicule primaire à exclure
+            
+        Returns:
+            list: Liste de véhicules ordonés par capacité croissante
+        """
+        try:
+            from ..models.requirement_parser import RequirementParser
+            parser = RequirementParser()
+            config = parser.missing_config
+            
+            personnel_mapping = config.get('personnel_mapping', {})
+            if personnel_code not in personnel_mapping:
+                return []
+            
+            # Obtenir les véhicules possibles pour ce personnel spécialisé
+            possible_vehicles = personnel_mapping[personnel_code].get('vehicles', [])
+            
+            # Pour le personnel spécialisé, il n'y a souvent qu'un seul type de véhicule
+            # Donc pas beaucoup d'alternatives possibles
+            alternatives = [v for v in possible_vehicles if v != exclude_primary]
+            
+            # Trier par priorité si définie
+            priority_vehicles = personnel_mapping[personnel_code].get('priority', [])
+            if priority_vehicles:
+                # Réorganiser selon la priorité
+                ordered_alternatives = []
+                for priority_vehicle in priority_vehicles:
+                    if priority_vehicle in alternatives:
+                        ordered_alternatives.append(priority_vehicle)
+                        alternatives.remove(priority_vehicle)
+                # Ajouter les véhicules restants
+                ordered_alternatives.extend(alternatives)
+                alternatives = ordered_alternatives
+            
+            return alternatives
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération des alternatives personnel spécialisé: {e}")
+            return []
+    
     async def _calculate_vehicles_for_missing_needs(self, other_needs: dict) -> dict:
         """
         Calcule les véhicules nécessaires pour satisfaire les besoins non-véhicules.
@@ -1095,10 +1395,14 @@ class MissionManager:
         best_solution = None
         min_waste = float('inf')
         
+        # Seuil de véhicules : si la solution nécessite N+ véhicules (configuré via VEHICLE_THRESHOLD),
+        # préférer une solution avec moins de véhicules même si plus de gaspillage
+        VEHICLE_THRESHOLD = self.settings.vehicle_threshold
+        
         # Générer toutes les combinaisons raisonnables
         combinations_to_test = []
         
-        # Stratégie 1: Véhicule unique le plus proche
+        # Stratégie 1: Véhicule unique le plus proche (PRIORITÉ MAXIMALE)
         for vehicle in water_vehicles:
             if vehicle['capacity'] >= target_water:
                 combinations_to_test.append({vehicle['type']: 1})
@@ -1139,22 +1443,48 @@ class MissionManager:
                                         if total_capacity >= target_water:
                                             combinations_to_test.append(combination)
         
-        # Évaluer toutes les combinaisons
+        # Évaluer toutes les combinaisons avec logique d'optimisation intelligente
         for combination in combinations_to_test:
             total_capacity = self._calculate_combination_capacity(combination, water_vehicles)
             
             if total_capacity >= target_water:
                 waste = total_capacity - target_water
-                # Favoriser les solutions avec moins de gaspillage et moins de véhicules
-                score = waste + (sum(combination.values()) * 100)  # Pénaliser le nombre de véhicules
+                vehicle_count = sum(combination.values())
                 
-                if waste < min_waste or (waste == min_waste and sum(combination.values()) < sum(best_solution['vehicles'].values()) if best_solution else True):
+                # Logique d'optimisation :
+                # 1. Minimiser le gaspillage d'eau (priorité 1)
+                # 2. MAIS éviter de gaspiller des véhicules (priorité 2)
+                # 3. Si solution actuelle >= 3 véhicules ET nouvelle solution < 3 véhicules : préférer la nouvelle
+                
+                is_better = False
+                current_vehicle_count = sum(best_solution['vehicles'].values()) if best_solution else float('inf')
+                current_waste = best_solution['waste'] if best_solution else float('inf')
+                
+                if best_solution is None:
+                    # Première solution valide
+                    is_better = True
+                elif current_vehicle_count >= VEHICLE_THRESHOLD and vehicle_count < VEHICLE_THRESHOLD:
+                    # Solution actuelle gaspille des véhicules, nouvelle solution plus économe
+                    is_better = True
+                    logger.debug(f"💧 Préférence pour moins de véhicules: {vehicle_count} vs {current_vehicle_count}")
+                elif current_vehicle_count < VEHICLE_THRESHOLD and vehicle_count >= VEHICLE_THRESHOLD:
+                    # Ne pas revenir à une solution qui gaspille des véhicules
+                    is_better = False
+                elif waste < current_waste:
+                    # Moins de gaspillage d'eau (priorité 1)
+                    is_better = True
+                elif waste == current_waste and vehicle_count < current_vehicle_count:
+                    # Même gaspillage mais moins de véhicules
+                    is_better = True
+                
+                if is_better:
                     min_waste = waste
                     best_solution = {
                         'vehicles': combination.copy(),
                         'total_capacity': total_capacity,
                         'waste': waste
                     }
+                    logger.debug(f"💧 Nouvelle meilleure solution: {vehicle_count} véhicules, {waste}L gaspillage")
         
         return best_solution
     
@@ -1275,6 +1605,9 @@ class MissionManager:
         """
         Trouve la combinaison optimale de véhicules pour approcher au mieux le besoin en personnel.
         
+        Applique le même principe que pour l'eau : privilégier 1 véhicule surdimensionné
+        plutôt que plusieurs véhicules plus petits si le nombre dépasse VEHICLE_THRESHOLD.
+        
         Args:
             target_personnel: Nombre de personnes cible
             personnel_vehicles: Liste des véhicules avec leurs capacités d'équipage
@@ -1284,6 +1617,8 @@ class MissionManager:
         """
         if not personnel_vehicles:
             return None
+        
+        VEHICLE_THRESHOLD = self.settings.vehicle_threshold  # Seuil critique configuré via .env
         
         # Limiter le nombre de véhicules de chaque type pour éviter les combinaisons absurdes
         max_vehicles_per_type = max(2, (target_personnel // min(v['crew_size'] for v in personnel_vehicles)) + 1)
@@ -1295,31 +1630,36 @@ class MissionManager:
         # Générer toutes les combinaisons raisonnables
         combinations_to_test = []
         
-        # Stratégie 1: Véhicule unique le plus proche
-        for vehicle in personnel_vehicles:
+        # STRATÉGIE PRIORITAIRE: Véhicule unique si possible (comme pour l'eau)
+        # Trier les véhicules par capacité croissante pour trouver le plus petit suffisant
+        vehicles_by_capacity = sorted(personnel_vehicles, key=lambda x: x['crew_size'])
+        for vehicle in vehicles_by_capacity:
             if vehicle['crew_size'] >= target_personnel:
                 combinations_to_test.append({vehicle['type']: 1})
+                break  # Prendre le plus petit véhicule suffisant en premier
         
-        # Stratégie 2: Combinaisons de 2-3 véhicules prioritaires
-        priority_vehicles = [v for v in personnel_vehicles if v['is_priority']]
-        if priority_vehicles:
-            for i, v1 in enumerate(priority_vehicles[:3]):  # Limiter aux 3 premiers prioritaires
-                for count1 in range(1, min(max_vehicles_per_type, (target_personnel // v1['crew_size']) + 2)):
-                    combination = {v1['type']: count1}
-                    total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
-                    if total_personnel >= target_personnel:
-                        combinations_to_test.append(combination)
-                    
-                    # Combinaisons avec un deuxième véhicule
-                    for j, v2 in enumerate(priority_vehicles[:3]):
-                        if i != j:  # Véhicules différents
-                            for count2 in range(1, min(max_vehicles_per_type, (target_personnel // v2['crew_size']) + 2)):
-                                combination = {v1['type']: count1, v2['type']: count2}
-                                total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
-                                if total_personnel >= target_personnel:
-                                    combinations_to_test.append(combination)
+        # STRATÉGIE SECONDAIRE: Combinaisons multiples SEULEMENT si aucun véhicule unique
+        if not combinations_to_test:
+            # Stratégie 2: Combinaisons de 2-3 véhicules prioritaires
+            priority_vehicles = [v for v in personnel_vehicles if v['is_priority']]
+            if priority_vehicles:
+                for i, v1 in enumerate(priority_vehicles[:3]):  # Limiter aux 3 premiers prioritaires
+                    for count1 in range(1, min(max_vehicles_per_type, (target_personnel // v1['crew_size']) + 2)):
+                        combination = {v1['type']: count1}
+                        total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
+                        if total_personnel >= target_personnel:
+                            combinations_to_test.append(combination)
+                        
+                        # Combinaisons avec un deuxième véhicule
+                        for j, v2 in enumerate(priority_vehicles[:3]):
+                            if i != j:  # Véhicules différents
+                                for count2 in range(1, min(max_vehicles_per_type, (target_personnel // v2['crew_size']) + 2)):
+                                    combination = {v1['type']: count1, v2['type']: count2}
+                                    total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
+                                    if total_personnel >= target_personnel:
+                                        combinations_to_test.append(combination)
         
-        # Évaluer toutes les combinaisons
+        # Évaluer toutes les combinaisons avec la logique de seuil VEHICLE_THRESHOLD
         for combination in combinations_to_test:
             total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
             
@@ -1327,16 +1667,47 @@ class MissionManager:
                 excess = total_personnel - target_personnel
                 vehicle_count = sum(combination.values())
                 
-                # Favoriser les solutions avec moins d'excédent et moins de véhicules
-                if (excess < min_excess or 
-                    (excess == min_excess and vehicle_count < min_vehicles)):
+                # LOGIQUE DU SEUIL : Si une solution nécessite > VEHICLE_THRESHOLD véhicules,
+                # privilégier les solutions avec 1 seul véhicule même si plus d'excédent
+                is_single_vehicle = vehicle_count == 1
+                is_multi_vehicle_over_threshold = vehicle_count > VEHICLE_THRESHOLD
+                
+                # Critères d'évaluation prioritaires :
+                # 1. Éviter les solutions avec > VEHICLE_THRESHOLD véhicules si possible
+                # 2. Privilégier les véhicules uniques
+                # 3. Minimiser l'excédent personnel
+                # 4. Minimiser le nombre de véhicules
+                
+                is_better = False
+                if best_solution is None:
+                    is_better = True
+                elif is_single_vehicle and not best_solution.get('is_single_vehicle', False):
+                    # Privilégier véhicule unique sur multi-véhicules
+                    is_better = True
+                elif best_solution.get('is_multi_over_threshold', False) and not is_multi_vehicle_over_threshold:
+                    # Éviter les solutions avec trop de véhicules
+                    is_better = True
+                elif (is_single_vehicle == best_solution.get('is_single_vehicle', False) and
+                      is_multi_vehicle_over_threshold == best_solution.get('is_multi_over_threshold', False)):
+                    # Si même catégorie, comparer excédent puis nombre de véhicules
+                    if (excess < min_excess or (excess == min_excess and vehicle_count < min_vehicles)):
+                        is_better = True
+                
+                if is_better:
                     min_excess = excess
                     min_vehicles = vehicle_count
                     best_solution = {
                         'vehicles': combination.copy(),
                         'total_personnel': total_personnel,
-                        'excess': excess
+                        'excess': excess,
+                        'is_single_vehicle': is_single_vehicle,
+                        'is_multi_over_threshold': is_multi_vehicle_over_threshold
                     }
+        
+        # Nettoyer les métadonnées avant de retourner
+        if best_solution:
+            best_solution.pop('is_single_vehicle', None)
+            best_solution.pop('is_multi_over_threshold', None)
         
         return best_solution
     
@@ -1428,25 +1799,92 @@ class MissionManager:
             logger.warning(f"👨‍💼 Aucun type de véhicule défini pour le personnel spécialisé '{personnel_code}' dans la configuration")
             return vehicles_needed
         
-        # Utiliser le véhicule prioritaire
-        for vehicle_type in priority_vehicles:
-            # Vérifier si le véhicule a des specs définies, sinon utiliser un crew_size par défaut
+        # Appliquer la logique de fallback par capacité (comme pour personnel générique)
+        VEHICLE_THRESHOLD = self.settings.vehicle_threshold  # Même seuil que pour le personnel générique
+        personnel_name = personnel_config.get("name", personnel_code)
+        
+        # Créer la liste des véhicules avec leurs capacités
+        specialized_vehicles = []
+        for vehicle_type in appropriate_vehicles:
             if vehicle_type in vehicle_specs:
                 crew_size = vehicle_specs[vehicle_type].get('crew_size', 1)
-                logger.debug(f"👨‍💼 Véhicule {vehicle_type} trouvé dans specs avec crew_size={crew_size}")
+                is_priority = vehicle_type in priority_vehicles
+                priority_index = priority_vehicles.index(vehicle_type) if is_priority else len(priority_vehicles)
+                
+                specialized_vehicles.append({
+                    'type': vehicle_type,
+                    'crew_size': crew_size,
+                    'is_priority': is_priority,
+                    'priority_index': priority_index
+                })
+                logger.debug(f"👨‍💼 Véhicule {vehicle_type} : {crew_size} spécialistes, priorité={is_priority}")
             else:
-                crew_size = 1  # Fallback pour véhicules sans specs
-                logger.debug(f"👨‍💼 Véhicule {vehicle_type} non trouvé dans specs, utilisation crew_size=1 par défaut")
-            
-            # Pour le personnel spécialisé, chaque véhicule peut transporter crew_size spécialistes
-            vehicles_count = max(1, (personnel_needed + crew_size - 1) // crew_size)
-            vehicles_needed[vehicle_type] = vehicles_count
-            
-            personnel_name = personnel_config.get("name", personnel_code)
-            logger.info(f"👨‍💼 Pour {personnel_needed} {personnel_name}: {vehicles_count} {vehicle_type} ({crew_size} spécialistes/véhicule)")
-            break
-        else:
+                # Fallback pour véhicules sans specs
+                is_priority = vehicle_type in priority_vehicles
+                priority_index = priority_vehicles.index(vehicle_type) if is_priority else len(priority_vehicles)
+                
+                specialized_vehicles.append({
+                    'type': vehicle_type,
+                    'crew_size': 1,  # Fallback par défaut
+                    'is_priority': is_priority,
+                    'priority_index': priority_index
+                })
+                logger.debug(f"👨‍💼 Véhicule {vehicle_type} : crew_size=1 (fallback), priorité={is_priority}")
+        
+        if not specialized_vehicles:
             logger.warning(f"👨‍💼 Aucun véhicule approprié trouvé pour {personnel_code} - configuration: {personnel_config}")
+            return vehicles_needed
+        
+        # Trier par priorité puis par capacité croissante (pour trouver le plus petit suffisant)
+        specialized_vehicles.sort(key=lambda x: (x['priority_index'], x['crew_size']))
+        
+        logger.info(f"👨‍💼 Véhicules disponibles pour {personnel_name} ({personnel_code}):")
+        for v in specialized_vehicles:
+            priority_str = "(prioritaire)" if v['is_priority'] else ""
+            logger.info(f"   - {v['type']}: {v['crew_size']} spécialistes {priority_str}")
+        
+        # STRATÉGIE PRIORITAIRE: Véhicule unique avec capacité suffisante
+        best_solution = None
+        min_vehicles = float('inf')
+        min_excess = float('inf')
+        
+        # D'abord chercher un véhicule unique suffisant
+        for vehicle in specialized_vehicles:
+            if vehicle['crew_size'] >= personnel_needed:
+                vehicles_count = 1
+                total_personnel = vehicle['crew_size']
+                excess = total_personnel - personnel_needed
+                
+                # Privilégier véhicule unique
+                vehicles_needed = {vehicle['type']: vehicles_count}
+                logger.info(f"👨‍💼 Solution optimale trouvée pour {personnel_needed} {personnel_name}:")
+                logger.info(f"   - {vehicles_count}x {vehicle['type']} ({vehicle['crew_size']} spécialistes)")
+                logger.info(f"   - Personnel fourni: {total_personnel}, Excédent: {excess}")
+                return vehicles_needed
+        
+        # STRATÉGIE SECONDAIRE: Combinaison multiple avec seuil VEHICLE_THRESHOLD
+        # Utiliser le véhicule prioritaire avec le meilleur ratio
+        best_vehicle = specialized_vehicles[0]  # Premier = plus prioritaire
+        vehicles_count = max(1, (personnel_needed + best_vehicle['crew_size'] - 1) // best_vehicle['crew_size'])
+        
+        # Vérifier le seuil VEHICLE_THRESHOLD
+        if vehicles_count > VEHICLE_THRESHOLD:
+            # Chercher un véhicule avec plus de capacité même si moins prioritaire
+            for vehicle in specialized_vehicles:
+                alternative_count = max(1, (personnel_needed + vehicle['crew_size'] - 1) // vehicle['crew_size'])
+                if alternative_count <= VEHICLE_THRESHOLD:
+                    vehicles_count = alternative_count
+                    best_vehicle = vehicle
+                    logger.info(f"👨‍💼 Utilisation de {vehicle['type']} pour éviter {vehicles_count} véhicules (seuil: {VEHICLE_THRESHOLD})")
+                    break
+        
+        vehicles_needed = {best_vehicle['type']: vehicles_count}
+        total_personnel = best_vehicle['crew_size'] * vehicles_count
+        excess = total_personnel - personnel_needed
+        
+        logger.info(f"👨‍💼 Solution trouvée pour {personnel_needed} {personnel_name}:")
+        logger.info(f"   - {vehicles_count}x {best_vehicle['type']} ({best_vehicle['crew_size']} spécialistes chacun)")
+        logger.info(f"   - Personnel fourni: {total_personnel}, Excédent: {excess}")
         
         return vehicles_needed
     

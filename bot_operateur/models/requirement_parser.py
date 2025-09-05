@@ -13,9 +13,10 @@ from .text_cleaner import TextCleaner
 class RequirementParser:
     """Parseur intelligent pour analyser les exigences de missions basé sur les labels réels"""
     
-    def __init__(self, needs_labels_path: str = None, vehicles_mapping_path: str = None):
+    def __init__(self, needs_labels_path: str = None, vehicles_mapping_path: str = None, missing_config_path: str = None):
         self.needs_labels = self._load_needs_labels(needs_labels_path)
         self.vehicles_mapping = self._load_vehicles_mapping(vehicles_mapping_path)
+        self.missing_config = self._load_missing_config(missing_config_path)
         
         # Compile des regex pour optimiser les performances
         self.compiled_patterns = self._compile_patterns()
@@ -42,6 +43,19 @@ class RequirementParser:
         """Charge le fichier de mapping des véhicules"""
         if path is None:
             path = Path(__file__).parent.parent / "data" / "vehicles_v2.json"
+        
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data
+        except Exception as e:
+            logger.error(f"Erreur lors du chargement de {path}: {e}")
+            return {}
+    
+    def _load_missing_config(self, path: str = None) -> Dict:
+        """Charge le fichier de configuration des besoins manquants"""
+        if path is None:
+            path = Path(__file__).parent.parent / "data" / "missing_needs_config.json"
         
         try:
             with open(path, 'r', encoding='utf-8') as f:
