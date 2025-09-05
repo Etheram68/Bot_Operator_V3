@@ -4,12 +4,13 @@
   "_last_updated": "2025-08-29",
   
   "vehicle_requirements": {
-    "AMBULANCE": ["Ambulances? requises?", "ambulances? nécessaires?", "(?<!s )Ambulance(?!s)"],
+    "AMBULANCE": ["Ambulances? requises?", "ambulances? nécessaires?", "(?<!s )Ambulance(?!s)", "ambulances"],
     "AMBULANCE_TRANSPORT": ["Transport médical requis", "transport sanitaire"],
     "PCDSM": ["PC DSM nécessaires?", "poste de commandement.{0,20}DSM"],
     "CHEF_DE_GROUPE": ["Chefs? de groupes?(?! ou VLHR) .{0,20}requis", "Chefs? de groupes? ou VLHR requis", "Chef de groupe"],
     "BEA": ["Moyens? [ÉEé]lévateurs? [Aa]ériens? requis", "BEA requis", "échelle aérienne"],
     "FPT": ["[Ff]ourgons?\\s+d[’' ]incendies?\\s*(requis)?", "FPT\\s*(requis)?"],
+    "FPT_BEA": ["Fourgons d[’' ]incendie ou moyens elévateur aérien"],
     "CCF": ["CCF\\s*(requis)?", "camions?[\\s-]*citernes?[\\s-]*feux"],
     "VIMP": ["Spécialistes\\s+IMP\\s*(requis)?", "VIMP", "intervention\\s+milieu\\s+périlleux"],
     "VGRIMP": ["VGRIMP", "groupe\\s+d'intervention.{0,20}milieu\\s+périlleux"],
@@ -38,7 +39,7 @@
     "BP": ["Barres?-ponts? nécessaires?", "ReBP", "remorques? barres? pont"],
     "ELE": ["ELE nécessaires?", "éclairages? mobiles?"],
     "RLC": ["RLC", "Requis RLC"],
-    "FPT_SR": ["[Ff]ourgons? d'incendie.{0,30}secours routiers?", "FPT.{0,10}VSR", "pompiers?.{0,20}secours"],
+    "FPT_SR": ["[Ff]ourgons? d'incendie.{0,30}secours routiers?", "FPT.{0,10}VSR", "pompiers?.{0,20}secours", "Fourgons d[’' ]incendie ou véhicules de secours routier requis"],
     "BLS_CSL": ["BLS.{0,10}CSL", "BLS\\s+ou\\s+CSL"],
     "CARS_POLICE_PATROUILLE_VR": ["[Vv]éhicules? patrouilles?.{0,20}VR", "police.{0,20}radio"],
     "CARS_POLICE_VR": ["[Vv]oitures? police.{0,20}VR", "police.{0,20}véhicules? radio", "[Vv]oitures? de police ou VR"],
