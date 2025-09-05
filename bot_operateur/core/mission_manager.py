@@ -672,10 +672,429 @@ class MissionManager:
                     logger.error(f"Erreur lors de l'analyse d'une div de véhicules manquants: {e}")
                     continue
             
+            # Analyser les besoins non-véhicules (eau, personnel, etc.)
+            other_needs = await self._extract_other_missing_needs_from_alert(mission)
+            if other_needs:
+                logger.info(f"🚨 Besoins supplémentaires détectés: {other_needs}")
+                # Calculer les véhicules nécessaires pour satisfaire ces besoins
+                additional_vehicles = await self._calculate_vehicles_for_missing_needs(other_needs)
+                if additional_vehicles:
+                    logger.info(f"💡 Véhicules calculés pour les besoins: {additional_vehicles}")
+                    # Ajouter aux besoins de véhicules
+                    for vehicle_type, quantity in additional_vehicles.items():
+                        missing_vehicles_needs[vehicle_type] = missing_vehicles_needs.get(vehicle_type, 0) + quantity
+            
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des véhicules manquants: {e}")
         
         return missing_vehicles_needs
+    
+    async def _extract_other_missing_needs_from_alert(self, mission: 'Mission') -> dict:
+        """
+        Extrait les besoins manquants non-véhicules depuis la div alert-missing-vehicles.
+        
+        Analyse les éléments comme "Il nous manque: 1000 l d'eau", "Il nous manque: 5 pompiers", etc.
+        
+        Args:
+            mission: Mission concernée
+            
+        Returns:
+            dict: Besoins manquants {type: quantité} avec types comme 'water_l', 'personnel_pompiers', etc.
+        """
+        other_needs = {}
+        
+        try:
+            # Chercher la div d'alerte des véhicules manquants
+            missing_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger.alert-missing-vehicles')
+            
+            if not missing_alert:
+                return other_needs
+            
+            # Chercher les div avec data-requirement-type="other"
+            other_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="other"]')
+            
+            for div in other_requirement_divs:
+                try:
+                    div_text = await div.inner_text()
+                    logger.debug(f"Analyse du texte de besoin: '{div_text}'")
+                    
+                    # Parser le texte pour extraire les besoins non-véhicules
+                    if "Il nous manque:" in div_text:
+                        # Extraire la partie après "Il nous manque:"
+                        missing_part = div_text.split("Il nous manque:")[1].strip()
+                        
+                        # Parser différents types de besoins
+                        need_info = self._parse_missing_need_text(missing_part)
+                        if need_info:
+                            other_needs[need_info['type']] = need_info['quantity']
+                            logger.info(f"Besoin détecté: {need_info['type']} = {need_info['quantity']}")
+                        
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'analyse d'une div de besoins autres: {e}")
+                    continue
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de l'extraction des besoins non-véhicules: {e}")
+        
+        return other_needs
+    
+    def _parse_missing_need_text(self, text: str) -> Optional[dict]:
+        """
+        Parse un texte de besoin manquant pour extraire le type et la quantité.
+        
+        Exemples:
+        - "1000 l d'eau" -> {'type': 'water_l', 'quantity': 1000}
+        - "5 pompiers" -> {'type': 'personnel_pompiers', 'quantity': 5}
+        - "10 policiers" -> {'type': 'personnel_policiers', 'quantity': 10}
+        
+        Args:
+            text: Texte à parser
+            
+        Returns:
+            dict ou None: Information du besoin {'type': str, 'quantity': int}
+        """
+        import re
+        
+        text = text.strip().lower()
+        
+        # Pattern pour l'eau en litres
+        water_pattern = r'(\d+)(?:\s*&nbsp;|\s+)l(?:\s+d[\'\u2019]?eau)?'
+        water_match = re.search(water_pattern, text, re.IGNORECASE)
+        if water_match:
+            quantity = int(water_match.group(1))
+            return {'type': 'water_l', 'quantity': quantity}
+        
+        # Pattern pour les pompiers
+        pompiers_pattern = r'(\d+)(?:\s+pompiers?)'
+        pompiers_match = re.search(pompiers_pattern, text, re.IGNORECASE)
+        if pompiers_match:
+            quantity = int(pompiers_match.group(1))
+            return {'type': 'personnel_pompiers', 'quantity': quantity}
+        
+        # Pattern pour les policiers
+        police_pattern = r'(\d+)(?:\s+policiers?)'
+        police_match = re.search(police_pattern, text, re.IGNORECASE)
+        if police_match:
+            quantity = int(police_match.group(1))
+            return {'type': 'personnel_policiers', 'quantity': quantity}
+        
+        # Pattern générique pour du personnel (équipiers, secouristes, etc.)
+        personnel_pattern = r'(\d+)(?:\s+(?:équipiers?|secouristes?|agents?|personnels?))'
+        personnel_match = re.search(personnel_pattern, text, re.IGNORECASE)
+        if personnel_match:
+            quantity = int(personnel_match.group(1))
+            return {'type': 'personnel_general', 'quantity': quantity}
+        
+        # Si aucun pattern ne correspond
+        logger.warning(f"Pattern de besoin non reconnu: '{text}'")
+        return None
+    
+    async def _calculate_vehicles_for_missing_needs(self, other_needs: dict) -> dict:
+        """
+        Calcule les véhicules nécessaires pour satisfaire les besoins non-véhicules.
+        
+        Utilise les spécifications des véhicules (water_capacity_l, crew_size, etc.) pour
+        déterminer quels véhicules envoyer et en quelle quantité.
+        
+        Args:
+            other_needs: Besoins à satisfaire {type: quantité}
+            
+        Returns:
+            dict: Véhicules à ajouter {vehicle_type: quantité}
+        """
+        additional_vehicles = {}
+        
+        try:
+            # Charger les spécifications des véhicules depuis vehicles_v2.json
+            from ..models.requirement_parser import RequirementParser
+            parser = RequirementParser()
+            vehicle_specs = parser.vehicles_mapping.get('vehicle_specs', {})
+            
+            for need_type, needed_quantity in other_needs.items():
+                vehicles_for_need = self._find_vehicles_for_need(need_type, needed_quantity, vehicle_specs)
+                
+                # Ajouter les véhicules trouvés
+                for vehicle_type, quantity in vehicles_for_need.items():
+                    additional_vehicles[vehicle_type] = additional_vehicles.get(vehicle_type, 0) + quantity
+                    logger.info(f"💧 Pour {need_type} ({needed_quantity}): ajouter {quantity} {vehicle_type}")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du calcul des véhicules pour besoins: {e}")
+        
+        return additional_vehicles
+    
+    def _find_vehicles_for_need(self, need_type: str, needed_quantity: int, vehicle_specs: dict) -> dict:
+        """
+        Trouve les véhicules appropriés pour un type de besoin spécifique.
+        
+        Args:
+            need_type: Type de besoin ('water_l', 'personnel_pompiers', etc.)
+            needed_quantity: Quantité nécessaire
+            vehicle_specs: Spécifications des véhicules
+            
+        Returns:
+            dict: Véhicules recommandés {vehicle_type: quantité}
+        """
+        vehicles_needed = {}
+        
+        if need_type == 'water_l':
+            # Calculer les véhicules pour l'eau
+            vehicles_needed = self._calculate_water_vehicles(needed_quantity, vehicle_specs)
+            
+        elif need_type.startswith('personnel_'):
+            # Calculer les véhicules pour le personnel
+            personnel_type = need_type.replace('personnel_', '')
+            vehicles_needed = self._calculate_personnel_vehicles(personnel_type, needed_quantity, vehicle_specs)
+        
+        return vehicles_needed
+    
+    def _calculate_water_vehicles(self, water_needed_l: int, vehicle_specs: dict) -> dict:
+        """
+        Calcule les véhicules nécessaires pour fournir une quantité d'eau de manière optimale.
+        
+        Utilise un algorithme intelligent pour minimiser le gaspillage en choisissant
+        la combinaison de véhicules qui se rapproche le plus du besoin exact.
+        
+        Args:
+            water_needed_l: Quantité d'eau nécessaire en litres
+            vehicle_specs: Spécifications des véhicules
+            
+        Returns:
+            dict: Véhicules recommandés {vehicle_type: quantité}
+        """
+        vehicles_needed = {}
+        
+        # Calculer la capacité d'eau totale actuelle sur la mission
+        current_water_capacity = self._estimate_current_water_capacity()
+        
+        # Calculer ce qu'il manque réellement
+        remaining_water_needed = max(0, water_needed_l - current_water_capacity)
+        if remaining_water_needed <= 0:
+            logger.info(f"💧 Capacité d'eau suffisante sur site ({current_water_capacity}L), pas de véhicule supplémentaire nécessaire")
+            return vehicles_needed
+        
+        logger.info(f"💧 Eau nécessaire: {remaining_water_needed}L (total: {water_needed_l}L - sur site: {current_water_capacity}L)")
+        
+        # Créer une liste des véhicules avec leurs capacités effectives
+        water_vehicles = []
+        for vehicle_type, specs in vehicle_specs.items():
+            water_capacity = specs.get('water_capacity_l', 0)
+            if water_capacity > 0:
+                # Appliquer le bonus de stockage d'eau si applicable
+                extra_pct = specs.get('extra_water_storage_pct', 0)
+                effective_capacity = water_capacity * (1 + extra_pct / 100)
+                
+                water_vehicles.append({
+                    'type': vehicle_type,
+                    'capacity': int(effective_capacity),
+                    'base_capacity': water_capacity,
+                    'bonus_pct': extra_pct
+                })
+        
+        # Trier par capacité croissante pour commencer par les plus petits
+        water_vehicles.sort(key=lambda x: x['capacity'])
+        
+        logger.info("💧 Véhicules d'eau disponibles:")
+        for v in water_vehicles:
+            logger.info(f"   - {v['type']}: {v['capacity']}L (base: {v['base_capacity']}L, bonus: {v['bonus_pct']}%)")
+        
+        # Algorithme d'optimisation : trouver la combinaison la plus proche du besoin
+        best_combination = self._find_optimal_water_combination(remaining_water_needed, water_vehicles)
+        
+        if best_combination:
+            vehicles_needed = best_combination['vehicles']
+            total_capacity = best_combination['total_capacity']
+            waste = total_capacity - remaining_water_needed
+            
+            logger.info(f"💧 Solution optimale trouvée:")
+            logger.info(f"   - Besoin: {remaining_water_needed}L")
+            logger.info(f"   - Capacité fournie: {total_capacity}L") 
+            logger.info(f"   - Gaspillage: {waste}L ({waste/remaining_water_needed*100:.1f}%)")
+            
+            for vehicle_type, count in vehicles_needed.items():
+                vehicle_info = next(v for v in water_vehicles if v['type'] == vehicle_type)
+                logger.info(f"   - {count}x {vehicle_type} ({vehicle_info['capacity']}L chacun)")
+        else:
+            logger.warning(f"💧 Impossible de satisfaire le besoin en eau de {remaining_water_needed}L")
+        
+        return vehicles_needed
+    
+    def _find_optimal_water_combination(self, target_water: int, water_vehicles: list) -> dict:
+        """
+        Trouve la combinaison optimale de véhicules pour approcher au mieux le besoin en eau.
+        
+        Utilise une approche de programmation dynamique adaptée pour minimiser le gaspillage
+        tout en satisfaisant le besoin minimum.
+        
+        Args:
+            target_water: Quantité d'eau cible en litres
+            water_vehicles: Liste des véhicules avec leurs capacités
+            
+        Returns:
+            dict: Meilleure combinaison trouvée avec 'vehicles' et 'total_capacity'
+        """
+        if not water_vehicles:
+            return None
+        
+        # Limiter le nombre de véhicules de chaque type pour éviter les combinaisons absurdes
+        max_vehicles_per_type = max(3, (target_water // min(v['capacity'] for v in water_vehicles)) + 1)
+        
+        best_solution = None
+        min_waste = float('inf')
+        
+        # Générer toutes les combinaisons raisonnables
+        combinations_to_test = []
+        
+        # Stratégie 1: Véhicule unique le plus proche
+        for vehicle in water_vehicles:
+            if vehicle['capacity'] >= target_water:
+                combinations_to_test.append({vehicle['type']: 1})
+        
+        # Stratégie 2: Combinaisons de 2 véhicules
+        for i, v1 in enumerate(water_vehicles):
+            for j, v2 in enumerate(water_vehicles):
+                if i <= j:  # Éviter les doublons symétriques
+                    for count1 in range(1, min(max_vehicles_per_type, (target_water // v1['capacity']) + 2)):
+                        for count2 in range(1 if i != j else count1, min(max_vehicles_per_type, (target_water // v2['capacity']) + 2)):
+                            combination = {}
+                            if count1 > 0:
+                                combination[v1['type']] = count1
+                            if count2 > 0 and (i != j or count2 != count1):
+                                combination[v2['type']] = combination.get(v2['type'], 0) + count2
+                            
+                            total_capacity = self._calculate_combination_capacity(combination, water_vehicles)
+                            if total_capacity >= target_water:
+                                combinations_to_test.append(combination)
+        
+        # Stratégie 3: Combinaisons de 3 véhicules pour les gros besoins
+        if target_water > 15000:  # Seulement pour les gros besoins
+            for i, v1 in enumerate(water_vehicles):
+                for j, v2 in enumerate(water_vehicles):
+                    for k, v3 in enumerate(water_vehicles):
+                        if i <= j <= k:  # Éviter les permutations
+                            max_count = min(2, (target_water // min(v1['capacity'], v2['capacity'], v3['capacity'])) + 1)
+                            for count1 in range(1, max_count + 1):
+                                for count2 in range(1, max_count + 1):
+                                    for count3 in range(1, max_count + 1):
+                                        combination = {
+                                            v1['type']: count1,
+                                            v2['type']: combination.get(v2['type'], 0) + count2,
+                                            v3['type']: combination.get(v3['type'], 0) + count3
+                                        }
+                                        
+                                        total_capacity = self._calculate_combination_capacity(combination, water_vehicles)
+                                        if total_capacity >= target_water:
+                                            combinations_to_test.append(combination)
+        
+        # Évaluer toutes les combinaisons
+        for combination in combinations_to_test:
+            total_capacity = self._calculate_combination_capacity(combination, water_vehicles)
+            
+            if total_capacity >= target_water:
+                waste = total_capacity - target_water
+                # Favoriser les solutions avec moins de gaspillage et moins de véhicules
+                score = waste + (sum(combination.values()) * 100)  # Pénaliser le nombre de véhicules
+                
+                if waste < min_waste or (waste == min_waste and sum(combination.values()) < sum(best_solution['vehicles'].values()) if best_solution else True):
+                    min_waste = waste
+                    best_solution = {
+                        'vehicles': combination.copy(),
+                        'total_capacity': total_capacity,
+                        'waste': waste
+                    }
+        
+        return best_solution
+    
+    def _calculate_combination_capacity(self, combination: dict, water_vehicles: list) -> int:
+        """
+        Calcule la capacité totale d'une combinaison de véhicules.
+        
+        Args:
+            combination: Dictionnaire {vehicle_type: count}
+            water_vehicles: Liste des véhicules avec leurs spécifications
+            
+        Returns:
+            int: Capacité totale en litres
+        """
+        total_capacity = 0
+        
+        for vehicle_type, count in combination.items():
+            vehicle_info = next((v for v in water_vehicles if v['type'] == vehicle_type), None)
+            if vehicle_info:
+                total_capacity += vehicle_info['capacity'] * count
+        
+        return total_capacity
+    
+    def _calculate_personnel_vehicles(self, personnel_type: str, personnel_needed: int, vehicle_specs: dict) -> dict:
+        """
+        Calcule les véhicules nécessaires pour fournir du personnel.
+        
+        Args:
+            personnel_type: Type de personnel ('pompiers', 'policiers', 'general')
+            personnel_needed: Nombre de personnes nécessaires
+            vehicle_specs: Spécifications des véhicules
+            
+        Returns:
+            dict: Véhicules recommandés {vehicle_type: quantité}
+        """
+        vehicles_needed = {}
+        
+        # Mapping des types de personnel vers les types de véhicules appropriés
+        personnel_vehicle_mapping = {
+            'pompiers': ['FPT', 'FPT(SR)', 'CCR(SR)', 'CCF(M)', 'CCF(S)', 'FS', 'VPC'],
+            'policiers': ['GN', 'PN', 'VR'],
+            'general': ['FPT', 'GN', 'PN']  # Personnel générique
+        }
+        
+        appropriate_vehicles = personnel_vehicle_mapping.get(personnel_type, [])
+        
+        if not appropriate_vehicles:
+            logger.warning(f"👥 Aucun type de véhicule défini pour le personnel '{personnel_type}'")
+            return vehicles_needed
+        
+        # Trouver les véhicules avec le plus grand crew_size parmi les appropriés
+        best_vehicles = []
+        for vehicle_type in appropriate_vehicles:
+            if vehicle_type in vehicle_specs:
+                crew_size = vehicle_specs[vehicle_type].get('crew_size', 0)
+                if crew_size > 0:
+                    best_vehicles.append({
+                        'type': vehicle_type,
+                        'crew_size': crew_size
+                    })
+        
+        # Trier par crew_size décroissant
+        best_vehicles.sort(key=lambda x: x['crew_size'], reverse=True)
+        
+        # Utiliser le véhicule avec le plus gros équipage
+        if best_vehicles:
+            best_vehicle = best_vehicles[0]
+            vehicle_type = best_vehicle['type']
+            crew_size = best_vehicle['crew_size']
+            
+            # Calculer combien de véhicules sont nécessaires
+            vehicles_count = max(1, (personnel_needed + crew_size - 1) // crew_size)  # Arrondi supérieur
+            vehicles_needed[vehicle_type] = vehicles_count
+            
+            logger.info(f"👥 Pour {personnel_needed} {personnel_type}: {vehicles_count} {vehicle_type} ({crew_size} personnes/véhicule)")
+        else:
+            logger.warning(f"👥 Aucun véhicule approprié trouvé pour {personnel_type}")
+        
+        return vehicles_needed
+    
+    def _estimate_current_water_capacity(self) -> int:
+        """
+        Estime la capacité d'eau totale actuellement disponible sur la mission.
+        
+        Cette méthode pourrait être étendue pour analyser les véhicules déjà sur site,
+        mais pour l'instant elle retourne 0 pour forcer l'envoi de véhicules supplémentaires.
+        
+        Returns:
+            int: Capacité d'eau estimée en litres
+        """
+        # TODO: Analyser les véhicules déjà sur site pour calculer leur capacité d'eau totale
+        # Pour l'instant, on assume qu'il n'y a pas d'eau sur site pour être sûr d'envoyer des véhicules
+        return 0
     
     async def _log_unrecognized_vehicle_pattern(self, missing_item: str, mission: 'Mission') -> None:
         """
