@@ -293,6 +293,9 @@
     },
     "VR": {
       "crew_size": 6
+    },
+    "VPL": {
+      "crew_size": 3
     }
   },
 

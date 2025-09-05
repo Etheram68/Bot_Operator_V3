@@ -1,4 +1,6 @@
 import asyncio
+import json
+from pathlib import Path
 from typing import List, Optional, Dict
 from loguru import logger
 
@@ -40,6 +42,35 @@ class MissionManager:
         }
         
         self.active_missions: List[Mission] = []
+        
+        # Charger la configuration des besoins manquants
+        self.missing_needs_config = self._load_missing_needs_config()
+    
+    def _load_missing_needs_config(self) -> Dict:
+        """
+        Charge la configuration des règles de besoins manquants depuis le JSON.
+        
+        Returns:
+            Dict: Configuration chargée ou configuration par défaut en cas d'erreur
+        """
+        try:
+            config_path = Path(__file__).parent.parent / "data" / "missing_needs_config.json"
+            
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                logger.info(f"Configuration des besoins manquants chargée depuis {config_path}")
+                return config
+                
+        except Exception as e:
+            logger.error(f"Erreur lors du chargement de la configuration des besoins manquants: {e}")
+            # Configuration par défaut minimale
+            return {
+                "personnel_mapping": {},
+                "other_needs_mapping": {},
+                "personnel_vehicle_mapping": {},
+                "deduplication_rules": {},
+                "parsing_patterns": {}
+            }
         
     async def get_all_missions(self) -> List[Mission]:
         """
@@ -244,6 +275,16 @@ class MissionManager:
                             logger.info(f"🆕 {vehicle_type}: ajouté {alert_quantity} (depuis alerte)")
                     
                     logger.info(f"📋 Besoins finaux avec alertes: {vehicle_needs}")
+                    
+                    # Ajouter les véhicules supplémentaires calculés pour les besoins non-véhicules (eau, personnel, etc.)
+                    # Ces véhicules sont stockés dans missing_vehicles_needs mais pas encore dans vehicle_needs
+                    for vehicle_type, quantity in missing_vehicles_needs.items():
+                        if vehicle_type not in alert_override_types:  # Ne pas dupliquer ceux déjà traités
+                            vehicle_needs[vehicle_type] = vehicle_needs.get(vehicle_type, 0) + quantity
+                            logger.info(f"🆕 {vehicle_type}: ajouté {quantity} (calculé depuis besoins supplémentaires)")
+                    
+                    if missing_vehicles_needs:
+                        logger.info(f"📋 Besoins finaux avec suppléments: {vehicle_needs}")
                 
             except Exception as e:
                 logger.error(f"Erreur lors de l'analyse des véhicules manquants: {e}")
@@ -710,9 +751,11 @@ class MissionManager:
             if not missing_alert:
                 return other_needs
             
-            # Chercher les div avec data-requirement-type="other"
+            # Chercher les div avec data-requirement-type="other" et "personnel"
             other_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="other"]')
+            personnel_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="personnel"]')
             
+            # Traiter les besoins "other" (eau, équipement, etc.)
             for div in other_requirement_divs:
                 try:
                     div_text = await div.inner_text()
@@ -736,6 +779,29 @@ class MissionManager:
                     logger.error(f"Erreur lors de l'analyse d'une div de besoins autres: {e}")
                     continue
             
+            # Traiter les besoins en personnel
+            for div in personnel_requirement_divs:
+                try:
+                    div_text = await div.inner_text()
+                    logger.debug(f"Analyse du texte de personnel: '{div_text}'")
+                    
+                    # Parser le texte pour extraire les besoins en personnel
+                    if "Personnel manquant:" in div_text:
+                        # Extraire la partie après "Personnel manquant:"
+                        personnel_part = div_text.split("Personnel manquant:")[1].strip()
+                        
+                        # Parser le format "3x PLG (Plongeur), 3x SAV (Sauvetage Aquatique)"
+                        personnel_needs = self._parse_missing_personnel_text(personnel_part)
+                        
+                        # Ajouter aux besoins avec un préfixe pour les distinguer
+                        for personnel_type, quantity in personnel_needs.items():
+                            other_needs[f"personnel_{personnel_type}"] = quantity
+                            logger.info(f"Personnel manquant détecté: {quantity}x {personnel_type}")
+                        
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'analyse d'une div de personnel manquant: {e}")
+                    continue
+            
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des besoins non-véhicules: {e}")
         
@@ -743,7 +809,7 @@ class MissionManager:
     
     def _parse_missing_need_text(self, text: str) -> Optional[dict]:
         """
-        Parse un texte de besoin manquant pour extraire le type et la quantité.
+        Parse un texte de besoin manquant pour extraire le type et la quantité en utilisant la configuration JSON.
         
         Exemples:
         - "1000 l d'eau" -> {'type': 'water_l', 'quantity': 1000}
@@ -760,37 +826,100 @@ class MissionManager:
         
         text = text.strip().lower()
         
-        # Pattern pour l'eau en litres
-        water_pattern = r'(\d+)(?:\s*&nbsp;|\s+)l(?:\s+d[\'\u2019]?eau)?'
+        # Charger les patterns depuis la configuration
+        if not hasattr(self, 'missing_needs_config') or not self.missing_needs_config:
+            self.missing_needs_config = self._load_missing_needs_config()
+        
+        other_needs_mapping = self.missing_needs_config.get('other_needs_mapping', {})
+        parsing_patterns = self.missing_needs_config.get('parsing_patterns', {})
+        
+        # Vérifier le pattern pour l'eau
+        water_pattern = parsing_patterns.get('water_pattern', r'(\d+)(?:\s*&nbsp;|\s+)l(?:\s+d[\'\u2019]?eau)?')
         water_match = re.search(water_pattern, text, re.IGNORECASE)
         if water_match:
             quantity = int(water_match.group(1))
             return {'type': 'water_l', 'quantity': quantity}
         
-        # Pattern pour les pompiers
-        pompiers_pattern = r'(\d+)(?:\s+pompiers?)'
-        pompiers_match = re.search(pompiers_pattern, text, re.IGNORECASE)
-        if pompiers_match:
-            quantity = int(pompiers_match.group(1))
-            return {'type': 'personnel_pompiers', 'quantity': quantity}
+        # Vérifier les patterns de personnel générique depuis la configuration
+        personnel_generic_patterns = parsing_patterns.get('personnel_generic_patterns', {})
         
-        # Pattern pour les policiers
-        police_pattern = r'(\d+)(?:\s+policiers?)'
-        police_match = re.search(police_pattern, text, re.IGNORECASE)
-        if police_match:
-            quantity = int(police_match.group(1))
-            return {'type': 'personnel_policiers', 'quantity': quantity}
+        for personnel_type, pattern in personnel_generic_patterns.items():
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                quantity = int(match.group(1))
+                return {'type': f'personnel_{personnel_type}', 'quantity': quantity}
         
-        # Pattern générique pour du personnel (équipiers, secouristes, etc.)
-        personnel_pattern = r'(\d+)(?:\s+(?:équipiers?|secouristes?|agents?|personnels?))'
-        personnel_match = re.search(personnel_pattern, text, re.IGNORECASE)
-        if personnel_match:
-            quantity = int(personnel_match.group(1))
-            return {'type': 'personnel_general', 'quantity': quantity}
+        # Vérifier les autres besoins (carburant, équipement, etc.)
+        for need_type, need_config in other_needs_mapping.items():
+            if 'keywords' in need_config:
+                for keyword in need_config['keywords']:
+                    if keyword in text:
+                        # Vérifier les exclusions
+                        exclusions = need_config.get('exclusions', [])
+                        exclude = any(excl in text for excl in exclusions)
+                        if not exclude:
+                            # Pattern pour extraire la quantité
+                            quantity_pattern = r'(\d+)'
+                            quantity_match = re.search(quantity_pattern, text)
+                            if quantity_match:
+                                quantity = int(quantity_match.group(1))
+                                return {'type': need_config['type'], 'quantity': quantity}
         
         # Si aucun pattern ne correspond, logger pour analyse future
         logger.warning(f"Pattern de besoin non reconnu: '{text}'")
         return None
+    
+    def _parse_missing_personnel_text(self, text: str) -> dict:
+        """
+        Parse un texte de personnel manquant pour extraire les types et quantités.
+        Utilise la configuration JSON pour les patterns.
+        
+        Args:
+            text: Texte à parser
+            
+        Returns:
+            dict: Personnel manquant {type_personnel: quantité}
+        """
+        import re
+        
+        personnel_needs = {}
+        
+        # S'assurer que la configuration est chargée
+        if not hasattr(self, 'missing_needs_config') or not self.missing_needs_config:
+            self.missing_needs_config = self._load_missing_needs_config()
+        
+        parsing_patterns = self.missing_needs_config.get("parsing_patterns", {})
+        
+        # 1. D'abord essayer les patterns de personnel spécialisé (format "3x PLG (Plongeur)")
+        personnel_pattern = parsing_patterns.get("personnel_pattern", r'(\d+)x\s+([A-Z][A-Z0-9]*)\s*(?:\([^)]+\))?')
+        matches = re.findall(personnel_pattern, text, re.IGNORECASE)
+        
+        for match in matches:
+            quantity = int(match[0])
+            personnel_code = match[1].upper()
+            
+            personnel_needs[personnel_code] = personnel_needs.get(personnel_code, 0) + quantity
+            logger.debug(f"Personnel spécialisé parsé: {quantity}x {personnel_code}")
+        
+        # 2. Si aucun personnel spécialisé trouvé, essayer les patterns génériques
+        if not personnel_needs:
+            personnel_generic_patterns = parsing_patterns.get("personnel_generic_patterns", {})
+            logger.debug(f"Patterns génériques disponibles: {personnel_generic_patterns}")
+            
+            for personnel_type, pattern in personnel_generic_patterns.items():
+                logger.debug(f"Test pattern '{personnel_type}': '{pattern}' sur texte '{text}'")
+                match = re.search(pattern, text, re.IGNORECASE)
+                logger.debug(f"Résultat match: {match}")
+                if match:
+                    quantity = int(match.group(1))
+                    personnel_needs[personnel_type] = personnel_needs.get(personnel_type, 0) + quantity
+                    logger.info(f"Personnel générique parsé: {quantity} {personnel_type}")
+                    break
+        
+        if not personnel_needs:
+            logger.warning(f"Aucun personnel reconnu dans: '{text}'")
+        
+        return personnel_needs
     
     async def _calculate_vehicles_for_missing_needs(self, other_needs: dict) -> dict:
         """
@@ -814,7 +943,7 @@ class MissionManager:
             vehicle_specs = parser.vehicles_mapping.get('vehicle_specs', {})
             
             for need_type, needed_quantity in other_needs.items():
-                vehicles_for_need = self._find_vehicles_for_need(need_type, needed_quantity, vehicle_specs)
+                vehicles_for_need = await self._find_vehicles_for_need(need_type, needed_quantity, vehicle_specs)
                 
                 # Ajouter les véhicules trouvés
                 for vehicle_type, quantity in vehicles_for_need.items():
@@ -826,7 +955,7 @@ class MissionManager:
         
         return additional_vehicles
     
-    def _find_vehicles_for_need(self, need_type: str, needed_quantity: int, vehicle_specs: dict) -> dict:
+    async def _find_vehicles_for_need(self, need_type: str, needed_quantity: int, vehicle_specs: dict) -> dict:
         """
         Trouve les véhicules appropriés pour un type de besoin spécifique.
         
@@ -842,16 +971,23 @@ class MissionManager:
         
         if need_type == 'water_l':
             # Calculer les véhicules pour l'eau
-            vehicles_needed = self._calculate_water_vehicles(needed_quantity, vehicle_specs)
+            vehicles_needed = await self._calculate_water_vehicles(needed_quantity, vehicle_specs)
             
         elif need_type.startswith('personnel_'):
             # Calculer les véhicules pour le personnel
             personnel_type = need_type.replace('personnel_', '')
-            vehicles_needed = self._calculate_personnel_vehicles(personnel_type, needed_quantity, vehicle_specs)
+            
+            # Distinguer les codes de personnel spécialisé (PLG, SAV) du personnel générique
+            if personnel_type.isupper() and len(personnel_type) <= 4:
+                # Code de personnel spécialisé (PLG, SAV, etc.)
+                vehicles_needed = self._calculate_specialized_personnel_vehicles(personnel_type, needed_quantity, vehicle_specs)
+            else:
+                # Personnel générique (pompiers, policiers)
+                vehicles_needed = await self._calculate_personnel_vehicles(personnel_type, needed_quantity, vehicle_specs)
         
         return vehicles_needed
     
-    def _calculate_water_vehicles(self, water_needed_l: int, vehicle_specs: dict) -> dict:
+    async def _calculate_water_vehicles(self, water_needed_l: int, vehicle_specs: dict) -> dict:
         """
         Calcule les véhicules nécessaires pour fournir une quantité d'eau de manière optimale.
         
@@ -867,8 +1003,8 @@ class MissionManager:
         """
         vehicles_needed = {}
         
-        # Calculer la capacité d'eau totale actuelle sur la mission
-        current_water_capacity = self._estimate_current_water_capacity()
+        # Calculer la capacité d'eau totale actuelle en route vers la mission
+        current_water_capacity = await self._estimate_current_water_capacity()
         
         # Calculer ce qu'il manque réellement
         remaining_water_needed = max(0, water_needed_l - current_water_capacity)
@@ -1028,9 +1164,12 @@ class MissionManager:
         
         return total_capacity
     
-    def _calculate_personnel_vehicles(self, personnel_type: str, personnel_needed: int, vehicle_specs: dict) -> dict:
+    async def _calculate_personnel_vehicles(self, personnel_type: str, personnel_needed: int, vehicle_specs: dict) -> dict:
         """
-        Calcule les véhicules nécessaires pour fournir du personnel.
+        Calcule les véhicules nécessaires pour fournir du personnel avec logique intelligente.
+        
+        Utilise un algorithme d'optimisation similaire à celui de l'eau pour minimiser
+        le nombre de véhicules tout en maximisant l'efficacité de l'équipage.
         
         Args:
             personnel_type: Type de personnel ('pompiers', 'policiers', 'general')
@@ -1042,62 +1181,299 @@ class MissionManager:
         """
         vehicles_needed = {}
         
-        # Mapping des types de personnel vers les types de véhicules appropriés
-        personnel_vehicle_mapping = {
-            'pompiers': ['FPT', 'FPT(SR)', 'CCR(SR)', 'CCF(M)', 'CCF(S)', 'FS', 'VPC'],
-            'policiers': ['GN', 'PN', 'VR'],
-            'general': ['FPT', 'GN', 'PN']  # Personnel générique
-        }
+        # S'assurer que la configuration est chargée
+        if not hasattr(self, 'missing_needs_config') or not self.missing_needs_config:
+            self.missing_needs_config = self._load_missing_needs_config()
         
-        appropriate_vehicles = personnel_vehicle_mapping.get(personnel_type, [])
+        # Récupérer le mapping depuis la configuration
+        personnel_vehicle_mapping = self.missing_needs_config.get("personnel_vehicle_mapping", {})
+        personnel_config = personnel_vehicle_mapping.get(personnel_type, {})
+        
+        appropriate_vehicles = personnel_config.get("vehicles", [])
+        priority_vehicles = personnel_config.get("priority", appropriate_vehicles)
         
         if not appropriate_vehicles:
-            logger.warning(f"👥 Aucun type de véhicule défini pour le personnel '{personnel_type}'")
+            logger.warning(f"👥 Aucun type de véhicule défini pour le personnel '{personnel_type}' dans la configuration")
             return vehicles_needed
         
-        # Trouver les véhicules avec le plus grand crew_size parmi les appropriés
-        best_vehicles = []
+        # Calculer le personnel actuellement en route
+        current_personnel_capacity = await self._estimate_current_personnel_capacity(personnel_type, appropriate_vehicles, vehicle_specs)
+        
+        # Calculer ce qu'il manque réellement
+        remaining_personnel_needed = max(0, personnel_needed - current_personnel_capacity)
+        if remaining_personnel_needed <= 0:
+            logger.info(f"👥 Personnel {personnel_type} suffisant en route ({current_personnel_capacity}), pas de véhicule supplémentaire nécessaire")
+            return vehicles_needed
+        
+        logger.info(f"👥 Personnel {personnel_type} nécessaire: {remaining_personnel_needed} (total: {personnel_needed} - en route: {current_personnel_capacity})")
+        
+        # Créer une liste des véhicules avec leurs capacités d'équipage
+        personnel_vehicles = []
         for vehicle_type in appropriate_vehicles:
             if vehicle_type in vehicle_specs:
                 crew_size = vehicle_specs[vehicle_type].get('crew_size', 0)
                 if crew_size > 0:
-                    best_vehicles.append({
+                    is_priority = vehicle_type in priority_vehicles
+                    priority_index = priority_vehicles.index(vehicle_type) if is_priority else len(priority_vehicles)
+                    
+                    personnel_vehicles.append({
                         'type': vehicle_type,
-                        'crew_size': crew_size
+                        'crew_size': crew_size,
+                        'is_priority': is_priority,
+                        'priority_index': priority_index
                     })
         
-        # Trier par crew_size décroissant
-        best_vehicles.sort(key=lambda x: x['crew_size'], reverse=True)
+        # Trier par priorité puis par crew_size décroissant
+        personnel_vehicles.sort(key=lambda x: (x['priority_index'], -x['crew_size']))
         
-        # Utiliser le véhicule avec le plus gros équipage
-        if best_vehicles:
-            best_vehicle = best_vehicles[0]
-            vehicle_type = best_vehicle['type']
-            crew_size = best_vehicle['crew_size']
+        logger.info(f"👥 Véhicules {personnel_type} disponibles:")
+        for v in personnel_vehicles:
+            priority_str = "(prioritaire)" if v['is_priority'] else ""
+            logger.info(f"   - {v['type']}: {v['crew_size']} personnes {priority_str}")
+        
+        # Algorithme d'optimisation : trouver la combinaison la plus efficace
+        best_combination = self._find_optimal_personnel_combination(remaining_personnel_needed, personnel_vehicles)
+        
+        if best_combination:
+            vehicles_needed = best_combination['vehicles']
+            total_personnel = best_combination['total_personnel']
+            excess = total_personnel - remaining_personnel_needed
             
-            # Calculer combien de véhicules sont nécessaires
-            vehicles_count = max(1, (personnel_needed + crew_size - 1) // crew_size)  # Arrondi supérieur
-            vehicles_needed[vehicle_type] = vehicles_count
+            logger.info(f"👥 Solution optimale trouvée pour {personnel_type}:")
+            logger.info(f"   - Besoin: {remaining_personnel_needed} personnes")
+            logger.info(f"   - Personnel fourni: {total_personnel} personnes")
+            logger.info(f"   - Excédent: {excess} personnes ({excess/remaining_personnel_needed*100:.1f}%)")
             
-            logger.info(f"👥 Pour {personnel_needed} {personnel_type}: {vehicles_count} {vehicle_type} ({crew_size} personnes/véhicule)")
+            for vehicle_type, count in vehicles_needed.items():
+                vehicle_info = next(v for v in personnel_vehicles if v['type'] == vehicle_type)
+                logger.info(f"   - {count}x {vehicle_type} ({vehicle_info['crew_size']} personnes chacun)")
         else:
-            logger.warning(f"👥 Aucun véhicule approprié trouvé pour {personnel_type}")
+            logger.warning(f"👥 Impossible de satisfaire le besoin en personnel {personnel_type} de {remaining_personnel_needed} personnes")
         
         return vehicles_needed
     
-    def _estimate_current_water_capacity(self) -> int:
+    def _find_optimal_personnel_combination(self, target_personnel: int, personnel_vehicles: list) -> dict:
         """
-        Estime la capacité d'eau totale actuellement disponible sur la mission.
+        Trouve la combinaison optimale de véhicules pour approcher au mieux le besoin en personnel.
         
-        Cette méthode pourrait être étendue pour analyser les véhicules déjà sur site,
-        mais pour l'instant elle retourne 0 pour forcer l'envoi de véhicules supplémentaires.
+        Args:
+            target_personnel: Nombre de personnes cible
+            personnel_vehicles: Liste des véhicules avec leurs capacités d'équipage
+            
+        Returns:
+            dict: Meilleure combinaison trouvée avec 'vehicles' et 'total_personnel'
+        """
+        if not personnel_vehicles:
+            return None
+        
+        # Limiter le nombre de véhicules de chaque type pour éviter les combinaisons absurdes
+        max_vehicles_per_type = max(2, (target_personnel // min(v['crew_size'] for v in personnel_vehicles)) + 1)
+        
+        best_solution = None
+        min_excess = float('inf')
+        min_vehicles = float('inf')
+        
+        # Générer toutes les combinaisons raisonnables
+        combinations_to_test = []
+        
+        # Stratégie 1: Véhicule unique le plus proche
+        for vehicle in personnel_vehicles:
+            if vehicle['crew_size'] >= target_personnel:
+                combinations_to_test.append({vehicle['type']: 1})
+        
+        # Stratégie 2: Combinaisons de 2-3 véhicules prioritaires
+        priority_vehicles = [v for v in personnel_vehicles if v['is_priority']]
+        if priority_vehicles:
+            for i, v1 in enumerate(priority_vehicles[:3]):  # Limiter aux 3 premiers prioritaires
+                for count1 in range(1, min(max_vehicles_per_type, (target_personnel // v1['crew_size']) + 2)):
+                    combination = {v1['type']: count1}
+                    total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
+                    if total_personnel >= target_personnel:
+                        combinations_to_test.append(combination)
+                    
+                    # Combinaisons avec un deuxième véhicule
+                    for j, v2 in enumerate(priority_vehicles[:3]):
+                        if i != j:  # Véhicules différents
+                            for count2 in range(1, min(max_vehicles_per_type, (target_personnel // v2['crew_size']) + 2)):
+                                combination = {v1['type']: count1, v2['type']: count2}
+                                total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
+                                if total_personnel >= target_personnel:
+                                    combinations_to_test.append(combination)
+        
+        # Évaluer toutes les combinaisons
+        for combination in combinations_to_test:
+            total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
+            
+            if total_personnel >= target_personnel:
+                excess = total_personnel - target_personnel
+                vehicle_count = sum(combination.values())
+                
+                # Favoriser les solutions avec moins d'excédent et moins de véhicules
+                if (excess < min_excess or 
+                    (excess == min_excess and vehicle_count < min_vehicles)):
+                    min_excess = excess
+                    min_vehicles = vehicle_count
+                    best_solution = {
+                        'vehicles': combination.copy(),
+                        'total_personnel': total_personnel,
+                        'excess': excess
+                    }
+        
+        return best_solution
+    
+    def _calculate_combination_personnel(self, combination: dict, personnel_vehicles: list) -> int:
+        """
+        Calcule le nombre total de personnel d'une combinaison de véhicules.
+        
+        Args:
+            combination: Dictionnaire {vehicle_type: count}
+            personnel_vehicles: Liste des véhicules avec leurs spécifications
+            
+        Returns:
+            int: Nombre total de personnel
+        """
+        total_personnel = 0
+        
+        for vehicle_type, count in combination.items():
+            vehicle_info = next((v for v in personnel_vehicles if v['type'] == vehicle_type), None)
+            if vehicle_info:
+                total_personnel += vehicle_info['crew_size'] * count
+        
+        return total_personnel
+    
+    async def _estimate_current_personnel_capacity(self, personnel_type: str, appropriate_vehicles: list, vehicle_specs: dict) -> int:
+        """
+        Estime le nombre de personnel actuellement en route vers la mission.
+        
+        Args:
+            personnel_type: Type de personnel ('pompiers', 'policiers')
+            appropriate_vehicles: Liste des types de véhicules appropriés
+            vehicle_specs: Spécifications des véhicules
+            
+        Returns:
+            int: Nombre de personnel estimé en route
+        """
+        try:
+            # Récupérer les véhicules en route
+            vehicles_en_route = await self.vehicle_scraper._get_vehicles_en_route_only_by_type()
+            
+            total_personnel_capacity = 0
+            
+            for vehicle_type, count in vehicles_en_route.items():
+                # Vérifier si ce véhicule est approprié pour ce type de personnel
+                if vehicle_type in appropriate_vehicles and vehicle_type in vehicle_specs:
+                    crew_size = vehicle_specs[vehicle_type].get('crew_size', 0)
+                    
+                    if crew_size > 0:
+                        vehicle_personnel = crew_size * count
+                        total_personnel_capacity += vehicle_personnel
+                        
+                        logger.debug(f"👥 Véhicule {personnel_type} en route: {count}x {vehicle_type} = {vehicle_personnel} personnes ({crew_size}/véhicule)")
+            
+            if total_personnel_capacity > 0:
+                logger.info(f"👥 Personnel {personnel_type} en route: {total_personnel_capacity} personnes")
+            
+            return total_personnel_capacity
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du calcul du personnel en route pour {personnel_type}: {e}")
+            return 0
+    
+    def _calculate_specialized_personnel_vehicles(self, personnel_code: str, personnel_needed: int, vehicle_specs: dict) -> dict:
+        """
+        Calcule les véhicules nécessaires pour du personnel spécialisé (PLG, SAV, etc.).
+        Utilise la configuration JSON pour les mappings.
+        
+        Args:
+            personnel_code: Code du personnel spécialisé ('PLG', 'SAV', etc.)
+            personnel_needed: Nombre de spécialistes nécessaires
+            vehicle_specs: Spécifications des véhicules
+            
+        Returns:
+            dict: Véhicules recommandés {vehicle_type: quantité}
+        """
+        vehicles_needed = {}
+        
+        # S'assurer que la configuration est chargée
+        if not hasattr(self, 'missing_needs_config') or not self.missing_needs_config:
+            self.missing_needs_config = self._load_missing_needs_config()
+        
+        # Récupérer le mapping depuis la configuration
+        personnel_mapping = self.missing_needs_config.get("personnel_mapping", {})
+        personnel_config = personnel_mapping.get(personnel_code, {})
+        
+        appropriate_vehicles = personnel_config.get("vehicles", [])
+        priority_vehicles = personnel_config.get("priority", appropriate_vehicles)
+        
+        if not appropriate_vehicles:
+            logger.warning(f"👨‍💼 Aucun type de véhicule défini pour le personnel spécialisé '{personnel_code}' dans la configuration")
+            return vehicles_needed
+        
+        # Utiliser le véhicule prioritaire
+        for vehicle_type in priority_vehicles:
+            # Vérifier si le véhicule a des specs définies, sinon utiliser un crew_size par défaut
+            if vehicle_type in vehicle_specs:
+                crew_size = vehicle_specs[vehicle_type].get('crew_size', 1)
+                logger.debug(f"👨‍💼 Véhicule {vehicle_type} trouvé dans specs avec crew_size={crew_size}")
+            else:
+                crew_size = 1  # Fallback pour véhicules sans specs
+                logger.debug(f"👨‍💼 Véhicule {vehicle_type} non trouvé dans specs, utilisation crew_size=1 par défaut")
+            
+            # Pour le personnel spécialisé, chaque véhicule peut transporter crew_size spécialistes
+            vehicles_count = max(1, (personnel_needed + crew_size - 1) // crew_size)
+            vehicles_needed[vehicle_type] = vehicles_count
+            
+            personnel_name = personnel_config.get("name", personnel_code)
+            logger.info(f"👨‍💼 Pour {personnel_needed} {personnel_name}: {vehicles_count} {vehicle_type} ({crew_size} spécialistes/véhicule)")
+            break
+        else:
+            logger.warning(f"👨‍💼 Aucun véhicule approprié trouvé pour {personnel_code} - configuration: {personnel_config}")
+        
+        return vehicles_needed
+    
+    async def _estimate_current_water_capacity(self) -> int:
+        """
+        Estime la capacité d'eau totale actuellement en route vers la mission.
+        
+        Analyse les véhicules en route pour calculer leur capacité d'eau totale.
         
         Returns:
             int: Capacité d'eau estimée en litres
         """
-        # TODO: Analyser les véhicules déjà sur site pour calculer leur capacité d'eau totale
-        # Pour l'instant, on assume qu'il n'y a pas d'eau sur site pour être sûr d'envoyer des véhicules
-        return 0
+        try:
+            # Récupérer les véhicules en route
+            vehicles_en_route = await self.vehicle_scraper._get_vehicles_en_route_only_by_type()
+            
+            # Charger les spécifications des véhicules
+            from ..models.requirement_parser import RequirementParser
+            parser = RequirementParser()
+            vehicle_specs = parser.vehicles_mapping.get('vehicle_specs', {})
+            
+            total_water_capacity = 0
+            
+            for vehicle_type, count in vehicles_en_route.items():
+                if vehicle_type in vehicle_specs:
+                    specs = vehicle_specs[vehicle_type]
+                    water_capacity = specs.get('water_capacity_l', 0)
+                    
+                    if water_capacity > 0:
+                        # Appliquer le bonus de stockage d'eau si applicable
+                        extra_pct = specs.get('extra_water_storage_pct', 0)
+                        effective_capacity = water_capacity * (1 + extra_pct / 100)
+                        
+                        vehicle_total = int(effective_capacity) * count
+                        total_water_capacity += vehicle_total
+                        
+                        logger.debug(f"💧 Véhicule en route: {count}x {vehicle_type} = {vehicle_total}L (base: {water_capacity}L, bonus: {extra_pct}%)")
+            
+            if total_water_capacity > 0:
+                logger.info(f"💧 Capacité d'eau en route: {total_water_capacity}L")
+            
+            return total_water_capacity
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du calcul de la capacité d'eau en route: {e}")
+            return 0
     
     async def _log_unrecognized_missing_pattern(self, missing_text: str, mission: 'Mission') -> None:
         """
@@ -1144,7 +1520,7 @@ class MissionManager:
     
     def _suggest_pattern_category(self, text: str) -> list:
         """
-        Suggère des catégories possibles pour un pattern non reconnu.
+        Suggère des catégories possibles pour un pattern non reconnu basé sur la configuration.
         
         Args:
             text: Texte à analyser
@@ -1155,32 +1531,21 @@ class MissionManager:
         suggestions = []
         text_lower = text.lower()
         
-        # Suggestions basées sur des mots-clés (ordre important pour éviter les faux positifs)
+        # Utiliser la configuration pour les suggestions
+        other_needs_mapping = self.missing_needs_config.get("other_needs_mapping", {})
         
-        # D'abord vérifier les catégories spécifiques avant l'eau (pour éviter "500 L de carburant" → water)
-        if any(word in text_lower for word in ['carburant', 'essence', 'diesel', 'fuel']):
-            suggestions.append('fuel')
-        elif any(word in text_lower for word in ['eau', 'litre', 'water']) or (
-            ' l ' in text_lower and 'eau' in text_lower
-        ):
-            suggestions.append('water')
-        
-        if any(word in text_lower for word in ['pompier', 'secouriste', 'équipier', 'firefighter']):
-            suggestions.append('personnel_pompiers')
-        
-        if any(word in text_lower for word in ['police', 'gendarme', 'agent']):
-            suggestions.append('personnel_police')
-        
-        if any(word in text_lower for word in ['médecin', 'infirmier', 'samu', 'medical']):
-            suggestions.append('personnel_medical')
-        
-        # Suggestions pour matériel/équipement
-        if any(word in text_lower for word in ['équipement', 'matériel', 'outil', 'equipment', 'mousse']):
-            suggestions.append('equipment')
-        
-        # Suggestions pour temps/durée
-        if any(word in text_lower for word in ['heure', 'minute', 'temps', 'time']):
-            suggestions.append('time')
+        for category_key, category_config in other_needs_mapping.items():
+            keywords = category_config.get("keywords", [])
+            exclusions = category_config.get("exclusions", [])
+            category_type = category_config.get("type", category_key)
+            
+            # Vérifier les exclusions d'abord
+            if exclusions and any(excl in text_lower for excl in exclusions):
+                continue
+                
+            # Vérifier les mots-clés
+            if keywords and any(keyword in text_lower for keyword in keywords):
+                suggestions.append(category_type)
         
         # Si aucune suggestion spécifique, catégorie générale
         if not suggestions:

@@ -1,0 +1,159 @@
+{
+  "_schema_version": "1.0",
+  "_description": "Configuration des règles pour analyser les besoins manquants dans les alertes",
+  "_last_updated": "2025-09-05",
+
+  "personnel_mapping": {
+    "_description": "Mapping du personnel spécialisé vers les véhicules appropriés",
+    "PLG": {
+      "name": "Plongeur",
+      "vehicles": ["VPL"],
+      "priority": ["VPL"],
+      "description": "Personnel spécialisé dans les interventions subaquatiques"
+    },
+    "SAV": {
+      "name": "Sauvetage Aquatique", 
+      "vehicles": ["VPL"],
+      "priority": ["VPL"],
+      "description": "Personnel spécialisé dans le sauvetage aquatique"
+    },
+    "GRI": {
+      "name": "GRIMP",
+      "vehicles": ["VIMP"],
+      "priority": ["VIMP"],
+      "description": "Groupe d'Intervention en Milieu Périlleux"
+    },
+    "CYN": {
+      "name": "Cynophile",
+      "vehicles": ["CARS_DROGUE"],
+      "priority": ["CARS_DROGUE"],
+      "description": "Unité cynophile (maître-chien)"
+    },
+    "MED": {
+      "name": "Médecin",
+      "vehicles": ["AMBULANCE", "SMUR(A)", "HELICOPTER"],
+      "priority": ["SMUR(A)", "AMBULANCE", "HELICOPTER"],
+      "description": "Médecin urgentiste"
+    },
+    "INF": {
+      "name": "Infirmier",
+      "vehicles": ["AMBULANCE"],
+      "priority": ["AMBULANCE"],
+      "description": "Infirmier spécialisé"
+    },
+    "CHEF": {
+      "name": "Chef d'intervention",
+      "vehicles": ["VPC", "CHEF_DE_GROUPE"],
+      "priority": ["CHEF_DE_GROUPE", "VPC"],
+      "description": "Chef d'intervention ou responsable secteur"
+    },
+    "PSY": {
+      "name": "Psychologue",
+      "vehicles": ["VPC", "AMBULANCE"],
+      "priority": ["VPC", "AMBULANCE"],
+      "description": "Psychologue d'intervention"
+    },
+    "RAD": {
+      "name": "Radioprotection",
+      "vehicles": ["VIRT"],
+      "priority": ["VIRT"],
+      "description": "Personnel de radioprotection"
+    }
+  },
+
+  "other_needs_mapping": {
+    "_description": "Mapping des autres besoins vers les types de véhicules",
+    "water_sources": {
+      "keywords": ["eau", "litre", "l", "water"],
+      "exclusions": ["carburant", "essence", "diesel"],
+      "type": "water_l",
+      "description": "Besoins en eau pour extinction"
+    },
+    "fuel_sources": {
+      "keywords": ["carburant", "essence", "diesel", "fuel"],
+      "type": "fuel_l", 
+      "description": "Besoins en carburant"
+    },
+    "personnel_pompiers": {
+      "keywords": ["pompier", "secouriste", "équipier", "firefighter"],
+      "type": "personnel_pompiers",
+      "description": "Personnel pompier générique"
+    },
+    "personnel_police": {
+      "keywords": ["police", "gendarme", "agent"],
+      "type": "personnel_policiers",
+      "description": "Personnel police générique"
+    },
+    "personnel_medical": {
+      "keywords": ["médecin", "infirmier", "samu", "medical"],
+      "type": "personnel_medical",
+      "description": "Personnel médical générique"
+    },
+    "equipment": {
+      "keywords": ["équipement", "matériel", "outil", "equipment", "mousse"],
+      "type": "equipment",
+      "description": "Équipements et matériels spécialisés"
+    },
+    "time": {
+      "keywords": ["heure", "minute", "temps", "time"],
+      "type": "time",
+      "description": "Besoins temporels (renforts)"
+    }
+  },
+
+  "personnel_vehicle_mapping": {
+    "_description": "Mapping des types de personnel générique vers les véhicules appropriés",
+    "pompiers": {
+      "vehicles": ["FPT", "FPT(SR)", "CCR(SR)", "CCF(M)", "CCF(S)", "FS", "VPC", "VTP(ers)"],
+      "priority": ["VTP(ers)", "FPT", "CCR(SR)", "CCF(M)"],
+      "description": "Personnel pompier standard"
+    },
+    "policiers": {
+      "vehicles": ["GN", "PN", "VR"],
+      "priority": ["GN", "PN", "VR"],
+      "description": "Personnel police standard"
+    },
+    "medical": {
+      "vehicles": ["AMBULANCE", "DRAGON"],
+      "priority": ["AMBULANCE", "DRAGON"],
+      "description": "Personnel médical standard"
+    },
+    "general": {
+      "vehicles": ["FPT", "GN", "PN"],
+      "priority": ["FPT", "GN"],
+      "description": "Personnel générique"
+    }
+  },
+
+  "deduplication_rules": {
+    "_description": "Règles de priorité pour éviter les doublons de détection",
+    "BLS_CSL": ["BLS"],
+    "FPT_SR": ["FPT", "VSR"],
+    "FPT_BEA": ["FPT", "BEA"], 
+    "FPT_SR_BEA": ["FPT", "VSR", "BEA", "FPT_SR", "FPT_BEA"],
+    "CARS_POLICE_VR": ["CARS_POLICE", "VR_CRS"],
+    "CARS_POLICE_PATROUILLE_VR": ["CARS_POLICE", "CARS_POLICE_PATROUILLE", "VR_CRS"],
+    "CHEF_DE_GROUPE": ["VLHR"]
+  },
+
+  "parsing_patterns": {
+    "_description": "Patterns regex pour parser les différents formats de besoins",
+    "personnel_pattern": "(\\d+)x\\s+([A-Z][A-Z0-9]*)\\s*(?:\\([^)]+\\))?",
+    "water_pattern": "(\\d+)(?:\\s*&nbsp;|\\s+)l(?:\\s+d[\\'’]?eau)?",
+    "personnel_generic_patterns": {
+      "pompiers": "(\\d+)(?:\\s+[Pp]ompiers?)",
+      "policiers": "(\\d+)(?:\\s+[Pp]oliciers?)",
+      "general": "(\\d+)(?:\\s+(?:équipiers?|secouristes?|agents?|personnels?))"
+    }
+  },
+
+  "vehicle_capacity_priorities": {
+    "_description": "Priorités pour la sélection des véhicules selon leurs capacités",
+    "water_vehicles": {
+      "large_capacity": ["CCF(S)", "CCGC", "FMOGP"],
+      "medium_capacity": ["CEEM", "CCF(M)", "FPT", "FPT(SR)", "CCR(SR)"],
+      "small_capacity": [],
+      "bonus_vehicles": ["FDGP", "RLC"]
+    }
+  }
+}
