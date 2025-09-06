@@ -25,6 +25,14 @@
         "primary": ["CCF(M)", "CCF(S)", "CCR(SR)"],
         "secondary": ["FMOGP"]
       },
+      "CCF(M)_CONSTRAINED": {
+        "primary": ["CCF(M)"],
+        "secondary": []
+      },
+      "CCF(S)_CONSTRAINED": {
+        "primary": ["CCF(S)"],
+        "secondary": []
+      },
       "CITERNE_CONSTRAINED": {
         "primary": ["CCGC", "CCF(S)", "FMOGP", "CCR(SR)"],
         "secondary": []
@@ -118,12 +126,24 @@
       "VAR": {
         "primary": ["VAR"],
         "secondary": []
+      },
+      "CEEP": {
+        "primary": ["CEEP"],
+        "secondary": []
+      },
+      "CEEM": {
+        "primary": ["CEEM"],
+        "secondary": []
       }
     },
 
     "water_rescue": {
       "FMOGP": {
         "primary": ["FMOGP", "CEEM"],
+        "secondary": []
+      },
+      "FMOGP_CONSTRAINED": {
+        "primary": ["FMOGP"],
         "secondary": []
       },
       "MOTOPOMPES": {
@@ -236,7 +256,7 @@
         "secondary": ["FS", "VPI"]
       },
       "FPT_SR_CONSTRAINED": {
-        "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR"],
+        "primary": ["FPT(SR)", "CCR(SR)", "FPT"],
         "secondary": []
       },
       "BLS_CSL": {

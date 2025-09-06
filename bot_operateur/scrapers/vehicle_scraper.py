@@ -422,8 +422,12 @@ class VehicleScraper:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
     
-    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None, alert_override_types: set = None, constrained_vehicles: set = None, constrained_alternatives: dict = None) -> int:
-        """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives"""
+    async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None, alert_override_types: set = None, constrained_vehicles: set = None, constrained_alternatives: dict = None) -> tuple[int, int]:
+        """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives
+        
+        Returns:
+            tuple[int, int]: (nombre de véhicules sélectionnés, nombre de véhicules manquants)
+        """
         total_selected = 0
         
         try:
@@ -445,7 +449,7 @@ class VehicleScraper:
             # Si tous les besoins sont déjà satisfaits, ne rien faire
             if not adjusted_vehicle_needs:
                 logger.info("🎉 Tous les besoins sont déjà satisfaits ! Aucun véhicule supplémentaire nécessaire.")
-                return -1  # Code spécial pour indiquer que tous les besoins sont déjà satisfaits
+                return (-1, 0)  # Code spécial pour indiquer que tous les besoins sont déjà satisfaits
             
             # Attendre que le tableau soit visible
             table_selector = self._get_vehicle_table_selector(mission_type or MissionType.NORMAL)
@@ -456,7 +460,9 @@ class VehicleScraper:
             
             if not vehicle_rows:
                 logger.warning("Aucune ligne de véhicule trouvée")
-                return 0
+                # Calculer le nombre total de véhicules manquants
+                total_missing = sum(adjusted_vehicle_needs.values())
+                return (0, total_missing)
             
             logger.info(f"Sélection parmi {len(vehicle_rows)} véhicules visibles (triés par proximité)")
             
@@ -575,11 +581,24 @@ class VehicleScraper:
                 else:
                     logger.info(f"  {status} {vtype}: {selected}/{original_needed}{alternatives_str}")
             
-            return final_count
+            # Calculer le nombre de véhicules manquants
+            total_missing = 0
+            for vtype, original_needed in vehicle_needs.items():
+                already_deployed = deployed_by_type.get(vtype, 0)
+                selected = selected_counts.get(vtype, 0)
+                total_satisfied = already_deployed + selected
+                missing = max(0, original_needed - total_satisfied)
+                total_missing += missing
+            
+            logger.info(f"📊 Résumé final: {final_count} sélectionnés, {total_missing} manquants")
+            
+            return (final_count, total_missing)
             
         except Exception as e:
             logger.error(f"Erreur lors de la sélection des véhicules proches: {e}")
-            return 0
+            # En cas d'erreur, calculer le manque total des besoins
+            total_missing = sum(vehicle_needs.values()) if vehicle_needs else 0
+            return (0, total_missing)
     
     async def _get_already_deployed_vehicles(self) -> List[str]:
         """

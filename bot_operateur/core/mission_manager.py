@@ -354,7 +354,7 @@ class MissionManager:
             alert_override_types_to_pass = alert_override_types if 'alert_override_types' in locals() else set()
             constrained_vehicles_to_pass = constrained_vehicles if 'constrained_vehicles' in locals() else set()
             constrained_alternatives_to_pass = constrained_alternatives if 'constrained_alternatives' in locals() else {}
-            selected_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission, alert_override_types_to_pass, constrained_vehicles_to_pass, constrained_alternatives_to_pass)
+            selected_count, missing_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission, alert_override_types_to_pass, constrained_vehicles_to_pass, constrained_alternatives_to_pass)
             
             if selected_count == -1:
                 # Tous les besoins sont déjà satisfaits - c'est un succès !
@@ -363,6 +363,11 @@ class MissionManager:
                 return True
             elif selected_count == 0:
                 logger.warning(f"❌ Aucun véhicule disponible pour satisfaire les besoins de la mission {mission.id}")
+                return False
+            
+            # Vérifier si trop de véhicules manquent selon le seuil VEHICLE_THRESHOLD
+            if missing_count > self.settings.vehicle_threshold:
+                logger.warning(f"🚫 Mission {mission.id} - trop de véhicules manquants ({missing_count} > {self.settings.vehicle_threshold}). Passage à la mission suivante.")
                 return False
             
             # Déployer immédiatement

@@ -17,3 +17,799 @@
 {"timestamp": "2025-09-05T16:01:08.717052", "mission_id": "261536555", "mission_title": "Sécurisation dévénement sportif", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
 {"timestamp": "2025-09-05T16:01:08.726584", "mission_id": "261536555", "mission_title": "Sécurisation dévénement sportif", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
 {"timestamp": "2025-09-05T16:25:06.855401", "mission_id": "261536555", "mission_title": "Sécurisation dévénement sportif", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T17:06:10.940200", "mission_id": "261546221", "mission_title": "Sécurisation dévénement sportif", "unrecognized_pattern": "4 voiture de patrouille", "original_div_context": "4 voiture de patrouille"}
+{"timestamp": "2025-09-05T17:06:10.951951", "mission_id": "261546221", "mission_title": "Sécurisation dévénement sportif", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T17:06:10.961930", "mission_id": "261546221", "mission_title": "Sécurisation dévénement sportif", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T17:06:10.975122", "mission_id": "261546221", "mission_title": "Sécurisation dévénement sportif", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T17:06:44.261720", "mission_id": "261542472", "mission_title": "Feu de PL TMD", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-05T17:11:46.270485", "mission_id": "261546221", "mission_title": "Sécurisation dévénement sportif", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T17:11:46.279608", "mission_id": "261546221", "mission_title": "Sécurisation dévénement sportif", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T17:46:28.864055", "mission_id": "261547562", "mission_title": "Agent en difficulté", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-05T17:56:49.821573", "mission_id": "261548996", "mission_title": "Station de métro inondé", "unrecognized_pattern": "1 Cellule épuisement", "original_div_context": "1 Cellule épuisement"}
+{"timestamp": "2025-09-05T18:09:09.777967", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T18:09:51.537138", "mission_id": "261550677", "mission_title": "Incendie dans une Prison", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-05T18:10:54.300105", "mission_id": "261548996", "mission_title": "Station de métro inondé", "unrecognized_pattern": "1 Cellule épuisement", "original_div_context": "1 Cellule épuisement"}
+{"timestamp": "2025-09-05T18:23:19.014844", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T18:23:19.023789", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T18:23:19.033698", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T18:23:59.107941", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T18:24:52.590363", "mission_id": "261548996", "mission_title": "Station de métro inondé", "unrecognized_pattern": "1 Cellule épuisement", "original_div_context": "1 Cellule épuisement"}
+{"timestamp": "2025-09-05T18:30:44.166552", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T18:30:44.175917", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T18:30:44.186186", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T18:31:00.244860", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T18:50:04.439372", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T18:50:04.447963", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T18:50:04.458591", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T18:50:39.931818", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T19:06:29.730382", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T19:06:29.738252", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T19:06:29.748339", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-05T19:07:27.836398", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T19:30:13.772648", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T19:30:13.782302", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-05T19:30:56.270766", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T19:37:23.917596", "mission_id": "261559066", "mission_title": "Service de sécurité - Course cycliste", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-05T19:51:32.110934", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T19:51:32.121910", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-05T19:51:47.989312", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T19:53:50.457173", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T19:53:50.465983", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T19:53:50.475607", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T19:55:50.265646", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T19:55:50.273965", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T19:59:00.429505", "mission_id": "261558627", "mission_title": "Agent en difficulté", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-05T20:14:55.028795", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T20:14:55.038632", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-05T20:15:11.672541", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T20:16:19.000395", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T20:16:19.008637", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T20:16:19.018282", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T20:16:46.319846", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T20:16:46.328128", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T20:16:46.337964", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T20:18:56.091213", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T20:18:56.099813", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T20:38:30.175704", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T20:38:30.186250", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T20:38:30.198399", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T20:38:44.544749", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T20:38:44.554696", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-05T20:39:51.373268", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T20:40:07.836547", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T20:40:07.843800", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T20:40:07.854060", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T20:40:34.526778", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T20:40:34.533694", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T20:40:34.542568", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T20:41:30.969048", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-05T20:42:54.224192", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T20:42:54.234229", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T21:08:03.681375", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T21:08:03.689794", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T21:08:03.700336", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T21:08:45.091390", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:08:45.100084", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-05T21:09:26.557844", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T21:09:42.453867", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:09:42.461724", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:09:42.471201", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T21:10:34.659469", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:10:34.666940", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:10:34.677903", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T21:11:02.977077", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-05T21:11:46.992236", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:11:47.002512", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T21:22:46.444439", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T21:22:46.452811", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T21:22:46.462828", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T21:23:02.529139", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:23:02.540701", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-05T21:23:17.483162", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T21:24:07.451141", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:24:07.460026", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:24:07.470297", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T21:24:36.445917", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:24:36.455765", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:24:36.466083", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T21:24:52.308201", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-05T21:27:08.819295", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:27:08.828394", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T21:49:38.223927", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-05T21:49:38.231333", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T21:49:38.239584", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T21:49:38.250824", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T21:50:37.005899", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T21:50:37.014019", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T21:50:37.025099", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T21:50:53.319282", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:50:53.328569", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-05T21:51:33.682270", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T21:52:15.623424", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:52:15.632038", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:52:15.641296", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T21:52:31.251654", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:52:31.269495", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:52:31.281466", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T21:53:37.922379", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T21:53:37.930245", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:53:37.939530", "mission_id": "261558964", "mission_title": "Mouvement social contre la réforme des retraites", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T21:54:18.709887", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-05T21:55:14.601309", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T21:55:14.611631", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T21:57:13.383399", "mission_id": "261572173", "mission_title": "Engagement communautaire", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-05T22:18:16.663441", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-05T22:18:16.670845", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T22:18:16.678575", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T22:18:16.687615", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T22:18:51.165678", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-05T22:18:51.172928", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T22:18:51.181179", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T22:18:51.189735", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T22:19:22.806158", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-05T22:19:22.813115", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T22:19:22.821180", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T22:19:22.828425", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T22:19:54.208192", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-05T22:19:54.215661", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T22:19:54.223765", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T22:19:54.233189", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T22:20:49.965365", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-05T22:20:49.972102", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T22:20:49.979972", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T22:20:49.990221", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T22:21:47.776857", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T22:21:47.784797", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T22:21:47.794069", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T22:23:35.825074", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-05T22:23:35.833146", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-05T22:23:35.840908", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-05T22:25:14.830534", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T22:25:14.839980", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T22:36:09.303470", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T22:36:43.254027", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T22:36:43.261918", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T22:36:43.279964", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T22:36:57.268102", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T22:36:57.276385", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T22:36:57.285906", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T22:37:12.587388", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T22:37:12.594280", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T22:37:12.603833", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T22:38:18.313407", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T22:38:18.321378", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T22:38:18.331506", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T22:38:33.648692", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T22:38:33.656165", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T22:38:33.665889", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T22:39:54.737590", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-05T22:39:54.746997", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-05T22:42:02.183219", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T22:42:02.191947", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T22:42:33.683959", "mission_id": "261577854", "mission_title": "Contrôle routier", "unrecognized_pattern": "5 voiture de patrouille", "original_div_context": "5 voiture de patrouille"}
+{"timestamp": "2025-09-05T22:57:47.030219", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T22:57:47.038359", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T22:57:47.047896", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T22:58:53.267485", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T22:58:53.273959", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T22:58:53.282143", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T22:59:06.833374", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T22:59:06.840779", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T22:59:06.851509", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T22:59:22.114201", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T22:59:22.122148", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T22:59:22.131674", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T23:00:02.033646", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T23:00:02.039382", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T23:00:02.047764", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T23:00:17.960344", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T23:00:17.966794", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T23:00:17.973864", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T23:01:24.688080", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-05T23:01:24.695920", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-05T23:02:41.983500", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-05T23:03:21.150382", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T23:03:21.159741", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-05T23:04:13.601754", "mission_id": "261577699", "mission_title": "Agression à domicile", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-05T23:28:31.685266", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-05T23:28:31.698712", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T23:28:31.707736", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T23:28:31.716890", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T23:29:31.198871", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T23:29:31.207207", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T23:29:31.215738", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T23:29:47.380729", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T23:29:47.389064", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-05T23:29:47.397816", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T23:30:02.869029", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-05T23:30:02.876606", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T23:30:02.885614", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-05T23:30:41.232380", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T23:30:41.239318", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T23:30:41.247584", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T23:30:57.647602", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T23:30:57.656311", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T23:30:57.666159", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T23:31:39.145512", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-05T23:31:39.152375", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T23:31:39.162163", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-05T23:32:52.385261", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-05T23:32:52.392910", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-05T23:33:23.193672", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-05T23:34:35.516716", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-05T23:34:35.526295", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T00:05:39.124864", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T00:05:39.131961", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:05:39.140736", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T00:05:39.149903", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T00:06:37.924264", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:06:37.931926", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T00:06:37.942222", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T00:08:09.241633", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T00:08:09.248973", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T00:08:09.258907", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T00:08:50.212711", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T00:08:50.220228", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:08:50.230264", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T00:09:05.567988", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:09:05.576495", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:09:05.585578", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T00:09:20.083866", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:09:20.091276", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:09:20.101290", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T00:10:01.290156", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:10:01.296903", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:10:01.307157", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T00:12:19.482127", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T00:12:19.488382", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T00:13:28.529877", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T00:13:58.157579", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:13:58.165150", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T00:49:17.949626", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T00:49:17.957744", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:49:17.966285", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T00:49:17.976258", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T00:50:17.379465", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:50:17.387705", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T00:50:17.396154", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T00:50:32.262398", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T00:50:32.270481", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T00:50:32.280413", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T00:50:48.330959", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T00:50:48.339801", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:50:48.349036", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T00:51:03.286500", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:51:03.295010", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:51:03.303629", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T00:51:18.733165", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:51:18.740974", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:51:18.750200", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T00:51:35.573638", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T00:51:35.582257", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:51:35.591069", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T00:51:50.051971", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "7 voiture de patrouille", "original_div_context": "7 voiture de patrouille"}
+{"timestamp": "2025-09-06T00:52:37.630990", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T00:52:37.639954", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T00:53:48.464636", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T00:54:18.931490", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T00:54:18.942118", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T01:23:34.192098", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T01:23:34.199815", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T01:23:34.207328", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T01:23:34.217115", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T01:24:07.345729", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T01:24:07.354967", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T01:24:07.364491", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T01:24:23.477493", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T01:24:23.488739", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T01:24:23.498765", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T01:24:37.082664", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T01:24:37.090992", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T01:24:37.099447", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T01:25:18.562743", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T01:25:18.572220", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T01:25:18.581407", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T01:25:33.178760", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T01:25:33.185595", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T01:25:33.195626", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T01:25:49.672611", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T01:25:49.679374", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T01:25:49.689982", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T01:26:05.527816", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "5 voiture de patrouille", "original_div_context": "5 voiture de patrouille"}
+{"timestamp": "2025-09-06T01:26:50.276854", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T01:26:50.284445", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T01:27:42.444415", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T01:28:12.023978", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T01:28:12.032676", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T01:57:38.657961", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T01:57:38.666200", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T01:57:38.673704", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T01:57:38.683985", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T01:58:37.580011", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T01:58:37.586785", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T01:58:37.596947", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T01:58:51.617150", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T01:58:51.625673", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T01:58:51.634581", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T01:59:33.243011", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T01:59:33.250360", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T01:59:33.260429", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T02:00:11.782931", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T02:00:11.791973", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T02:00:11.802437", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T02:00:27.967470", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T02:00:27.974916", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T02:00:27.983102", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T02:00:41.688529", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T02:00:41.696005", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T02:00:41.705890", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T02:01:56.144104", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T02:04:06.207703", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T02:04:06.215582", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T02:04:37.550551", "mission_id": "261589600", "mission_title": "Service de sécurité - Feux dartifice", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T02:06:00.398784", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T02:07:44.379937", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T02:07:44.388598", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T02:43:21.320305", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T02:43:21.327183", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T02:43:21.333762", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T02:43:21.344891", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T02:44:22.270245", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T02:44:22.279191", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T02:44:22.289035", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T02:44:36.578341", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T02:44:36.586873", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T02:44:36.595065", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T02:45:16.890768", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T02:45:16.898437", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T02:45:16.909236", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T02:45:30.908494", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T02:45:30.916777", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T02:45:30.925676", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T02:46:38.171467", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T02:46:38.179518", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T02:46:38.188969", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T02:46:54.359544", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T02:46:54.367659", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T02:46:54.378096", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T02:47:08.553074", "mission_id": "261589655", "mission_title": "Accident de circulation avec désincarcération (PL contre PL-TMD)", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T02:48:04.562831", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T02:49:51.951419", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T02:49:51.960747", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T02:50:48.805303", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T02:51:43.369065", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T02:51:43.379655", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T02:51:58.344873", "mission_id": "261589598", "mission_title": "Activation dalarme dintrusion (Système dalarme)", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T03:23:04.855049", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T03:23:04.863877", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T03:23:04.871993", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T03:23:04.882691", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T03:24:02.952030", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T03:24:02.960091", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T03:24:02.970786", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T03:24:17.337795", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T03:24:17.346341", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T03:24:17.356822", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T03:24:33.721195", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T03:24:33.728655", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T03:24:33.737748", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T03:25:18.561028", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T03:25:18.568720", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T03:25:18.576774", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T03:25:34.952165", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T03:25:34.960225", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T03:25:34.969970", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T03:26:15.039161", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T03:26:15.047557", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T03:26:15.057384", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T03:26:32.279282", "mission_id": "261589655", "mission_title": "Accident de circulation avec désincarcération (PL contre PL-TMD)", "unrecognized_pattern": "2 voiture de patrouille", "original_div_context": "2 voiture de patrouille"}
+{"timestamp": "2025-09-06T03:26:46.292449", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T03:27:42.905240", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T03:27:42.912420", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T03:28:40.040136", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T03:29:10.364770", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T03:29:10.374222", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T03:29:30.231367", "mission_id": "261589598", "mission_title": "Agression à domicile", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T04:04:25.847916", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T04:04:25.857011", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:04:25.864989", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T04:04:25.876374", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:05:23.471638", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:05:23.479126", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T04:05:23.490103", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T04:05:39.752860", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T04:05:39.760354", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T04:05:39.770446", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T04:05:52.903933", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T04:05:52.912027", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:05:52.920096", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T04:06:09.103125", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T04:06:09.110921", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:06:09.118970", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:06:09.128002", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:06:23.090431", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:06:23.098845", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:06:23.108205", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:06:39.409406", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:06:39.415832", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:06:39.426137", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:07:18.898095", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:07:18.905040", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:07:18.912644", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:07:35.360147", "mission_id": "261589655", "mission_title": "Accident de circulation avec désincarcération (PL contre PL-TMD)", "unrecognized_pattern": "2 voiture de patrouille", "original_div_context": "2 voiture de patrouille"}
+{"timestamp": "2025-09-06T04:08:23.253222", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T04:10:11.383894", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T04:10:11.392160", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T04:11:07.021382", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T04:12:01.139476", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:12:01.148535", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T04:12:42.626598", "mission_id": "261589598", "mission_title": "Agression à domicile", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T04:48:43.807341", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T04:48:43.814503", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:48:43.821496", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T04:48:43.829222", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:49:42.834373", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:49:42.842725", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T04:49:42.851969", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T04:49:56.516076", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T04:49:56.525165", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T04:49:56.534285", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T04:51:02.473687", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T04:51:02.481300", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:51:02.491632", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T04:52:09.645658", "mission_id": "261592738", "mission_title": "Feu dindustrie étendu", "unrecognized_pattern": "6 voiture de patrouille", "original_div_context": "6 voiture de patrouille"}
+{"timestamp": "2025-09-06T04:52:44.795456", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T04:52:44.803790", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:52:44.811246", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:52:44.821374", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:53:00.670581", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:53:00.679474", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:53:00.688337", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:54:06.996967", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:54:07.006398", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:54:07.015277", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:54:21.002460", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T04:54:21.012545", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:54:21.023646", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T04:54:37.340956", "mission_id": "261589655", "mission_title": "Accident de circulation avec désincarcération (PL contre PL-TMD)", "unrecognized_pattern": "2 voiture de patrouille", "original_div_context": "2 voiture de patrouille"}
+{"timestamp": "2025-09-06T04:54:50.978318", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T04:55:47.361340", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T04:55:47.368606", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T04:56:17.138079", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T04:56:47.014880", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T04:56:47.022361", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T04:57:27.981901", "mission_id": "261589598", "mission_title": "Agression à domicile", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T05:30:57.955449", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T05:30:57.964213", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T05:30:57.972504", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T05:30:57.983857", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T05:31:54.664936", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T05:31:54.673445", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T05:31:54.682411", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T05:32:10.893458", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T05:32:10.901629", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T05:32:10.910581", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T05:32:24.491411", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T05:32:24.498753", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T05:32:24.508795", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T05:32:56.315157", "mission_id": "261592738", "mission_title": "Feu dindustrie étendu", "unrecognized_pattern": "6 voiture de patrouille", "original_div_context": "6 voiture de patrouille"}
+{"timestamp": "2025-09-06T05:33:13.786145", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T05:33:13.794087", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T05:33:13.802386", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T05:33:13.812598", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T05:33:52.548945", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T05:33:52.557087", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T05:33:52.566087", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T05:34:09.594481", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T05:34:09.602276", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T05:34:09.612286", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T05:34:23.943738", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T05:34:23.952156", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T05:34:23.963276", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T05:34:40.240259", "mission_id": "261589655", "mission_title": "Accident de circulation avec désincarcération (PL contre PL-TMD)", "unrecognized_pattern": "2 voiture de patrouille", "original_div_context": "2 voiture de patrouille"}
+{"timestamp": "2025-09-06T05:34:53.672048", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T05:35:50.174905", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T05:35:50.182680", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T05:36:46.359368", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T05:38:57.739761", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T05:38:57.748981", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T05:39:14.211463", "mission_id": "261589598", "mission_title": "Agression à domicile", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T06:19:05.484738", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T06:19:05.493106", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T06:19:05.500705", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T06:19:05.510015", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T06:20:27.948188", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T06:20:27.956364", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T06:20:27.965520", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T06:21:58.508989", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T06:21:58.516737", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T06:21:58.525964", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T06:22:15.124415", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T06:22:15.131418", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T06:22:15.141341", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T06:23:23.123879", "mission_id": "261592738", "mission_title": "Feu dindustrie étendu", "unrecognized_pattern": "6 voiture de patrouille", "original_div_context": "6 voiture de patrouille"}
+{"timestamp": "2025-09-06T06:24:04.062668", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T06:24:04.070737", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T06:24:04.078789", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T06:24:04.087407", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T06:24:20.908477", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T06:24:20.918050", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T06:24:20.927233", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T06:25:00.075230", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T06:25:00.083504", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T06:25:00.093437", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T06:25:17.105192", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T06:25:17.113408", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T06:25:17.123441", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T06:25:32.055587", "mission_id": "261589655", "mission_title": "Accident de circulation avec désincarcération (PL contre PL-TMD)", "unrecognized_pattern": "2 voiture de patrouille", "original_div_context": "2 voiture de patrouille"}
+{"timestamp": "2025-09-06T06:26:13.732275", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T06:27:34.486231", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T06:27:34.494443", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T06:28:05.942947", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T06:29:53.399397", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T06:29:53.408787", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T06:30:56.983906", "mission_id": "261589598", "mission_title": "Agression à domicile", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T07:13:23.728467", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T07:13:23.736702", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T07:13:23.744579", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T07:13:23.754283", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T07:13:58.136272", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T07:13:58.144004", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T07:13:58.153503", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T07:14:11.578570", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T07:14:11.587816", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T07:14:11.597062", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T07:14:27.073616", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T07:14:27.080921", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T07:14:27.091136", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T07:14:41.544023", "mission_id": "261592738", "mission_title": "Feu dindustrie étendu", "unrecognized_pattern": "6 voiture de patrouille", "original_div_context": "6 voiture de patrouille"}
+{"timestamp": "2025-09-06T07:15:24.835658", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T07:15:24.844318", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T07:15:24.852741", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T07:15:24.863332", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T07:16:06.711980", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T07:16:06.719094", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T07:16:06.729747", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T07:16:20.373498", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T07:16:20.381764", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T07:16:20.390778", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T07:17:27.169678", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T07:17:27.179084", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T07:17:27.188484", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T07:18:33.566804", "mission_id": "261589655", "mission_title": "Accident de circulation avec désincarcération (PL contre PL-TMD)", "unrecognized_pattern": "2 voiture de patrouille", "original_div_context": "2 voiture de patrouille"}
+{"timestamp": "2025-09-06T07:19:12.075355", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T07:20:08.147182", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T07:20:08.154728", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T07:21:31.375198", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T07:22:25.754056", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T07:22:25.763515", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T07:22:39.787062", "mission_id": "261589598", "mission_title": "Agression à domicile", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T08:04:38.965454", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T08:04:38.974184", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:04:38.981544", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T08:04:38.992256", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:06:52.160548", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:06:52.169967", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T08:06:52.180528", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T08:07:33.841669", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T08:07:33.850848", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T08:07:33.861107", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T08:07:53.952757", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T08:07:53.963504", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:07:53.974333", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T08:08:11.033085", "mission_id": "261592738", "mission_title": "Feu dindustrie étendu", "unrecognized_pattern": "6 voiture de patrouille", "original_div_context": "6 voiture de patrouille"}
+{"timestamp": "2025-09-06T08:08:29.598930", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T08:08:29.609507", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:08:29.619295", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:08:29.631170", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:08:49.421246", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:08:49.436363", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:08:49.456119", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:09:32.347815", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:09:32.360385", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:09:32.376017", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:09:55.013170", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:09:55.028873", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:09:55.049627", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:10:21.655987", "mission_id": "261589655", "mission_title": "Accident de circulation avec désincarcération (PL contre PL-TMD)", "unrecognized_pattern": "2 voiture de patrouille", "original_div_context": "2 voiture de patrouille"}
+{"timestamp": "2025-09-06T08:10:44.767291", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T08:11:17.953392", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T08:11:17.967324", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T08:12:39.951424", "mission_id": "261577540", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T08:13:35.548615", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:13:35.559289", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T08:13:51.240394", "mission_id": "261589598", "mission_title": "Agression à domicile", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T08:54:52.706402", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T08:54:52.713701", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:54:52.721593", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T08:54:52.729934", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:56:20.110781", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:56:20.119380", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T08:56:20.129122", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T08:56:55.030461", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T08:56:55.042623", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T08:56:55.060264", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T08:57:11.049118", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T08:57:11.056958", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:57:11.067013", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T08:57:29.023294", "mission_id": "261592738", "mission_title": "Feu dindustrie étendu", "unrecognized_pattern": "6 voiture de patrouille", "original_div_context": "6 voiture de patrouille"}
+{"timestamp": "2025-09-06T08:58:09.847900", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T08:58:09.855557", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:58:09.864879", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:58:09.874614", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:58:27.227820", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:58:27.235342", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:58:27.244971", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:58:42.087729", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:58:42.094532", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:58:42.104215", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:59:00.545727", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T08:59:00.553278", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T08:59:00.563806", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T08:59:15.283297", "mission_id": "261589655", "mission_title": "Accident de circulation avec désincarcération (PL contre PL-TMD)", "unrecognized_pattern": "2 voiture de patrouille", "original_div_context": "2 voiture de patrouille"}
+{"timestamp": "2025-09-06T09:00:00.316777", "mission_id": "261584136", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "3 voiture de patrouille", "original_div_context": "3 voiture de patrouille"}
+{"timestamp": "2025-09-06T09:01:07.000896", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T09:01:07.008763", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T09:01:07.016058", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T09:01:45.639853", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:01:45.648006", "mission_id": "261559027", "mission_title": "sécurisation dune zone", "unrecognized_pattern": "1 Barre-pont", "original_div_context": "1 Barre-pont"}
+{"timestamp": "2025-09-06T09:01:56.384764", "mission_id": "261589598", "mission_title": "Agression à domicile", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T09:20:01.502692", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T09:20:01.511417", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T09:20:01.518937", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T09:20:01.528630", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T09:20:37.579292", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:21:10.521424", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T09:21:10.528421", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T09:21:10.537240", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T09:21:10.547139", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T09:22:07.203850", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T09:22:07.211613", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T09:22:07.220954", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T09:22:07.230509", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T09:23:02.179954", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T09:23:02.185675", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T09:23:02.192981", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T09:23:02.200256", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T09:23:32.205582", "mission_id": "261592738", "mission_title": "Feu dindustrie étendu", "unrecognized_pattern": "6 voiture de patrouille", "original_div_context": "6 voiture de patrouille"}
+{"timestamp": "2025-09-06T09:24:14.497378", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T09:24:14.504872", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T09:24:14.513947", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:24:14.524024", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T09:24:46.611365", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T09:24:46.618770", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:24:46.629294", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T09:25:51.143984", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T09:25:51.152108", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:25:51.161966", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T09:26:33.574907", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T09:26:33.583505", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:26:33.593808", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T09:27:46.388780", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "1 voiture de patrouille", "original_div_context": "1 voiture de patrouille"}
+{"timestamp": "2025-09-06T09:27:46.397373", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T09:27:46.406100", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T09:38:31.646887", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:38:31.656251", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T09:39:05.121492", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:39:21.291262", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T09:39:21.300626", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T09:39:21.309560", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T09:40:02.739897", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T09:40:02.747251", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T09:40:02.756537", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T09:40:16.173866", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T09:40:16.181169", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T09:40:16.190051", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T09:40:16.199480", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T09:40:32.772804", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T09:40:32.781666", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:40:32.790851", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T09:41:12.845127", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T09:41:12.852129", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:41:12.862037", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T09:41:31.121419", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T09:41:31.129205", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:41:31.138290", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T09:41:45.555656", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T09:41:45.562050", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T09:41:45.572136", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T09:42:57.386627", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T09:42:57.395616", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T10:04:07.581478", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-06T10:04:47.496018", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:05:07.058411", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T10:05:07.067273", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T10:05:07.076942", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T10:05:20.933763", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T10:05:20.941949", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T10:05:20.951325", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T10:05:34.925424", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T10:05:34.933561", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T10:05:34.940438", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T10:05:34.949791", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T10:07:02.321122", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T10:07:02.332954", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:07:02.342514", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T10:07:16.317214", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T10:07:16.325717", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:07:16.335503", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T10:07:33.616638", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T10:07:33.625020", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:07:33.634082", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T10:08:12.936593", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T10:08:12.945054", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:08:12.954949", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T10:09:57.367553", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T10:35:43.162034", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "4 Barres-ponts", "original_div_context": "4 Barres-ponts"}
+{"timestamp": "2025-09-06T10:36:28.785802", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:36:38.374893", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T10:36:38.383137", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T10:36:38.392406", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T10:36:38.401779", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T10:37:12.143426", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T10:37:12.151486", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T10:37:12.161387", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T10:37:12.171405", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T10:37:46.263584", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T10:37:46.271629", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T10:37:46.280919", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T10:37:46.291012", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T10:38:16.713620", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T10:38:16.721698", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T10:38:16.730257", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:38:16.739364", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T10:38:52.047189", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T10:38:52.057405", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T10:38:52.066414", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:38:52.076899", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T10:39:29.032572", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T10:39:29.040942", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T10:39:29.049599", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:39:29.059604", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T10:40:26.605595", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T10:40:26.613313", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T10:40:26.622083", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T10:40:26.630881", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T10:41:38.690481", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T10:41:38.701237", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T10:41:38.711394", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T10:42:30.828953", "mission_id": "261614281", "mission_title": "Vol de banque", "unrecognized_pattern": "5 voiture de patrouille", "original_div_context": "5 voiture de patrouille"}
+{"timestamp": "2025-09-06T10:42:30.837002", "mission_id": "261614281", "mission_title": "Vol de banque", "unrecognized_pattern": "1 unité cynophile", "original_div_context": "1 unité cynophile"}
+{"timestamp": "2025-09-06T11:03:04.539657", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T11:03:04.552799", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T11:03:04.562544", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T11:03:04.572975", "mission_id": "261579794", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T11:04:04.768190", "mission_id": "261567190", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T11:04:41.743642", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T11:04:41.752315", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T11:04:41.760230", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T11:04:41.770645", "mission_id": "261562781", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T11:05:15.993098", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T11:05:16.001012", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T11:05:16.010612", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T11:05:16.019947", "mission_id": "261551920", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T11:05:50.542567", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
+{"timestamp": "2025-09-06T11:05:50.552319", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 ELE", "original_div_context": "2 ELE"}
+{"timestamp": "2025-09-06T11:05:50.561233", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "2 VTP", "original_div_context": "2 VTP"}
+{"timestamp": "2025-09-06T11:05:50.571197", "mission_id": "261550303", "mission_title": "Évacuation de Zone À Défendre", "unrecognized_pattern": "5 Barres-ponts", "original_div_context": "5 Barres-ponts"}
+{"timestamp": "2025-09-06T11:06:24.798721", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T11:06:24.806115", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T11:06:24.812669", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T11:06:24.821456", "mission_id": "261592158", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T11:07:50.311713", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T11:07:50.320080", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T11:07:50.327639", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T11:07:50.337919", "mission_id": "261577746", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T11:08:27.624023", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T11:08:27.631444", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T11:08:27.640542", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T11:08:27.649687", "mission_id": "261569919", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T11:09:03.579582", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T11:09:03.587113", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 ELE", "original_div_context": "1 ELE"}
+{"timestamp": "2025-09-06T11:09:03.596163", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "1 VTP", "original_div_context": "1 VTP"}
+{"timestamp": "2025-09-06T11:09:03.606303", "mission_id": "261561927", "mission_title": "Manifestations des agriculteurs", "unrecognized_pattern": "2 Barres-ponts", "original_div_context": "2 Barres-ponts"}
+{"timestamp": "2025-09-06T11:10:23.113724", "mission_id": "261617843", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "10 voiture de patrouille", "original_div_context": "10 voiture de patrouille"}
+{"timestamp": "2025-09-06T11:10:23.121856", "mission_id": "261617843", "mission_title": "Disparition inquiétante en forêt", "unrecognized_pattern": "1 spécialiste IMP manquant", "original_div_context": "1 spécialiste IMP manquant"}
+{"timestamp": "2025-09-06T11:10:58.479462", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "8 voiture de patrouille", "original_div_context": "8 voiture de patrouille"}
+{"timestamp": "2025-09-06T11:10:58.488202", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 soutiens aériens FAG", "original_div_context": "2 soutiens aériens FAG"}
+{"timestamp": "2025-09-06T11:10:58.496476", "mission_id": "261562422", "mission_title": "Visite présidentielle", "unrecognized_pattern": "2 unités cynophiles", "original_div_context": "2 unités cynophiles"}
