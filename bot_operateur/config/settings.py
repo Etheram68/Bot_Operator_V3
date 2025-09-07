@@ -15,10 +15,12 @@ class Settings(BaseModel):
     username: str = Field(description="Nom d'utilisateur")
     password: str = Field(description="Mot de passe")
     
-    # Timeouts (en secondes)
-    page_load_timeout: int = Field(default=30, description="Timeout de chargement de page")
-    element_wait_timeout: int = Field(default=10, description="Timeout d'attente d'élément")
-    retry_delay: int = Field(default=2, description="Délai entre les tentatives")
+    # Timeouts optimisés (en secondes)
+    page_load_timeout: int = Field(default=15, description="Timeout de chargement de page (réduit pour performance)")
+    element_wait_timeout: int = Field(default=5, description="Timeout d'attente d'élément standard")
+    fast_timeout: int = Field(default=3, description="Timeout rapide pour éléments qui doivent être présents")
+    slow_timeout: int = Field(default=12, description="Timeout lent pour opérations complexes uniquement")
+    retry_delay: int = Field(default=1, description="Délai entre les tentatives (optimisé)")
     max_retries: int = Field(default=3, description="Nombre maximum de tentatives")
     
     # Logging
@@ -49,9 +51,11 @@ class Settings(BaseModel):
             username=os.getenv("USERNAME", ""),
             password=os.getenv("PASSWORD", ""),
             
-            page_load_timeout=int(os.getenv("PAGE_LOAD_TIMEOUT", "30")),
-            element_wait_timeout=int(os.getenv("ELEMENT_WAIT_TIMEOUT", "10")),
-            retry_delay=int(os.getenv("RETRY_DELAY", "2")),
+            page_load_timeout=int(os.getenv("PAGE_LOAD_TIMEOUT", "15")),
+            element_wait_timeout=int(os.getenv("ELEMENT_WAIT_TIMEOUT", "5")),
+            fast_timeout=int(os.getenv("FAST_TIMEOUT", "3")),
+            slow_timeout=int(os.getenv("SLOW_TIMEOUT", "12")),
+            retry_delay=int(os.getenv("RETRY_DELAY", "1")),
             max_retries=int(os.getenv("MAX_RETRIES", "3")),
             
             log_level=os.getenv("LOG_LEVEL", "INFO"),

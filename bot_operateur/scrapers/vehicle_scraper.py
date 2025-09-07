@@ -1,4 +1,5 @@
 import re
+import asyncio
 from typing import List, Optional
 from playwright.async_api import Page
 from loguru import logger
@@ -475,16 +476,27 @@ class VehicleScraper:
                 selected_counts[req_type] = 0
                 alternatives_used[req_type] = []
             
-            # Parcourir les véhicules dans l'ordre (premier = plus proche)
-            for row in vehicle_rows:
+            # Optimisation: Extraire les informations de base des véhicules en parallèle
+            logger.debug("🚀 Extraction parallèle des informations véhicules...")
+            vehicle_info_tasks = []
+            for i, row in enumerate(vehicle_rows):
+                task = self._extract_vehicle_basic_info(row, i)
+                vehicle_info_tasks.append(task)
+            
+            # Exécuter l'extraction en parallèle par lots de 10 pour éviter la surcharge
+            batch_size = 10
+            vehicle_infos = []
+            for i in range(0, len(vehicle_info_tasks), batch_size):
+                batch = vehicle_info_tasks[i:i+batch_size]
+                batch_results = await asyncio.gather(*batch, return_exceptions=True)
+                vehicle_infos.extend([r for r in batch_results if r is not None and not isinstance(r, Exception)])
+            
+            logger.debug(f"📋 {len(vehicle_infos)} véhicules analysés en parallèle")
+            
+            # Parcourir les véhicules avec informations pré-extraites
+            for vehicle_info in vehicle_infos:
                 try:
-                    # Extraire le type du véhicule depuis vehicle_caption (avant le premier espace)
-                    vehicle_caption = await row.get_attribute("vehicle_caption")
-                    if not vehicle_caption:
-                        continue
-                    
-                    # Extraire le type : "FS 1 Brunstatt" -> "FS"
-                    vehicle_type = vehicle_caption.split()[0] if vehicle_caption else None
+                    row, vehicle_type, vehicle_caption = vehicle_info
                     if not vehicle_type:
                         continue
                     
@@ -933,13 +945,13 @@ class VehicleScraper:
         additional_selected = 0
         
         try:
-            # Charger tous les véhicules (même les plus éloignés)
-            logger.info("📡 Chargement de tous les véhicules disponibles...")
+            # Chargement optimisé : seulement si nécessaire et avec timeout réduit
+            logger.info("📡 Chargement ciblé de véhicules supplémentaires...")
             await self._load_all_vehicles()
             
-            # Attendre que les nouveaux véhicules soient chargés
-            await self.page.wait_for_timeout(3000)
-            await self.page.wait_for_load_state('networkidle')
+            # Attendre que les nouveaux véhicules soient chargés (timeout optimisé)
+            await self.page.wait_for_timeout(1000)  # Réduit de 3000ms à 1000ms
+            await self.page.wait_for_load_state('domcontentloaded', timeout=5000)  # Plus rapide que networkidle
             
             # Récupérer toutes les lignes (maintenant avec plus de véhicules)
             final_table_selector = table_selector or "#vehicle_show_table_all"
@@ -1041,6 +1053,34 @@ class VehicleScraper:
             logger.error(f"Erreur lors du chargement de véhicules supplémentaires: {e}")
             return 0
     
+    async def _extract_vehicle_basic_info(self, row, index: int) -> Optional[tuple]:
+        """
+        Extrait les informations de base d'un véhicule en parallèle.
+        
+        Args:
+            row: Element DOM de la ligne véhicule
+            index: Index pour debug
+            
+        Returns:
+            tuple: (row, vehicle_type, vehicle_caption) ou None si erreur
+        """
+        try:
+            # Extraire le type du véhicule depuis vehicle_caption (avant le premier espace)
+            vehicle_caption = await row.get_attribute("vehicle_caption")
+            if not vehicle_caption:
+                return None
+                
+            # Extraire le type : "FS 1 Brunstatt" -> "FS"
+            vehicle_type = vehicle_caption.split()[0] if vehicle_caption else None
+            if not vehicle_type:
+                return None
+            
+            return (row, vehicle_type, vehicle_caption)
+            
+        except Exception as e:
+            logger.debug(f"Erreur extraction véhicule {index}: {e}")
+            return None
+
     async def _check_tractor_availability(self, vehicle_row) -> bool:
         """
         Vérifie si le véhicule tracteur est disponible pour une remorque.

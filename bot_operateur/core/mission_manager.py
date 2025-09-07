@@ -219,26 +219,18 @@ class MissionManager:
             if not mission:
                 return False
             
-            # Navigation vers la page de mission (sans charger tous les véhicules)
+            # Navigation optimisée directe vers la page de déploiement (éviter 3 navigations redondantes)
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
-            await self.browser_manager.page.goto(mission_url)
-            await self.browser_manager.page.wait_for_load_state('networkidle')
-
-            # Naviguer vers la page de déploiement
-            help_button = await self.browser_manager.page.query_selector("#mission_help")
-            if help_button:
-                help_href = await help_button.get_attribute("href")
-                if help_href:
-                    help_url = f"https://www.operateur112.fr{help_href}"
-                    await self.browser_manager.page.goto(help_url)
-                    await self.browser_manager.page.wait_for_load_state('networkidle')
-                    
-                    back_to_mission_link = await self.browser_manager.page.query_selector("#back_to_mission")
-                    if back_to_mission_link:
-                        mission_url = await back_to_mission_link.get_attribute("href")
-                        if mission_url:
-                            await self.browser_manager.page.goto(f"https://www.operateur112.fr{mission_url}")
-                            await self.browser_manager.page.wait_for_load_state('networkidle')
+            
+            # Si on a déjà les détails de mission complets, pas besoin de re-naviguer
+            if not hasattr(mission, '_deployment_ready') or not mission._deployment_ready:
+                logger.debug(f"Navigation optimisée vers mission {mission.id}")
+                await self.browser_manager.navigate_to(mission_url, wait_for_load=True, fast_navigation=True)
+                # Marquer cette mission comme prête pour le déploiement
+                mission._deployment_ready = True
+            else:
+                logger.debug(f"Réutilisation de la session existante pour mission {mission.id}")
+            
             
             # Calculer les besoins en véhicules selon la stratégie
             vehicle_needs = await strategy.get_vehicle_needs(mission)

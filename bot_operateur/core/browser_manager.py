@@ -79,17 +79,21 @@ class BrowserManager:
         except Exception as e:
             logger.warning(f"Erreur lors du nettoyage: {e}")
     
-    async def navigate_to(self, url: str, wait_for_load: bool = True) -> None:
-        """Navigue vers une URL avec gestion d'erreurs"""
+    async def navigate_to(self, url: str, wait_for_load: bool = True, fast_navigation: bool = False) -> None:
+        """Navigue vers une URL avec gestion d'erreurs optimisée"""
         if not self.page:
             raise RuntimeError("Le navigateur n'est pas initialisé")
         
         async def _navigate():
             logger.debug(f"Navigation vers: {url}")
-            await self.page.goto(url)
+            # Utiliser un timeout réduit pour la navigation
+            timeout = self.settings.fast_timeout * 1000 if fast_navigation else self.settings.page_load_timeout * 1000
+            await self.page.goto(url, timeout=timeout)
             
             if wait_for_load:
-                await self.page.wait_for_load_state('networkidle')
+                # Utiliser wait_for_load_state avec timeout optimisé au lieu de networkidle qui est lent
+                load_state = 'domcontentloaded' if fast_navigation else 'load'
+                await self.page.wait_for_load_state(load_state, timeout=timeout)
                 
         await self.retry_handler.execute_with_retry(_navigate, f"Navigation vers {url}")
     
