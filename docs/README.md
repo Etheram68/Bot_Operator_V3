@@ -30,6 +30,7 @@ Le **Bot Opérateur 112** est un système d'automatisation avancé pour le jeu "
 
 ### 📊 **Features Avancées**
 - [Optimisations de Performance](./PERFORMANCE_OPTIMIZATIONS.md) - Amélioration 68.5%
+- [Optimisations Retry](./RETRY_OPTIMIZATIONS.md) - **83% moins de temps perdu** ⚡
 - [Feature VEHICLE_THRESHOLD](./VEHICLE_THRESHOLD_SKIP_FEATURE.md) - Skip automatique
 - [Fix Probabilités](./PROBABILITY_PATTERNS_FIX.md) - Bug CITERNE résolu
 - [Guide Véhicules Tractés](./TRACTOR_VEHICLES_GUIDE.md) - Véhicules spécialisés

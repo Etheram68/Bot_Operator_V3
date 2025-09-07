@@ -20,8 +20,8 @@ class Settings(BaseModel):
     element_wait_timeout: int = Field(default=5, description="Timeout d'attente d'élément standard")
     fast_timeout: int = Field(default=3, description="Timeout rapide pour éléments qui doivent être présents")
     slow_timeout: int = Field(default=12, description="Timeout lent pour opérations complexes uniquement")
-    retry_delay: int = Field(default=1, description="Délai entre les tentatives (optimisé)")
-    max_retries: int = Field(default=3, description="Nombre maximum de tentatives")
+    retry_delay: float = Field(default=0.5, description="Délai entre les tentatives (ultra-optimisé)")
+    max_retries: int = Field(default=1, description="Nombre maximum de tentatives (réduit pour vitesse)")
     
     # Logging
     log_level: str = Field(default="INFO", description="Niveau de logging")
@@ -38,14 +38,18 @@ class Settings(BaseModel):
     
     # Sécurité
     max_concurrent_missions: int = Field(default=5, description="Nombre max de missions simultanées")
-    mission_cooldown: int = Field(default=30, description="Cooldown entre missions (secondes)")
+    mission_cooldown: int = Field(default=5, description="Cooldown entre missions (ultra-optimisé)")
     
     # Optimisation des déploiements
     vehicle_threshold: int = Field(default=3, description="Seuil critique de véhicules pour forcer l'utilisation d'un véhicule plus gros")
     
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls, env_file: str = ".env") -> "Settings":
         """Crée une instance Settings depuis les variables d'environnement"""
+        # Charger le fichier .env si il existe
+        if os.path.exists(env_file):
+            from dotenv import load_dotenv
+            load_dotenv(env_file, override=True)
         return cls(
             game_url=os.getenv("GAME_URL", "https://www.operateur112.fr"),
             username=os.getenv("USERNAME", ""),
@@ -55,8 +59,8 @@ class Settings(BaseModel):
             element_wait_timeout=int(os.getenv("ELEMENT_WAIT_TIMEOUT", "5")),
             fast_timeout=int(os.getenv("FAST_TIMEOUT", "3")),
             slow_timeout=int(os.getenv("SLOW_TIMEOUT", "12")),
-            retry_delay=int(os.getenv("RETRY_DELAY", "1")),
-            max_retries=int(os.getenv("MAX_RETRIES", "3")),
+            retry_delay=float(os.getenv("RETRY_DELAY", "0.5")),
+            max_retries=int(os.getenv("MAX_RETRIES", "1")),
             
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             log_file=os.getenv("LOG_FILE", "bot.log"),
@@ -69,7 +73,7 @@ class Settings(BaseModel):
             min_credits_threshold=int(os.getenv("MIN_CREDITS_THRESHOLD", "1000")),
             
             max_concurrent_missions=int(os.getenv("MAX_CONCURRENT_MISSIONS", "5")),
-            mission_cooldown=int(os.getenv("MISSION_COOLDOWN", "30")),
+            mission_cooldown=int(os.getenv("MISSION_COOLDOWN", "5")),
             
             vehicle_threshold=int(os.getenv("VEHICLE_THRESHOLD", "3"))
         )

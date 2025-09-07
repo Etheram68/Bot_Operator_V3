@@ -2100,31 +2100,44 @@ class MissionManager:
                 if deployed_count < max_missions:
                     await asyncio.sleep(self.settings.mission_cooldown)
             
-            # Retry des missions échouées avec plus de véhicules si nécessaire
+            # Retry intelligent des missions échouées (réduit pour vitesse)
             if failed_missions and deployed_count < max_missions:
-                logger.info(f"🔄 Retry de {len(failed_missions)} missions échouées avec recherche étendue...")
+                # Limiter le retry à 1-2 missions maximum pour éviter de perdre du temps
+                retry_limit = min(2, len(failed_missions), max_missions - deployed_count)
+                logger.info(f"🔄 Retry optimisé de {retry_limit}/{len(failed_missions)} missions échouées (limite pour vitesse)")
                 
-                for mission in failed_missions:
+                # Retry seulement les missions les plus récentes/prometteuses
+                for i, mission in enumerate(failed_missions[:retry_limit]):
                     if deployed_count >= max_missions:
                         break
                     
-                    logger.info(f"🔄 Retry mission {mission.id} avec recherche étendue de véhicules")
+                    logger.info(f"🔄 Retry rapide mission {mission.id} ({i+1}/{retry_limit})")
                     
-                    # Pour le retry, on force l'utilisation de la méthode classique qui charge tous les véhicules
-                    success = await self.deploy_vehicles_for_mission(mission)
+                    # Retry rapide avec timeout réduit (éviter les missions qui bloquent)
+                    try:
+                        success = await asyncio.wait_for(
+                            self.deploy_vehicles_for_mission(mission),
+                            timeout=15  # Timeout de 15s max pour le retry
+                        )
+                        
+                        if success:
+                            stats["deployed"] += 1
+                            stats["failed"] -= 1
+                            deployed_count += 1
+                            logger.info(f"✅ Retry réussi pour mission {mission.id}")
+                        else:
+                            logger.info(f"❌ Retry échoué pour mission {mission.id} - abandon définitif")
+                            
+                    except asyncio.TimeoutError:
+                        logger.warning(f"⏱️ Timeout retry pour mission {mission.id} - abandon pour vitesse")
+                        continue
+                    except Exception as e:
+                        logger.warning(f"❌ Erreur retry mission {mission.id}: {e} - abandon")
+                        continue
                     
-                    if success:
-                        stats["deployed"] += 1
-                        stats["failed"] -= 1  # Retirer du compte des échecs
-                        deployed_count += 1
-                        self.active_missions.append(mission)
-                        logger.info(f"✅ Retry réussi pour mission {mission.id}")
-                    else:
-                        logger.warning(f"❌ Retry échoué pour mission {mission.id}")
-                    
-                    # Cooldown entre retries
-                    if deployed_count < max_missions:
-                        await asyncio.sleep(self.settings.mission_cooldown)
+                    # Cooldown très court entre retry (optimisé)
+                    if i < retry_limit - 1:
+                        await asyncio.sleep(1)  # Réduit de 30s à 1s
             
             # Compter les missions ignorées
             stats["skipped"] = len(eligible_missions) - stats["deployed"] - stats["failed"]
