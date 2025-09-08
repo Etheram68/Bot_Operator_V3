@@ -593,14 +593,18 @@ class VehicleScraper:
                 else:
                     logger.info(f"  {status} {vtype}: {selected}/{original_needed}{alternatives_str}")
             
-            # Calculer le nombre de véhicules manquants
+            # Calculer le nombre de véhicules manquants (basé sur les besoins ajustés)
             total_missing = 0
-            for vtype, original_needed in vehicle_needs.items():
-                already_deployed = deployed_by_type.get(vtype, 0)
+            for vtype, adjusted_needed in adjusted_vehicle_needs.items():
                 selected = selected_counts.get(vtype, 0)
-                total_satisfied = already_deployed + selected
-                missing = max(0, original_needed - total_satisfied)
+                missing = max(0, adjusted_needed - selected)
                 total_missing += missing
+                
+            # Log détaillé pour debug
+            logger.debug(f"📊 Debug comptage:")
+            logger.debug(f"   • Besoins ajustés: {adjusted_vehicle_needs}")
+            logger.debug(f"   • Véhicules sélectionnés: {selected_counts}")
+            logger.debug(f"   • Manquants calculés: {total_missing}")
             
             logger.info(f"📊 Résumé final: {final_count} sélectionnés, {total_missing} manquants")
             

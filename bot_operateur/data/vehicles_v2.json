@@ -134,6 +134,10 @@
       "CEEM": {
         "primary": ["CEEM"],
         "secondary": []
+      },
+      "VTP(ers)_CONSTRAINED": {
+        "primary": ["VTP(ers)"],
+        "secondary": []
       }
     },
 
@@ -179,6 +183,14 @@
       },
       "CARS_POLICE_PATROUILLE_VR": {
         "primary": ["GN", "PN", "VR"],
+        "secondary": []
+      },
+      "GN_CONSTRAINED": {
+        "primary": ["GN", "PN", "VR"],
+        "secondary": []
+      },
+      "VR_CONSTRAINED": {
+        "primary": ["VR"],
         "secondary": []
       }
     },
