@@ -562,7 +562,7 @@ class VehicleScraper:
             # Si des besoins ne sont pas satisfaits, essayer de charger plus de véhicules
             if unsatisfied_needs and total_selected > 0:  # Seulement si on a déjà trouvé quelque chose
                 logger.warning(f"⚠️ Besoins non satisfaits: {unsatisfied_needs}. Tentative de chargement de véhicules supplémentaires...")
-                additional_selected = await self._load_and_select_additional_vehicles(unsatisfied_needs, alternatives_mapping, table_selector, mission)
+                additional_selected = await self._load_and_select_additional_vehicles(unsatisfied_needs, selected_counts, alternatives_mapping, table_selector, mission)
                 total_selected += additional_selected
                 
                 # Mettre à jour les compteurs
@@ -929,7 +929,7 @@ class VehicleScraper:
         
         return None
     
-    async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, alternatives_mapping: dict = None, table_selector: str = None, mission: 'Mission' = None) -> int:
+    async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, table_selector: str = None, mission: 'Mission' = None) -> int:
         """
         Charge tous les véhicules disponibles et sélectionne ceux manquants.
         
@@ -939,6 +939,7 @@ class VehicleScraper:
         
         Args:
             unsatisfied_needs: Besoins restants par type de véhicule
+            selected_counts: Compteur des véhicules déjà sélectionnés (mis à jour)
             alternatives_mapping: Mapping des alternatives possibles
             table_selector: Sélecteur du tableau de véhicules
             mission: Mission courante pour adaptation contextuelle
@@ -1031,6 +1032,9 @@ class VehicleScraper:
                             await checkbox.check()
                             additional_selected += 1
                             unsatisfied_needs[matching_need] -= 1
+                            
+                            # IMPORTANT: Mettre à jour selected_counts pour le comptage final correct
+                            selected_counts[matching_need] = selected_counts.get(matching_need, 0) + 1
                             
                             logger.info(f"🆕 Véhicule supplémentaire sélectionné: {vehicle_caption} -> Type: {vehicle_type} (pour {matching_need})")
                             

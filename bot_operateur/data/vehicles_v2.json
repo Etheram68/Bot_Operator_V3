@@ -37,6 +37,14 @@
         "primary": ["CCGC", "CCF(S)", "FMOGP", "CCR(SR)"],
         "secondary": []
       },
+      "CCGC_CONSTRAINED": {
+        "primary": ["CCGC"],
+        "secondary": []
+      },
+      "VPI_CONSTRAINED": {
+        "primary": ["VPI"],
+        "secondary": []
+      },
       "CCF": {
         "primary": ["CCF(M)", "CCF(S)", "CCR(SR)"],
         "secondary": ["FMOGP"]
@@ -117,6 +125,10 @@
       },
       "VTU": {
         "primary": ["FS", "VPI"],
+        "secondary": []
+      },
+      "FS_CONSTRAINED": {
+        "primary": ["FS"],
         "secondary": []
       },
       "VPC": {

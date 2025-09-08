@@ -59,25 +59,43 @@ class BrowserManager:
         """Nettoie les ressources du navigateur"""
         logger.info("Nettoyage des ressources du navigateur...")
         
-        try:
-            if self.page:
-                await self.page.close()
+        # Fermer la page en premier (plus rapide)
+        if self.page:
+            try:
+                await asyncio.wait_for(self.page.close(), timeout=2.0)
+            except (asyncio.TimeoutError, Exception) as e:
+                logger.warning(f"Timeout/erreur fermeture page: {e}")
+            finally:
                 self.page = None
                 
-            if self.context:
-                await self.context.close()
+        # Fermer le contexte
+        if self.context:
+            try:
+                await asyncio.wait_for(self.context.close(), timeout=2.0)
+            except (asyncio.TimeoutError, Exception) as e:
+                logger.warning(f"Timeout/erreur fermeture contexte: {e}")
+            finally:
                 self.context = None
                 
-            if self.browser:
-                await self.browser.close()
+        # Fermer le navigateur
+        if self.browser:
+            try:
+                await asyncio.wait_for(self.browser.close(), timeout=3.0)
+            except (asyncio.TimeoutError, Exception) as e:
+                logger.warning(f"Timeout/erreur fermeture navigateur: {e}")
+            finally:
                 self.browser = None
                 
-            if self.playwright:
-                await self.playwright.stop()
+        # Arrêter Playwright
+        if self.playwright:
+            try:
+                await asyncio.wait_for(self.playwright.stop(), timeout=2.0)
+            except (asyncio.TimeoutError, Exception) as e:
+                logger.warning(f"Timeout/erreur arrêt Playwright: {e}")
+            finally:
                 self.playwright = None
                 
-        except Exception as e:
-            logger.warning(f"Erreur lors du nettoyage: {e}")
+        logger.info("Nettoyage du navigateur terminé")
     
     async def navigate_to(self, url: str, wait_for_load: bool = True, fast_navigation: bool = False) -> None:
         """Navigue vers une URL avec gestion d'erreurs optimisée"""
@@ -85,15 +103,20 @@ class BrowserManager:
             raise RuntimeError("Le navigateur n'est pas initialisé")
         
         async def _navigate():
-            logger.debug(f"Navigation vers: {url}")
-            # Utiliser un timeout réduit pour la navigation
-            timeout = self.settings.fast_timeout * 1000 if fast_navigation else self.settings.page_load_timeout * 1000
-            await self.page.goto(url, timeout=timeout)
-            
-            if wait_for_load:
-                # Utiliser wait_for_load_state avec timeout optimisé au lieu de networkidle qui est lent
-                load_state = 'domcontentloaded' if fast_navigation else 'load'
-                await self.page.wait_for_load_state(load_state, timeout=timeout)
+            try:
+                logger.debug(f"Navigation vers: {url}")
+                # Utiliser un timeout réduit pour la navigation
+                timeout = self.settings.fast_timeout * 1000 if fast_navigation else self.settings.page_load_timeout * 1000
+                await self.page.goto(url, timeout=timeout)
+                
+                if wait_for_load:
+                    # Utiliser wait_for_load_state avec timeout optimisé au lieu de networkidle qui est lent
+                    load_state = 'domcontentloaded' if fast_navigation else 'load'
+                    await self.page.wait_for_load_state(load_state, timeout=timeout)
+                    
+            except asyncio.CancelledError:
+                logger.debug(f"Navigation vers {url} annulée")
+                raise
                 
         await self.retry_handler.execute_with_retry(_navigate, f"Navigation vers {url}")
     

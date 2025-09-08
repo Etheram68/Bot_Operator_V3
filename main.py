@@ -5,11 +5,22 @@ Point d'entrée principal pour le Bot Opérateur 112
 import asyncio
 import argparse
 import sys
+import signal
 from pathlib import Path
 
 from bot_operateur import OperateurBot, Settings
 from bot_operateur.scrapers.mission_scraper import MissionScraper
 from loguru import logger
+
+# Variable globale pour gestion de l'arrêt gracieux
+shutdown_event = asyncio.Event()
+
+
+def signal_handler(signum, frame):
+    """Gestionnaire de signaux pour arrêt gracieux"""
+    signal_name = signal.Signals(signum).name
+    logger.info(f"🛑 Signal {signal_name} reçu, arrêt gracieux en cours...")
+    shutdown_event.set()
 
 
 async def run_single_deployment(bot: OperateurBot, mission_id: str = None, strategy: str = None):
@@ -62,9 +73,35 @@ async def run_continuous_mode(bot: OperateurBot, cycles: int = -1, max_missions:
     logger.info("Appuyez sur Ctrl+C pour arrêter")
     
     try:
-        await bot.run_continuous(cycles, max_missions)
-    except KeyboardInterrupt:
-        logger.info("Arrêt demandé par l'utilisateur")
+        # Créer une tâche pour run_continuous
+        continuous_task = asyncio.create_task(bot.run_continuous(cycles, max_missions))
+        
+        # Attendre soit la fin du cycle, soit le signal d'arrêt
+        done, pending = await asyncio.wait(
+            [continuous_task, asyncio.create_task(shutdown_event.wait())],
+            return_when=asyncio.FIRST_COMPLETED
+        )
+        
+        # Si le signal d'arrêt a été reçu
+        if shutdown_event.is_set():
+            logger.info("🛑 Arrêt gracieux en cours...")
+            continuous_task.cancel()
+            try:
+                await continuous_task
+            except asyncio.CancelledError:
+                pass
+        
+        # Annuler les tâches restantes
+        for task in pending:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+                
+    except Exception as e:
+        logger.error(f"Erreur dans le mode continu: {e}")
+        raise
 
 
 async def show_status(bot: OperateurBot):
@@ -358,6 +395,10 @@ async def main():
     args = parser.parse_args()
     
     try:
+        # Installer les gestionnaires de signaux pour un arrêt gracieux
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
         # Charger la configuration
         settings = load_settings(args)
         
@@ -402,7 +443,11 @@ async def main():
         return 0
         
     except KeyboardInterrupt:
-        logger.info("\n⏹️ Arrêt demandé par l'utilisateur")
+        logger.info("\n🛑 Arrêt gracieux par Ctrl+C")
+        return 0
+        
+    except asyncio.CancelledError:
+        logger.info("🛑 Arrêt gracieux terminé")
         return 0
     
     except Exception as e:
