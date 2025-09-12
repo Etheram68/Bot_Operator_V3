@@ -653,8 +653,8 @@ class VehicleScraper:
                     logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission: {e}")
                     continue
             
-            # Véhicules en route vers la mission (mission_vehicle_driving)
-            driving_rows = await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
+            # Véhicules en route vers la mission (h2_vehicle_driving)
+            driving_rows = await self._get_driving_vehicle_rows()
             for row in driving_rows:
                 try:
                     # Chercher le lien du véhicule dans la ligne
@@ -715,8 +715,8 @@ class VehicleScraper:
                     logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission (par type): {e}")
                     continue
             
-            # Véhicules en route vers la mission (mission_vehicle_driving)
-            driving_rows = await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
+            # Véhicules en route vers la mission (h2_vehicle_driving)
+            driving_rows = await self._get_driving_vehicle_rows()
             for row in driving_rows:
                 try:
                     vehicle_link = await row.query_selector("a[vehicle_type_id]")
@@ -740,6 +740,42 @@ class VehicleScraper:
         
         return deployed_by_type
     
+    async def _get_driving_vehicle_rows(self):
+        """
+        Utilitaire pour récupérer les lignes des véhicules en cours de déplacement.
+        
+        Utilise le bon sélecteur basé sur l'ID h2_vehicle_driving trouvé dans le DOM.
+        
+        Returns:
+            List: Liste des éléments <tr> des véhicules en route
+        """
+        try:
+            # D'abord vérifier si l'en-tête h2_vehicle_driving existe
+            header = await self.page.query_selector("#h2_vehicle_driving")
+            if header:
+                # Chercher le tableau suivant l'en-tête
+                driving_rows = await self.page.query_selector_all("#h2_vehicle_driving ~ table tbody tr, #h2_vehicle_driving + table tbody tr")
+                if driving_rows:
+                    logger.debug(f"✅ Trouvé {len(driving_rows)} lignes avec le sélecteur h2_vehicle_driving")
+                    return driving_rows
+                
+                # Fallback: chercher dans les éléments suivants
+                parent_container = await header.query_selector("xpath=following::table[1]")
+                if parent_container:
+                    driving_rows = await parent_container.query_selector_all("tbody tr")
+                    if driving_rows:
+                        logger.debug(f"✅ Trouvé {len(driving_rows)} lignes avec xpath fallback")
+                        return driving_rows
+            
+            # Fallback vers l'ancien sélecteur si le nouveau ne fonctionne pas
+            logger.debug("⚠️ Utilisation du fallback vers mission_vehicle_driving")
+            driving_rows = await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
+            return driving_rows
+            
+        except Exception as e:
+            logger.debug(f"Erreur avec les nouveaux sélecteurs, utilisation du fallback: {e}")
+            return await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
+    
     async def _get_vehicles_en_route_only_by_type(self) -> dict:
         """
         Comptabilise uniquement les véhicules EN ROUTE vers la mission par type.
@@ -754,8 +790,8 @@ class VehicleScraper:
         vehicles_en_route_by_type = {}
         
         try:
-            # Véhicules en route vers la mission (mission_vehicle_driving) UNIQUEMENT
-            driving_rows = await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
+            # Véhicules en route vers la mission (h2_vehicle_driving) UNIQUEMENT
+            driving_rows = await self._get_driving_vehicle_rows()
             for row in driving_rows:
                 try:
                     vehicle_link = await row.query_selector("a[vehicle_type_id]")
