@@ -9,6 +9,8 @@ from ..models.patient import Patient, PatientSeverity
 from ..models.requirement_parser import RequirementParser
 from ..utils.dom_utils import DOMUtils
 from ..utils.text_utils import extract_number_from_text
+from ..utils.exceptions import ExceptionContext, MissionParsingError, handle_playwright_exceptions
+from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS, SELECTORS
 from .conditions_analyzer import ConditionsAnalyzer
 from .patient_scraper import PatientScraper
 

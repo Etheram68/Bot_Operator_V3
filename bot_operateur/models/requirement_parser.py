@@ -27,30 +27,34 @@ class RequirementParser:
         self.text_cleaner = TextCleaner()
         
     def _load_needs_labels(self, path: str = None) -> Dict:
-        """Charge le fichier de mapping des labels de besoins"""
+        """Charge le fichier de mapping des labels de besoins avec cache"""
         if path is None:
             path = Path(__file__).parent.parent / "data" / "needs_labels_v2.json"
         
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data
-        except Exception as e:
-            logger.error(f"Erreur lors du chargement de {path}: {e}")
+        # Utiliser le cache manager
+        from ..utils.cache_manager import get_cached_json
+        
+        data = get_cached_json(str(path))
+        if data is None:
+            logger.error(f"Erreur lors du chargement de {path}")
             return {}
+        
+        return data
     
     def _load_vehicles_mapping(self, path: str = None) -> Dict:
-        """Charge le fichier de mapping des véhicules"""
+        """Charge le fichier de mapping des véhicules avec cache"""
         if path is None:
             path = Path(__file__).parent.parent / "data" / "vehicles_v2.json"
         
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data
-        except Exception as e:
-            logger.error(f"Erreur lors du chargement de {path}: {e}")
+        # Utiliser le cache manager
+        from ..utils.cache_manager import get_cached_json
+        
+        data = get_cached_json(str(path))
+        if data is None:
+            logger.error(f"Erreur lors du chargement de {path}")
             return {}
+        
+        return data
     
     def _load_missing_config(self, path: str = None) -> Dict:
         """Charge le fichier de configuration des besoins manquants"""

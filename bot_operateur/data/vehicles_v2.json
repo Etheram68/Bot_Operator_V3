@@ -150,6 +150,18 @@
       "VTP(ers)_CONSTRAINED": {
         "primary": ["VTP(ers)"],
         "secondary": []
+      },
+      "DASH": {
+        "primary": ["Dash"],
+        "secondary": []
+      },
+      "PELICAN": {
+        "primary": ["Pélican"],
+        "secondary": []
+      },
+      "HBE": {
+        "primary": ["HBE"],
+        "secondary": []
       }
     },
 
@@ -185,6 +197,18 @@
         "primary": ["Equipe"],
         "secondary": []
       },
+      "VB": {
+        "primary": ["VB"],
+        "secondary": []
+      },
+      "VIC": {
+        "primary": ["VIC"],
+        "secondary": []
+      },
+      "ERI": {
+        "primary": ["ERI"],
+        "secondary": []
+      },
       "VR_CRS": {
         "primary": ["VR"],
         "secondary": []
@@ -198,7 +222,7 @@
         "secondary": []
       },
       "GN_CONSTRAINED": {
-        "primary": ["GN", "PN", "VR"],
+        "primary": ["GN", "PN"],
         "secondary": []
       },
       "VR_CONSTRAINED": {

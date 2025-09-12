@@ -2,6 +2,8 @@ import asyncio
 from typing import Optional, List
 from playwright.async_api import Page, ElementHandle
 from loguru import logger
+from .dom_base import DOMOperationsBase
+from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS, DEFAULT_NAVIGATION_TIMEOUT_MS
 
 
 class DOMUtils:
@@ -9,8 +11,9 @@ class DOMUtils:
     
     def __init__(self, page: Page):
         self.page = page
+        self._dom_ops = DOMOperationsBase(page)
     
-    async def element_exists(self, selector: str, timeout: int = 5000) -> bool:
+    async def element_exists(self, selector: str, timeout: int = DEFAULT_ELEMENT_TIMEOUT_MS) -> bool:
         """Vérifie si un élément existe dans le DOM"""
         try:
             await self.page.wait_for_selector(selector, timeout=timeout, state='attached')
@@ -18,7 +21,7 @@ class DOMUtils:
         except Exception:
             return False
     
-    async def element_visible(self, selector: str, timeout: int = 5000) -> bool:
+    async def element_visible(self, selector: str, timeout: int = DEFAULT_ELEMENT_TIMEOUT_MS) -> bool:
         """Vérifie si un élément est visible"""
         try:
             await self.page.wait_for_selector(selector, timeout=timeout, state='visible')
@@ -49,45 +52,15 @@ class DOMUtils:
         
         return default
     
-    async def safe_click(self, selector: str, timeout: int = 5000) -> bool:
+    async def safe_click(self, selector: str, timeout: int = DEFAULT_ELEMENT_TIMEOUT_MS) -> bool:
         """Clique sur un élément de façon sécurisée"""
-        try:
-            # Attendre que l'élément soit cliquable
-            await self.page.wait_for_selector(selector, timeout=timeout, state='visible')
-            
-            element = await self.page.query_selector(selector)
-            if element:
-                # Vérifier si l'élément est activé
-                is_disabled = await element.is_disabled()
-                if not is_disabled:
-                    await element.click()
-                    logger.debug(f"Clic réussi sur: {selector}")
-                    return True
-                else:
-                    logger.warning(f"Élément désactivé: {selector}")
-            
-        except Exception as e:
-            logger.warning(f"Erreur lors du clic sur '{selector}': {e}")
-        
-        return False
+        return await self._dom_ops.safe_click(selector, timeout)
     
-    async def safe_fill(self, selector: str, value: str, timeout: int = 5000) -> bool:
+    async def safe_fill(self, selector: str, value: str, timeout: int = DEFAULT_ELEMENT_TIMEOUT_MS) -> bool:
         """Remplit un champ de façon sécurisée"""
-        try:
-            await self.page.wait_for_selector(selector, timeout=timeout, state='visible')
-            
-            element = await self.page.query_selector(selector)
-            if element:
-                await element.fill(value)
-                logger.debug(f"Champ rempli: {selector}")
-                return True
-            
-        except Exception as e:
-            logger.warning(f"Erreur lors du remplissage de '{selector}': {e}")
-        
-        return False
+        return await self._dom_ops.safe_fill(selector, value, timeout)
     
-    async def wait_for_any_selector(self, selectors: List[str], timeout: int = 10000) -> Optional[str]:
+    async def wait_for_any_selector(self, selectors: List[str], timeout: int = DEFAULT_NAVIGATION_TIMEOUT_MS) -> Optional[str]:
         """Attend que l'un des sélecteurs soit présent"""
         try:
             # Créer des tâches pour chaque sélecteur
@@ -159,7 +132,7 @@ class DOMUtils:
         
         return False
     
-    async def wait_for_page_stability(self, timeout: int = 5000) -> None:
+    async def wait_for_page_stability(self, timeout: int = DEFAULT_ELEMENT_TIMEOUT_MS) -> None:
         """Attend que la page soit stable (pas de nouvelles requêtes réseau)"""
         try:
             await self.page.wait_for_load_state('networkidle', timeout=timeout)

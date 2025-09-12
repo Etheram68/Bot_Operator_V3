@@ -5,6 +5,7 @@ from loguru import logger
 
 from ..config.settings import Settings
 from ..utils.retry import RetryHandler
+from ..utils.dom_base import DOMOperationsBase
 
 
 class BrowserManager:
@@ -17,6 +18,7 @@ class BrowserManager:
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
         self.retry_handler = RetryHandler(settings)
+        self._dom_ops: Optional[DOMOperationsBase] = None
         
     async def start(self) -> None:
         """Démarre le navigateur et initialise une page"""
@@ -44,6 +46,9 @@ class BrowserManager:
             self.page.set_default_timeout(self.settings.element_wait_timeout * 1000)
             self.page.set_default_navigation_timeout(self.settings.page_load_timeout * 1000)
             
+            # Initialiser les opérations DOM
+            self._dom_ops = DOMOperationsBase(self.page, self.settings.element_wait_timeout * 1000)
+            
             logger.info("Navigateur démarré avec succès")
             
         except Exception as e:
@@ -67,6 +72,7 @@ class BrowserManager:
                 logger.warning(f"Timeout/erreur fermeture page: {e}")
             finally:
                 self.page = None
+                self._dom_ops = None  # Nettoyer la référence DOM
                 
         # Fermer le contexte
         if self.context:
@@ -137,52 +143,15 @@ class BrowserManager:
     
     async def safe_click(self, selector: str, timeout: Optional[int] = None) -> bool:
         """Clique sur un élément de façon sécurisée"""
-        if not self.page:
+        if not self._dom_ops:
             raise RuntimeError("Le navigateur n'est pas initialisé")
-        
-        try:
-            # Attendre que l'élément soit présent et cliquable
-            element = await self.page.wait_for_selector(
-                selector,
-                timeout=(timeout or self.settings.element_wait_timeout) * 1000,
-                state='visible'
-            )
-            
-            if element:
-                await element.click()
-                logger.debug(f"Clic réussi sur: {selector}")
-                return True
-            else:
-                logger.warning(f"Élément non trouvé: {selector}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Erreur lors du clic sur '{selector}': {e}")
-            return False
+        return await self._dom_ops.safe_click(selector, timeout)
     
     async def safe_fill(self, selector: str, value: str, timeout: Optional[int] = None) -> bool:
         """Remplit un champ de façon sécurisée"""
-        if not self.page:
+        if not self._dom_ops:
             raise RuntimeError("Le navigateur n'est pas initialisé")
-        
-        try:
-            element = await self.page.wait_for_selector(
-                selector,
-                timeout=(timeout or self.settings.element_wait_timeout) * 1000,
-                state='visible'
-            )
-            
-            if element:
-                await element.fill(value)
-                logger.debug(f"Champ rempli: {selector}")
-                return True
-            else:
-                logger.warning(f"Champ non trouvé: {selector}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Erreur lors du remplissage de '{selector}': {e}")
-            return False
+        return await self._dom_ops.safe_fill(selector, value, timeout)
     
     async def get_page_title(self) -> Optional[str]:
         """Retourne le titre de la page courante"""
