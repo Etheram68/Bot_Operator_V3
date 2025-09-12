@@ -1013,16 +1013,21 @@ class MissionManager:
             for need_type, needed_quantity in other_needs.items():
                 vehicle_info = await self._find_vehicles_for_need_with_fallback(need_type, needed_quantity, vehicle_specs)
                 if vehicle_info:
-                    vehicles_info.append(vehicle_info)
+                    # Si c'est une liste (personnel générique), ajouter tous les éléments
+                    if isinstance(vehicle_info, list):
+                        vehicles_info.extend(vehicle_info)
+                    else:
+                        # Si c'est un dict (eau, personnel spécialisé), ajouter directement
+                        vehicles_info.append(vehicle_info)
             
         except Exception as e:
             logger.error(f"Erreur lors du calcul des véhicules avec fallback: {e}")
         
         return vehicles_info
     
-    async def _find_vehicles_for_need_with_fallback(self, need_type: str, needed_quantity: int, vehicle_specs: dict) -> dict:
+    async def _find_vehicles_for_need_with_fallback(self, need_type: str, needed_quantity: int, vehicle_specs: dict):
         """
-        Trouve le véhicule optimal et ses alternatives par capacité croissante.
+        Trouve les véhicules optimaux et leurs alternatives par capacité croissante.
         
         Args:
             need_type: Type de besoin ('water_l', 'personnel_pompiers', etc.)
@@ -1030,17 +1035,18 @@ class MissionManager:
             vehicle_specs: Spécifications des véhicules
             
         Returns:
-            dict: {primary, quantity, alternatives, need_type} ou None
+            dict ou list: Pour l'eau/personnel spécialisé: dict {primary, quantity, alternatives, need_type}
+                         Pour personnel générique: list de dict (peut être plusieurs véhicules)
         """
         if need_type == 'water_l':
             return await self._find_water_vehicle_with_fallback(needed_quantity, vehicle_specs)
         elif need_type.startswith('personnel_'):
             personnel_type = need_type.replace('personnel_', '')
             if personnel_type.isupper() and len(personnel_type) <= 4:
-                # Personnel spécialisé
+                # Personnel spécialisé - retourne un dict
                 return self._find_specialized_personnel_vehicle_with_fallback(personnel_type, needed_quantity, vehicle_specs)
             else:
-                # Personnel générique
+                # Personnel générique - retourne une liste
                 return await self._find_personnel_vehicle_with_fallback(personnel_type, needed_quantity, vehicle_specs)
         
         return None

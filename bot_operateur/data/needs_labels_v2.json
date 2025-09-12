@@ -2,69 +2,282 @@
   "_schema_version": "2.0",
   "_description": "Mapping des labels de besoins en véhicules depuis les missions vers les types internes",
   "_last_updated": "2025-08-29",
-  
   "vehicle_requirements": {
-    "AMBULANCE": ["Ambulances? requises?", "ambulances? nécessaires?", "(?<!s )Ambulance(?!s)", "ambulances"],
-    "AMBULANCE_TRANSPORT": ["Transport médical requis", "transport sanitaire"],
-    "PCDSM": ["PC DSM nécessaires?", "poste de commandement.{0,20}DSM"],
-    "CHEF_DE_GROUPE": ["Chefs? de groupes?(?! ou VLHR) .{0,20}requis", "Chefs? de groupes? ou VLHR requis", "Chef de groupe"],
-    "BEA": ["Moyens? [ÉEé]lévateurs? [Aa]ériens? requis", "BEA requis", "échelle aérienne"],
-    "FPT": ["[Ff]ourgons?\\s+d[’' ]incendies?\\s*(requis)?", "FPT\\s*(requis)?"],
-    "FPT_BEA": ["Fourgons d[’' ]incendie ou moyens elévateur aérien"],
-    "CCF": ["CCF\\s*(requis)?", "camions?[\\s-]*citernes?[\\s-]*feux"],
-    "VIMP": ["Spécialistes\\s+IMP\\s*(requis)?", "VIMP", "intervention\\s+milieu\\s+périlleux"],
-    "VGRIMP": ["VGRIMP", "groupe\\s+d'intervention.{0,20}milieu\\s+périlleux"],
-    "VIRT": ["Véhicules?\\s+risques?\\s+technologiques?\\s+requis", "\\bVIRT\\b(?!_PROBABILITY)"],
-    "VTU": ["VTU\\s*(requis)?", "véhicules?\\s+tout\\s+usage"],
-    "VSR": ["Véhicules?\\s+de\\s+secours\\s+routiers?\\s*(requis)?", "\\bVSR\\b", "secours\\s+routiers?\\s+(requis|nécessaires?)"],
-    "VPC": ["Véhicules?\\s+postes?\\s+de\\s+commandements?\\s*(requis)?", "\\bVPC\\s+(requis|nécessaires?)\\b", "postes?\\s+de\\s+commandements?\\s+(requis|nécessaires?)"],
-    "CITERNE": ["Camions?-citernes? requis", "citernes? nécessaires?", "véhicules? citernes?", "(?<!Chances qu'un )camion-citerne(?! soit requis)"],
-    "VAR": ["Assistance respiratoire requise", "\\bVAR\\b(?!_PROBABILITY)", "assistance ventilatoire"],
-    "VLHR": ["(?<!groupe ou )VLHR requis", "(?<!ou )VLHR nécessaires?", "véhicules? liaisons? hors route"],
-    "FMOGP": ["FMOGP nécessaires?", "fourgons? moyens généraux", "\\bFMOGP\\b(?!_PROBABILITY)"],
-    "MOTOPOMPES": ["Motopompes nécessaires?", "motopompes?"],
-    "CAMION_DEVIDOIRS": ["Camions? dévidoirs nécessaires?", "dévidoirs?"],
-    "BLS": ["BLS requis", "\\bBLS\\b(?!\\s+ou\\s+CSL)(?!_PROBABILITY)"],
-    "VPL": ["VPL requis", "\\bVPL\\b(?!_PROBABILITY)"],
-    "DRAGON": ["\\bDRAGON\\b", "hélicoptères", "soutien aérien(?! FAG)"],
-    "CARS_POLICE": ["Voitures? de police requises?", "voitures? de police nécessaires?", "véhicules? police", "véhicules? de police", "patrouilles? police", "voiture de patrouille"],
-    "CARS_DROGUE": ["Unités? cynophiles? requises?", "unité cynophiles?", "unité cynophile"],
-    "CHOUCAS": ["Soutien aérien FAG requis", "CHOUCAS", "hélicoptères? gendarmerie"],
-    "VR_CRS": ["VR nécessaires?", "véhicules? radios? CRS", "\\bVR\\b(?!_PROBABILITY)"],
-    "VCT": ["VCT nécessaires?", "\\bVCT\\b(?!_PROBABILITY)"],
-    "RAM": ["RAM nécessaires?", "\\bRAM\\b(?!_PROBABILITY)"],
-    "VAT": ["VAT nécessaires?", "\\bVAT\\b(?!_PROBABILITY)"],
-    "VTP_CRS": ["VTP nécessaires?", "véhicules? transports? personnel", "\\bVTP\\b(?!_PROBABILITY)"],
-    "BP": ["Barres?-ponts? nécessaires?", "ReBP", "remorques? barres? pont", "\\bBarres-ponts\\b(?!_PROBABILITY)"],
-    "ELE": ["ELE nécessaires?", "éclairages? mobiles?", "\\bELE\\b(?!_PROBABILITY)"],
-    "RLC": ["RLC", "Requis RLC"],
-    "FPT_SR": ["[Ff]ourgons? d'incendie.{0,30}secours routiers?", "FPT.{0,10}VSR", "pompiers?.{0,20}secours", "Fourgons d[’' ]incendie ou véhicules de secours routier requis"],
-    "BLS_CSL": ["BLS.{0,10}CSL", "BLS\\s+ou\\s+CSL"],
-    "CARS_POLICE_PATROUILLE_VR": ["[Vv]éhicules? patrouilles?.{0,20}VR", "police.{0,20}radio"],
-    "CARS_POLICE_VR": ["[Vv]oitures? police.{0,20}VR", "police.{0,20}véhicules? radio", "[Vv]oitures? de police ou VR"],
-    "FPT_SR_BEA": ["[Ff]ourgons?.{0,30}secours.{0,30}échelles?", "pompiers?.{0,40}aériens?"],
-    "CEEP": ["Cellule épuisement nécessaire", "Cellule épuisement"],
-    "WATER_REQUIRED": ["Eau nécessaire", "eau requise", "litres? d'eau"],
-    "MIN_PUMP_CAPACITY": ["Min\\. Capacité de la pompe", "Capacité minimum.{0,10}pompe", "capacité pompe minimum"],
-    "INTENSIVE_CARE": ["Soins intensifs", "réanimation", "intensive care"],
-    "BURN_UNIT": ["Unité grands brûlés", "grands brûlés", "burn unit", "brûlé", "brule"],
-    "PEDIATRIC": ["Pédiatrie", "pediatrie", "enfant", "enfants"],
-    "HELICOPTER": ["Hélicoptères? (nécessaires?|requis)", "helicoptere", "hélico", "samu"],
-    "RESCUE_DIRECTOR": ["(?<!Chances qu'un )Directeur des [Ss]ecours [Mm]édicaux?(?! soit requis)", "DSM requis", "directeur secours", "chef intervention"],
-    "DRAGON_PROBABILITY": ["Probabilité qu'un soutien aérien soit requis"],
-    "CHOUCAS_PROBABILITY": ["Probabilité qu'un soutien aérien FAG soit requis"],
-    "VIRT_PROBABILITY": ["Chances qu'un véhicule risques? technologiques? soit requis"],
-    "VLHR_PROBABILITY": ["Chances qu'un Chef de Groupe soit demandé"],
-    "CHEF_DE_GROUPE_PROBABILITY": ["Chances qu'un Chef de Groupe soit demandé"],
-    "RESCUE_DIRECTOR_PROBABILITY": ["Chances qu'un Directeur des Secours Médicaux soit requis"],
-    "DASH": ["Grands avions bombardiers d'eau nécessaire"],
-    "PELICAN": ["Pélican nécessaire"],
-    "HBE": ["Hélicoptères bombardiers d'eau nécessaire"],
-    "VB": ["Requis véhicule banalisé"],
-    "VIC": ["Requis véhicule d'identification criminelle"],
-    "ERI": ["Requis équipes d'intervention rapide"]
+    "AMBULANCE": [
+      "Ambulances? requises?",
+      "ambulances? nécessaires?",
+      "(?<!s )Ambulance(?!s)",
+      "ambulances"
+    ],
+    "AMBULANCE_TRANSPORT": [
+      "Transport médical requis",
+      "transport sanitaire"
+    ],
+    "PCDSM": [
+      "PC DSM nécessaires?",
+      "poste de commandement.{0,20}DSM"
+    ],
+    "CHEF_DE_GROUPE": [
+      "Chefs? de groupes?(?! ou VLHR)\\s*\\s*.*?\\s*requis",
+      "Chefs? de groupes? ou VLHR requis",
+      "Chef de groupe"
+    ],
+    "BEA": [
+      "Moyens? [ÉEé]lévateurs? [Aa]ériens? requis",
+      "BEA requis",
+      "échelle aérienne",
+      "[éeÉE]chelles? a[éeÉE]riennes?",
+      "moyens [éeÉE]l[éeÉE]vateurs"
+    ],
+    "FPT": [
+      "[Ff]ourgons?\\s+d[’' ]incendies?\\s*(requis)?",
+      "FPT\\s*(requis)?"
+    ],
+    "FPT_BEA": [
+      "Fourgons d[’' ]incendie ou moyens elévateur aérien"
+    ],
+    "CCF": [
+      "CCF\\s*(requis)?",
+      "camions?[\\s-]*citernes?[\\s-]*feux"
+    ],
+    "VIMP": [
+      "Spécialistes\\s+IMP\\s*(requis)?",
+      "VIMP",
+      "intervention\\s+milieu\\s+périlleux"
+    ],
+    "VGRIMP": [
+      "VGRIMP",
+      "groupe\\s+d'intervention.{0,20}milieu\\s+périlleux"
+    ],
+    "VIRT": [
+      "Véhicules?\\s+risques?\\s+technologiques?\\s+requis",
+      "\\bVIRT\\b(?!_PROBABILITY)"
+    ],
+    "VTU": [
+      "VTU\\s*(requis)?",
+      "véhicules?\\s+tout\\s+usage"
+    ],
+    "VSR": [
+      "Véhicules?\\s+de\\s+secours\\s+routiers?\\s*(requis)?",
+      "\\bVSR\\b",
+      "secours\\s+routiers?\\s+(requis|nécessaires?)"
+    ],
+    "VPC": [
+      "Véhicules?\\s+postes?\\s+de\\s+commandements?\\s*(requis)?",
+      "\\bVPC\\s+(requis|n[éeÉE]cessaires?)\\b",
+      "postes?\\s+de\\s+commandements?\\s+(requis|nécessaires?)",
+      "postes? de commandements?",
+      "v[éeÉE]hicules? postes?"
+    ],
+    "CITERNE": [
+      "Camions?-citernes? requis",
+      "citernes? nécessaires?",
+      "véhicules? citernes?",
+      "(?<!Chances qu'un )camion-citerne(?! soit requis)"
+    ],
+    "VAR": [
+      "Assistance respiratoire requise",
+      "\\bVAR\\b(?!_PROBABILITY)",
+      "assistance ventilatoire"
+    ],
+    "VLHR": [
+      "(?<!groupe ou )VLHR requis",
+      "(?<!ou )VLHR nécessaires?",
+      "véhicules? liaisons? hors route"
+    ],
+    "FMOGP": [
+      "FMOGP nécessaires?",
+      "fourgons? moyens généraux",
+      "\\bFMOGP\\b(?!_PROBABILITY)"
+    ],
+    "MOTOPOMPES": [
+      "Motopompes nécessaires?",
+      "motopompes?"
+    ],
+    "CAMION_DEVIDOIRS": [
+      "Camions? dévidoirs nécessaires?",
+      "dévidoirs?"
+    ],
+    "BLS": [
+      "BLS requis",
+      "\\bBLS\\b(?!\\s+ou\\s+CSL)(?!_PROBABILITY)"
+    ],
+    "VPL": [
+      "VPL requis",
+      "\\bVPL\\b(?!_PROBABILITY)"
+    ],
+    "DRAGON": [
+      "\\bDRAGON\\b",
+      "hélicoptères",
+      "soutien aérien(?! FAG)"
+    ],
+    "CARS_POLICE": [
+      "Voitures? de police requises?",
+      "voitures? de police nécessaires?",
+      "véhicules? police",
+      "véhicules? de police",
+      "patrouilles? police",
+      "voiture de patrouille",
+      "voitures? de patrouilles?",
+      "\\d+\\s+voitures?\\s+de\\s+patrouilles?",
+      "\\d+\\s+voiture\\s+de\\s+patrouille"
+    ],
+    "CARS_DROGUE": [
+      "Unités? cynophiles? requises?",
+      "unité cynophiles?",
+      "unité cynophile",
+      "\\d+\\s+unités?\\s+cynophiles?",
+      "\\d+\\s+unité\\s+cynophile"
+    ],
+    "CHOUCAS": [
+      "Soutien aérien FAG requis",
+      "CHOUCAS",
+      "hélicoptères? gendarmerie"
+    ],
+    "VR_CRS": [
+      "VR nécessaires?",
+      "véhicules? radios? CRS",
+      "\\bVR\\b(?!_PROBABILITY)"
+    ],
+    "VCT": [
+      "VCT nécessaires?",
+      "\\bVCT\\b(?!_PROBABILITY)"
+    ],
+    "RAM": [
+      "RAM nécessaires?",
+      "\\bRAM\\b(?!_PROBABILITY)"
+    ],
+    "VAT": [
+      "VAT nécessaires?",
+      "\\bVAT\\b(?!_PROBABILITY)"
+    ],
+    "VTP_CRS": [
+      "VTP nécessaires?",
+      "véhicules? transports? personnel",
+      "\\bVTP\\b(?!_PROBABILITY)"
+    ],
+    "BP": [
+      "Barres?-ponts? nécessaires?",
+      "ReBP",
+      "remorques? barres? pont",
+      "\\bBarres?-ponts?\\b(?!_PROBABILITY)",
+      "\\d+\\s+Barres?-ponts?",
+      "\\d+\\s+Barre-pont"
+    ],
+    "ELE": [
+      "ELE nécessaires?",
+      "éclairages? mobiles?",
+      "\\bELE\\b(?!_PROBABILITY)",
+      "[éeÉE]clairages? mobiles?"
+    ],
+    "RLC": [
+      "RLC",
+      "Requis RLC"
+    ],
+    "FPT_SR": [
+      "[Ff]ourgons? d'incendie.{0,30}secours routiers?",
+      "FPT.{0,10}VSR",
+      "pompiers?.{0,20}secours",
+      "Fourgons d[’' ]incendie ou véhicules de secours routier requis"
+    ],
+    "BLS_CSL": [
+      "BLS.{0,10}CSL",
+      "BLS\\s+ou\\s+CSL"
+    ],
+    "CARS_POLICE_PATROUILLE_VR": [
+      "[Vv]éhicules? patrouilles?.{0,20}VR",
+      "police.{0,20}radio"
+    ],
+    "CARS_POLICE_VR": [
+      "[Vv]oitures? police.{0,20}VR",
+      "police.{0,20}véhicules? radio",
+      "[Vv]oitures? de police ou VR"
+    ],
+    "FPT_SR_BEA": [
+      "[Ff]ourgons?.{0,30}secours.{0,30}échelles?",
+      "pompiers?.{0,40}aériens?"
+    ],
+    "CEEP": [
+      "Cellule épuisement nécessaire",
+      "Cellule épuisement"
+    ],
+    "WATER_REQUIRED": [
+      "Eau nécessaire",
+      "eau requise",
+      "litres? d'eau"
+    ],
+    "MIN_PUMP_CAPACITY": [
+      "Min\\. Capacité de la pompe",
+      "Capacité minimum.{0,10}pompe",
+      "capacité pompe minimum"
+    ],
+    "INTENSIVE_CARE": [
+      "Soins intensifs",
+      "réanimation",
+      "intensive care"
+    ],
+    "BURN_UNIT": [
+      "Unité grands brûlés",
+      "grands brûlés",
+      "burn unit",
+      "brûlé",
+      "brule"
+    ],
+    "PEDIATRIC": [
+      "Pédiatrie",
+      "pediatrie",
+      "enfant",
+      "enfants"
+    ],
+    "HELICOPTER": [
+      "Hélicoptères? (nécessaires?|requis)",
+      "helicoptere",
+      "hélico",
+      "samu"
+    ],
+    "RESCUE_DIRECTOR": [
+      "(?<!Chances qu'un )Directeur des [Ss]ecours [Mm]édicaux?(?! soit requis)",
+      "DSM requis",
+      "directeur secours",
+      "chef intervention"
+    ],
+    "DRAGON_PROBABILITY": [
+      "Probabilité qu'un soutien aérien soit requis"
+    ],
+    "CHOUCAS_PROBABILITY": [
+      "Probabilité qu'un soutien aérien FAG soit requis"
+    ],
+    "VIRT_PROBABILITY": [
+      "Chances qu'un véhicule risques? technologiques? soit requis"
+    ],
+    "VLHR_PROBABILITY": [
+      "Chances qu'un Chef de Groupe soit demandé"
+    ],
+    "CHEF_DE_GROUPE_PROBABILITY": [
+      "Chances qu'un Chef de Groupe soit demandé"
+    ],
+    "RESCUE_DIRECTOR_PROBABILITY": [
+      "Chances qu'un Directeur des Secours Médicaux soit requis"
+    ],
+    "DASH": [
+      "Grands avions bombardiers d'eau nécessaire"
+    ],
+    "PELICAN": [
+      "Pélican nécessaire"
+    ],
+    "HBE": [
+      "Hélicoptères bombardiers d'eau nécessaire"
+    ],
+    "VB": [
+      "Requis véhicule banalisé"
+    ],
+    "VIC": [
+      "Requis véhicule d'identification criminelle"
+    ],
+    "ERI": [
+      "Requis équipes d'intervention rapide"
+    ]
   },
-
   "resource_indicators": {
     "WATER_REQUIRED": "Eau nécessaire",
     "MIN_PUMP_CAPACITY": "Min. Capacité de la pompe",
@@ -82,7 +295,6 @@
     "CHEF_DE_GROUPE_PROBABILITY": "Chances qu'un Chef de Groupe soit demandé",
     "RESCUE_DIRECTOR_PROBABILITY": "Chances qu'un Directeur des Secours Médicaux soit requis"
   },
-
   "probability_thresholds": {
     "CITERNE_PROBABILITY": 30,
     "VAR_PROBABILITY": 25,
