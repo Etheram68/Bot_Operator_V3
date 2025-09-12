@@ -235,13 +235,9 @@ class MissionManager:
             # Calculer les besoins en véhicules selon la stratégie
             vehicle_needs = await strategy.get_vehicle_needs(mission)
             
-            if not vehicle_needs:
-                logger.warning(f"Aucun besoin en véhicule identifié pour mission {mission.id}")
-                return False
+            logger.info(f"📋 Besoins identifiés par stratégie: {vehicle_needs}")
             
-            logger.info(f"📋 Besoins identifiés: {vehicle_needs}")
-            
-            # Vérifier les véhicules manquants depuis l'alerte et recouper avec les besoins identifiés
+            # Vérifier les véhicules manquants depuis l'alerte MÊME SI la stratégie ne trouve rien
             try:
                 missing_vehicles_needs = await self._extract_missing_vehicles_from_alert(mission)
                 
@@ -340,6 +336,11 @@ class MissionManager:
                             "secondary": []
                         }
                         logger.debug("Utilisation du mapping AMBULANCE_TRANSPORT par défaut")
+            
+            # Vérification finale : s'assurer qu'il y a des besoins à satisfaire
+            if not vehicle_needs:
+                logger.warning(f"Aucun besoin en véhicule identifié pour mission {mission.id} (ni par stratégie, ni par alertes)")
+                return False
             
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
             # Passer alert_override_types et constrained_vehicles si définis
@@ -907,7 +908,10 @@ class MissionManager:
     def _parse_missing_personnel_text(self, text: str) -> dict:
         """
         Parse un texte de personnel manquant pour extraire les types et quantités.
-        Utilise la configuration JSON pour les patterns.
+        Supporte plusieurs formats:
+        - Format spécialisé: "3x PLG (Plongeur)"
+        - Format simple: "2 Pompiers", "5 Policiers" 
+        - Format code court: "1 OPJ", "2 SAV"
         
         Args:
             text: Texte à parser
@@ -918,6 +922,7 @@ class MissionManager:
         import re
         
         personnel_needs = {}
+        logger.debug(f"Parsing personnel text: '{text}'")
         
         # S'assurer que la configuration est chargée
         if not hasattr(self, 'missing_needs_config') or not self.missing_needs_config:
@@ -925,7 +930,7 @@ class MissionManager:
         
         parsing_patterns = self.missing_needs_config.get("parsing_patterns", {})
         
-        # 1. D'abord essayer les patterns de personnel spécialisé (format "3x PLG (Plongeur)")
+        # 1. Format spécialisé avec 'x': "3x PLG (Plongeur)", "2x SAV"
         personnel_pattern = parsing_patterns.get("personnel_pattern", r'(\d+)x\s+([A-Z][A-Z0-9]*)\s*(?:\([^)]+\))?')
         matches = re.findall(personnel_pattern, text, re.IGNORECASE)
         
@@ -936,19 +941,50 @@ class MissionManager:
             personnel_needs[personnel_code] = personnel_needs.get(personnel_code, 0) + quantity
             logger.debug(f"Personnel spécialisé parsé: {quantity}x {personnel_code}")
         
-        # 2. Si aucun personnel spécialisé trouvé, essayer les patterns génériques
+        # 2. Format simple avec mots complets: "2 Pompiers", "5 Policiers" 
         if not personnel_needs:
             personnel_generic_patterns = parsing_patterns.get("personnel_generic_patterns", {})
-            logger.debug(f"Patterns génériques disponibles: {personnel_generic_patterns}")
+            logger.debug(f"Test patterns génériques sur: '{text}'")
             
             for personnel_type, pattern in personnel_generic_patterns.items():
-                logger.debug(f"Test pattern '{personnel_type}': '{pattern}' sur texte '{text}'")
+                logger.debug(f"Test pattern '{personnel_type}': '{pattern}'")
                 match = re.search(pattern, text, re.IGNORECASE)
-                logger.debug(f"Résultat match: {match}")
                 if match:
                     quantity = int(match.group(1))
                     personnel_needs[personnel_type] = personnel_needs.get(personnel_type, 0) + quantity
                     logger.info(f"Personnel générique parsé: {quantity} {personnel_type}")
+        
+        # 3. Format codes courts sans 'x': "1 OPJ", "2 PLG", "3 SAV"
+        if not personnel_needs:
+            # Pattern pour codes courts (2-4 lettres majuscules)
+            code_pattern = r'(\d+)\s+([A-Z]{2,4})(?:\s|$)'
+            matches = re.findall(code_pattern, text, re.IGNORECASE)
+            
+            for match in matches:
+                quantity = int(match[0])
+                personnel_code = match[1].upper()
+                
+                # Vérifier si c'est un code personnel connu
+                personnel_mapping = self.missing_needs_config.get("personnel_mapping", {})
+                if personnel_code in personnel_mapping:
+                    personnel_needs[personnel_code] = personnel_needs.get(personnel_code, 0) + quantity
+                    logger.info(f"Personnel code court parsé: {quantity} {personnel_code}")
+        
+        # 4. Formats longs potentiels: "1 Officier de police judiciaire"
+        if not personnel_needs:
+            extended_patterns = {
+                'OPJ': r'(\d+)\s+[Oo]fficiers?\s+de\s+police\s+judiciaires?',
+                'CHEF': r'(\d+)\s+[Cc]hefs?\s+d[\'\u2019]intervention',
+                'MED': r'(\d+)\s+[Mm]édecins?',
+                'INF': r'(\d+)\s+[Ii]nfirmiers?'
+            }
+            
+            for personnel_code, pattern in extended_patterns.items():
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    quantity = int(match.group(1))
+                    personnel_needs[personnel_code] = personnel_needs.get(personnel_code, 0) + quantity
+                    logger.info(f"Personnel format long parsé: {quantity} {personnel_code}")
                     break
         
         if not personnel_needs:
@@ -1065,9 +1101,10 @@ class MissionManager:
         # Retourner seulement les types de véhicules
         return [v['type'] for v in water_vehicles]
     
-    async def _find_personnel_vehicle_with_fallback(self, personnel_type: str, needed_quantity: int, vehicle_specs: dict) -> dict:
+    async def _find_personnel_vehicle_with_fallback(self, personnel_type: str, needed_quantity: int, vehicle_specs: dict) -> list:
         """
-        Trouve le véhicule de personnel optimal et ses alternatives par capacité croissante.
+        Trouve les véhicules de personnel optimaux pour satisfaire le besoin.
+        Retourne TOUS les véhicules de la solution optimale.
         
         Args:
             personnel_type: Type de personnel ('pompiers', 'policiers', 'medical')
@@ -1075,27 +1112,29 @@ class MissionManager:
             vehicle_specs: Spécifications des véhicules
             
         Returns:
-            dict: {primary: str, quantity: int, alternatives: list, need_type: str}
+            list: Liste de dict {primary: str, quantity: int, alternatives: list, need_type: str}
         """
-        # Calculer le véhicule optimal comme avant
+        # Calculer la solution optimale complète
         vehicles_needed = await self._calculate_personnel_vehicles(personnel_type, needed_quantity, vehicle_specs)
         
         if not vehicles_needed:
-            return None
+            return []
         
-        # Prendre le premier véhicule comme primaire
-        primary_vehicle = list(vehicles_needed.keys())[0]
-        primary_quantity = vehicles_needed[primary_vehicle]
+        vehicle_list = []
         
-        # Générer les alternatives par capacité croissante
-        alternatives = self._generate_personnel_alternatives(personnel_type, needed_quantity, vehicle_specs, primary_vehicle)
+        # Créer une entrée pour chaque véhicule de la solution
+        for vehicle_type, quantity in vehicles_needed.items():
+            # Générer les alternatives pour ce véhicule spécifique
+            alternatives = self._generate_personnel_alternatives(personnel_type, needed_quantity, vehicle_specs, vehicle_type)
+            
+            vehicle_list.append({
+                'primary': vehicle_type,
+                'quantity': quantity,
+                'alternatives': alternatives,
+                'need_type': f'personnel_{personnel_type}'
+            })
         
-        return {
-            'primary': primary_vehicle,
-            'quantity': primary_quantity,
-            'alternatives': alternatives,
-            'need_type': f'personnel_{personnel_type}'
-        }
+        return vehicle_list
     
     def _find_specialized_personnel_vehicle_with_fallback(self, personnel_code: str, needed_quantity: int, vehicle_specs: dict) -> dict:
         """

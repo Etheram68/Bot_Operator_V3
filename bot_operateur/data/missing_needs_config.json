@@ -58,6 +58,12 @@
       "vehicles": ["VIRT"],
       "priority": ["VIRT"],
       "description": "Personnel de radioprotection"
+    },
+    "OPJ": {
+      "name": "Officier de Police Judiciaire",
+      "vehicles": ["GN", "PN", "VR"],
+      "priority": ["GN", "PN", "VR"],
+      "description": "Officier de police judiciaire pour enquêtes et procédures"
     }
   },
 
