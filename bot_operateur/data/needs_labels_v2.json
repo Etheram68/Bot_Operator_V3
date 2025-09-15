@@ -276,6 +276,22 @@
     ],
     "ERI": [
       "Requis équipes d'intervention rapide"
+    ],
+    "VIRP": [
+      "VIRP requis",
+      "VIRP"
+    ],
+    "VLCM": [
+      "VLCM requis",
+      "VLCM"
+    ],
+    "VIM": [
+      "VIM requis",
+      "VIM"
+    ],
+    "VSA": [
+      "VSA requis",
+      "VSA"
     ]
   },
   "resource_indicators": {

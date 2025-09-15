@@ -61,8 +61,8 @@
     },
     "OPJ": {
       "name": "Officier de Police Judiciaire",
-      "vehicles": ["GN", "PN", "VR"],
-      "priority": ["GN", "PN", "VR"],
+      "vehicles": ["VB"],
+      "priority": ["VB"],
       "description": "Officier de police judiciaire pour enquêtes et procédures"
     }
   },

@@ -162,6 +162,22 @@
       "HBE": {
         "primary": ["HBE"],
         "secondary": []
+      },
+      "VIRP": {
+        "primary": ["VIRP"],
+        "secondary": []
+      },
+      "VLCM": {
+        "primary": ["VLCM"],
+        "secondary": []
+      },
+      "VIM": {
+        "primary": ["VIM"],
+        "secondary": []
+      },
+      "VSA": {
+        "primary": ["VSA"],
+        "secondary": []
       }
     },
 
