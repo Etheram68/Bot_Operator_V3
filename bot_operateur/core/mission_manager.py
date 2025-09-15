@@ -358,9 +358,15 @@ class MissionManager:
                 logger.warning(f"❌ Aucun véhicule disponible pour satisfaire les besoins de la mission {mission.id}")
                 return False
             
-            # Vérifier si trop de véhicules manquent selon le seuil VEHICLE_THRESHOLD
-            if missing_count > self.settings.vehicle_threshold:
-                logger.warning(f"🚫 Mission {mission.id} - trop de véhicules manquants ({missing_count} > {self.settings.vehicle_threshold}). Passage à la mission suivante.")
+            # Vérifier si trop de personnel spécialisé manque selon le seuil PERSONNEL_THRESHOLD
+            specialized_personnel_missing = await self._count_missing_specialized_personnel(mission)
+            if specialized_personnel_missing > self.settings.personnel_threshold:
+                logger.warning(f"🚫 Mission {mission.id} - trop de personnel spécialisé manquant ({specialized_personnel_missing} > {self.settings.personnel_threshold}). Mission critique, passage à la suivante.")
+                return False
+            
+            # Vérifier si trop de véhicules manquent selon le seuil DEPLOYMENT_THRESHOLD
+            if missing_count > self.settings.deployment_threshold:
+                logger.warning(f"🚫 Mission {mission.id} - trop de véhicules manquants ({missing_count} > {self.settings.deployment_threshold}). Passage à la mission suivante.")
                 return False
             
             # Déployer immédiatement
@@ -991,6 +997,45 @@ class MissionManager:
             logger.warning(f"Aucun personnel reconnu dans: '{text}'")
         
         return personnel_needs
+    
+    async def _count_missing_specialized_personnel(self, mission: 'Mission') -> int:
+        """
+        Compte le nombre total de personnel spécialisé manquant.
+        
+        Personnel spécialisé : PLG, SAV, GRIMP, CYN, MED, INF, CHEF, PSY, RAD, OPJ
+        (tout sauf pompiers/policiers génériques)
+        
+        Args:
+            mission: Mission concernée
+            
+        Returns:
+            int: Nombre total de spécialistes manquants
+        """
+        specialized_missing_count = 0
+        
+        try:
+            # Extraire les besoins en personnel depuis les alertes
+            other_needs = await self._extract_other_missing_needs_from_alert(mission)
+            
+            # Liste des codes de personnel spécialisé (excluant générique)
+            specialized_personnel_codes = {
+                'PLG', 'SAV', 'GRI', 'CYN', 'MED', 'INF', 'CHEF', 'PSY', 'RAD', 'OPJ'
+            }
+            
+            # Compter uniquement le personnel spécialisé
+            for need_type, quantity in other_needs.items():
+                # Vérifier si c'est du personnel spécialisé (code direct)
+                if need_type in specialized_personnel_codes:
+                    specialized_missing_count += quantity
+                    logger.debug(f"Personnel spécialisé manquant: {quantity}x {need_type}")
+            
+            if specialized_missing_count > 0:
+                logger.info(f"🔬 Total personnel spécialisé manquant: {specialized_missing_count}")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du comptage du personnel spécialisé manquant: {e}")
+        
+        return specialized_missing_count
     
     async def _calculate_vehicles_for_missing_needs_with_fallback(self, other_needs: dict) -> list:
         """
@@ -1878,7 +1923,7 @@ class MissionManager:
         if not personnel_vehicles:
             return None
         
-        VEHICLE_THRESHOLD = self.settings.vehicle_threshold  # Seuil critique configuré via .env
+        OPTIMIZATION_THRESHOLD = self.settings.optimization_threshold  # Seuil pour optimisation véhicules
         
         # Limiter le nombre de véhicules de chaque type pour éviter les combinaisons absurdes
         max_vehicles_per_type = max(2, (target_personnel // min(v['crew_size'] for v in personnel_vehicles)) + 1)
@@ -1919,7 +1964,7 @@ class MissionManager:
                                     if total_personnel >= target_personnel:
                                         combinations_to_test.append(combination)
         
-        # Évaluer toutes les combinaisons avec la logique de seuil VEHICLE_THRESHOLD
+        # Évaluer toutes les combinaisons avec la logique de seuil OPTIMIZATION_THRESHOLD
         for combination in combinations_to_test:
             total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
             
@@ -1927,13 +1972,13 @@ class MissionManager:
                 excess = total_personnel - target_personnel
                 vehicle_count = sum(combination.values())
                 
-                # LOGIQUE DU SEUIL : Si une solution nécessite > VEHICLE_THRESHOLD véhicules,
+                # LOGIQUE DU SEUIL : Si une solution nécessite > OPTIMIZATION_THRESHOLD véhicules,
                 # privilégier les solutions avec 1 seul véhicule même si plus d'excédent
                 is_single_vehicle = vehicle_count == 1
-                is_multi_vehicle_over_threshold = vehicle_count > VEHICLE_THRESHOLD
+                is_multi_vehicle_over_threshold = vehicle_count > OPTIMIZATION_THRESHOLD
                 
                 # Critères d'évaluation prioritaires :
-                # 1. Éviter les solutions avec > VEHICLE_THRESHOLD véhicules si possible
+                # 1. Éviter les solutions avec > OPTIMIZATION_THRESHOLD véhicules si possible
                 # 2. Privilégier les véhicules uniques
                 # 3. Minimiser l'excédent personnel
                 # 4. Minimiser le nombre de véhicules
@@ -2060,7 +2105,7 @@ class MissionManager:
             return vehicles_needed
         
         # Appliquer la logique de fallback par capacité (comme pour personnel générique)
-        VEHICLE_THRESHOLD = self.settings.vehicle_threshold  # Même seuil que pour le personnel générique
+        OPTIMIZATION_THRESHOLD = self.settings.optimization_threshold  # Seuil pour optimisation véhicules
         personnel_name = personnel_config.get("name", personnel_code)
         
         # Créer la liste des véhicules avec leurs capacités
@@ -2122,20 +2167,20 @@ class MissionManager:
                 logger.info(f"   - Personnel fourni: {total_personnel}, Excédent: {excess}")
                 return vehicles_needed
         
-        # STRATÉGIE SECONDAIRE: Combinaison multiple avec seuil VEHICLE_THRESHOLD
+        # STRATÉGIE SECONDAIRE: Combinaison multiple avec seuil OPTIMIZATION_THRESHOLD
         # Utiliser le véhicule prioritaire avec le meilleur ratio
         best_vehicle = specialized_vehicles[0]  # Premier = plus prioritaire
         vehicles_count = max(1, (personnel_needed + best_vehicle['crew_size'] - 1) // best_vehicle['crew_size'])
         
-        # Vérifier le seuil VEHICLE_THRESHOLD
-        if vehicles_count > VEHICLE_THRESHOLD:
+        # Vérifier le seuil OPTIMIZATION_THRESHOLD
+        if vehicles_count > OPTIMIZATION_THRESHOLD:
             # Chercher un véhicule avec plus de capacité même si moins prioritaire
             for vehicle in specialized_vehicles:
                 alternative_count = max(1, (personnel_needed + vehicle['crew_size'] - 1) // vehicle['crew_size'])
-                if alternative_count <= VEHICLE_THRESHOLD:
+                if alternative_count <= OPTIMIZATION_THRESHOLD:
                     vehicles_count = alternative_count
                     best_vehicle = vehicle
-                    logger.info(f"👨‍💼 Utilisation de {vehicle['type']} pour éviter {vehicles_count} véhicules (seuil: {VEHICLE_THRESHOLD})")
+                    logger.info(f"👨‍💼 Utilisation de {vehicle['type']} pour éviter {vehicles_count} véhicules (seuil: {OPTIMIZATION_THRESHOLD})")
                     break
         
         vehicles_needed = {best_vehicle['type']: vehicles_count}

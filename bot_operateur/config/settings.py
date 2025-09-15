@@ -41,7 +41,10 @@ class Settings(BaseModel):
     mission_cooldown: int = Field(default=5, description="Cooldown entre missions (ultra-optimisé)")
     
     # Optimisation des déploiements
-    vehicle_threshold: int = Field(default=3, description="Seuil critique de véhicules pour forcer l'utilisation d'un véhicule plus gros")
+    vehicle_threshold: int = Field(default=3, description="DEPRECATED: Utiliser optimization_threshold et deployment_threshold")
+    optimization_threshold: int = Field(default=3, description="Seuil pour privilégier un gros véhicule vs plusieurs petits")
+    deployment_threshold: int = Field(default=5, description="Seuil de véhicules manquants pour skip mission")
+    personnel_threshold: int = Field(default=1, description="Seuil critique de personnel spécialisé manquant pour skip mission")
     
     @classmethod
     def from_env(cls, env_file: str = ".env") -> "Settings":
@@ -75,7 +78,10 @@ class Settings(BaseModel):
             max_concurrent_missions=int(os.getenv("MAX_CONCURRENT_MISSIONS", "5")),
             mission_cooldown=int(os.getenv("MISSION_COOLDOWN", "5")),
             
-            vehicle_threshold=int(os.getenv("VEHICLE_THRESHOLD", "3"))
+            vehicle_threshold=int(os.getenv("VEHICLE_THRESHOLD", "3")),
+            optimization_threshold=int(os.getenv("OPTIMIZATION_THRESHOLD", os.getenv("VEHICLE_THRESHOLD", "3"))),
+            deployment_threshold=int(os.getenv("DEPLOYMENT_THRESHOLD", "5")),
+            personnel_threshold=int(os.getenv("PERSONNEL_THRESHOLD", "1"))
         )
     
     def validate_credentials(self) -> bool:
