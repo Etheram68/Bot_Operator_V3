@@ -1,0 +1,78 @@
+# Fichiers à exclure de l'image Docker
+
+# Données et caches
+data/
+logs/
+cache/
+*.log
+
+# Configuration locale
+.env
+.env.local
+.env.*
+!.env.docker
+
+# Développement
+.git/
+.gitignore
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+
+# Tests et debug
+tests/
+test_*.py
+*_test.py
+debug_*.py
+*_debug.py
+pytest.ini
+.pytest_cache/
+
+# Documentation de développement
+README.md
+CHANGELOG.md
+docs/development/
+
+# Fichiers temporaires
+*.tmp
+*.temp
+*.log
+*.backup
+*.bak
+*.old
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile.*
+docker-compose.*.yml
+!docker-compose.yml
+
+# Scripts de développement
+scripts/dev-*
+scripts/test-*
+
+# Monitoring local
+monitoring/
+node_modules/
+
+# Backup files
+*.bak
+*.backup

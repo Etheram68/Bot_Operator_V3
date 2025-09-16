@@ -34,7 +34,7 @@
         "secondary": []
       },
       "CITERNE_CONSTRAINED": {
-        "primary": ["CCGC", "CCF(S)", "FMOGP", "CCR(SR)"],
+        "primary": ["CCGC", "CCF(S)", "FMOGP"],
         "secondary": []
       },
       "CCGC_CONSTRAINED": {
@@ -54,7 +54,7 @@
         "secondary": []
       },
       "CITERNE": {
-        "primary": ["CCGC", "CCF(S)", "FMOGP", "CCR(SR)"],
+        "primary": ["CCGC", "CCF(S)", "FMOGP"],
         "secondary": []
       },
       "VLHR": {

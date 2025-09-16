@@ -108,7 +108,7 @@
     ],
     "DRAGON": [
       "\\bDRAGON\\b",
-      "hélicoptères",
+      "\\bhélicoptères\\b(?!.*nécessaires?|.*requis)",
       "soutien aérien(?! FAG)"
     ],
     "CARS_POLICE": [
@@ -119,15 +119,15 @@
       "patrouilles? police",
       "voiture de patrouille",
       "voitures? de patrouilles?",
-      "\\d+\\s+voitures?\\s+de\\s+patrouilles?",
-      "\\d+\\s+voiture\\s+de\\s+patrouille"
+      "\\d+[ \\t]+voitures?[ \\t]+de[ \\t]+patrouilles?",
+      "\\d+[ \\t]+voiture[ \\t]+de[ \\t]+patrouille"
     ],
     "CARS_DROGUE": [
       "Unités? cynophiles? requises?",
       "unité cynophiles?",
       "unité cynophile",
-      "\\d+\\s+unités?\\s+cynophiles?",
-      "\\d+\\s+unité\\s+cynophile"
+      "\\d+[ \\t]+unités?[ \\t]+cynophiles?",
+      "\\d+[ \\t]+unité[ \\t]+cynophile"
     ],
     "CHOUCAS": [
       "Soutien aérien FAG requis",
@@ -161,8 +161,8 @@
       "ReBP",
       "remorques? barres? pont",
       "\\bBarres?-ponts?\\b(?!_PROBABILITY)",
-      "\\d+\\s+Barres?-ponts?",
-      "\\d+\\s+Barre-pont"
+      "\\d+[ \\t]+Barres?-ponts?",
+      "\\d+[ \\t]+Barre-pont"
     ],
     "ELE": [
       "ELE nécessaires?",
@@ -230,10 +230,8 @@
       "enfants"
     ],
     "HELICOPTER": [
-      "Hélicoptères? (nécessaires?|requis)",
-      "helicoptere",
-      "hélico",
-      "samu"
+      "Hélicoptères?(?!.*bombardiers).*(nécessaires?|requis)",
+      "helicoptere"
     ],
     "RESCUE_DIRECTOR": [
       "(?<!Chances qu'un )Directeur des [Ss]ecours [Mm]édicaux?(?! soit requis)",
