@@ -260,17 +260,43 @@ class RequirementParser:
         if all(len(group) == 1 for group in type_groups.values()):
             return requirements
         
-        # Définir les overlaps connus (spécifique -> générique)
+        # Définir la hiérarchie de spécificité (plus spécifique → moins spécifique)
+        specificity_hierarchy = {
+            # Super-combinaisons (priorité maximale)
+            'FPT_SR_BEA': 100,  # "Fourgons, secours routier ou moyens elévateur aérien"
+
+            # Combinaisons doubles (priorité élevée)
+            'FPT_SR': 90,   # "Fourgons d'incendie ou véhicules de secours routier"
+            'FPT_BEA': 90,  # "Fourgons d'incendie ou moyens elévateur aérien"
+            'FPT_VIM': 90,  # "Fourgons d'incendie ou VIM"
+            'BLS_CSL': 90,  # "BLS ou CSL"
+            'CARS_POLICE_PATROUILLE_VR': 90,
+            'CARS_POLICE_VR': 85,
+
+            # Types simples mais spécifiques (priorité moyenne)
+            'CHEF_DE_GROUPE': 50,  # "Chefs de groupe ou VLHR" peut primer sur VLHR seul
+
+            # Types de base (priorité normale)
+            'FPT': 10,
+            'VSR': 10,
+            'BEA': 10,
+            'VIM': 10,
+            'BLS': 10,
+            'VLHR': 10,
+            'CARS_POLICE': 10,
+            'VR_CRS': 10,
+        }
+
+        # Mapping des overlaps : type spécifique → types qu'il remplace
         overlap_rules = {
-            # Patterns combinés qui ont priorité sur les patterns simples
-            'BLS_CSL': ['BLS'],  # "BLS ou CSL" doit primer sur "BLS"
-            'FPT_SR': ['FPT', 'VSR'],  # "Fourgons d'incendie secours routiers" prime sur FPT et VSR séparés
-            'FPT_BEA': ['FPT', 'BEA'],  # "Fourgons d'incendie ou moyens elévateur aérien"
-            'FPT_VIM': ['FPT', 'VIM'],  # "Fourgons d'incendie ou VIM" prime sur FPT et VIM séparés
-            'FPT_SR_BEA': ['FPT', 'VSR', 'BEA', 'FPT_SR', 'FPT_BEA'],  # Super-combinaison
-            'CARS_POLICE_VR': ['CARS_POLICE', 'VR_CRS'],  # Voitures de police avec VR
+            'FPT_SR_BEA': ['FPT', 'VSR', 'BEA', 'FPT_SR', 'FPT_BEA'],
+            'FPT_SR': ['FPT', 'VSR'],
+            'FPT_BEA': ['FPT', 'BEA'],
+            'FPT_VIM': ['FPT', 'VIM'],
+            'BLS_CSL': ['BLS'],
+            'CARS_POLICE_VR': ['CARS_POLICE', 'VR_CRS'],
             'CARS_POLICE_PATROUILLE_VR': ['CARS_POLICE', 'CARS_POLICE_PATROUILLE', 'VR_CRS'],
-            'CHEF_DE_GROUPE': ['VLHR'],  # "Chefs de groupe ou VLHR" peut parfois primer
+            'CHEF_DE_GROUPE': ['VLHR'],
         }
         
         # Identifier les requirements par type et quantité
