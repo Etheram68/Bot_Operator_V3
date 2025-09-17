@@ -34,7 +34,8 @@ class ContextualParser:
                 if match_span in matched_spans:
                     continue
                 matched_spans.add(match_span)
-                
+
+
                 # Extraire quantité et optionalité
                 quantity = self._extract_quantity_from_match_and_context(text, match)
                 optional = self._is_optional_requirement(match.group())
@@ -80,19 +81,7 @@ class ContextualParser:
         """Extrait la quantité d'un match en analysant le contexte de ligne."""
 
         # 🔥 Méthode optimisée pour format HTML tabulaire
-        # Chercher directement le nombre qui suit le pattern trouvé
-        match_end = match.end()
-        text_after_match = text[match_end:match_end + 50]  # Regarder 50 chars après le match
-
-        # Pattern pour capturer le nombre immédiatement après le match
-        immediate_number = re.search(r'^\s*(\d+)', text_after_match)
-        if immediate_number:
-            try:
-                return int(immediate_number.group(1))
-            except (ValueError, IndexError):
-                pass
-
-        # Extraction de ligne classique en fallback
+        # D'abord extraire la ligne complète contenant le match
         lines = text.split('\n')
         match_pos = match.start()
         line_start = 0
@@ -108,8 +97,27 @@ class ContextualParser:
         if not current_line:
             return 1
 
-        # Patterns spécifiques pour les formats tabulaires
-        # Format: "Type de véhicule    Quantité"
+        # Pour HTML tabulaire: chercher le nombre dans la cellule <td>
+        table_cell_pattern = r'<td[^>]*>\s*(\d+)\s*</td>'
+        table_match = re.search(table_cell_pattern, current_line)
+        if table_match:
+            try:
+                return int(table_match.group(1))
+            except (ValueError, IndexError):
+                pass
+
+        # Fallback: chercher le nombre qui suit directement le pattern dans la même ligne
+        match_in_line = match.start() - line_start
+        if match_in_line >= 0:
+            text_after_match_in_line = current_line[match_in_line + len(match.group()):]
+            immediate_number = re.search(r'^\s*(\d+)', text_after_match_in_line)
+            if immediate_number:
+                try:
+                    return int(immediate_number.group(1))
+                except (ValueError, IndexError):
+                    pass
+
+        # Patterns spécifiques pour les formats tabulaires (dans la ligne courante déjà extraite)
         tabular_patterns = [
             r'^\s*[^0-9]+?\s+(\d+)\s*$',  # Ligne avec texte puis nombre à la fin
             r'requis\s+(\d+)',           # "requis 1"

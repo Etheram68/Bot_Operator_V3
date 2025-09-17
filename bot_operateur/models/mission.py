@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
+from loguru import logger
 from .vehicle import Vehicle
 from .patient import Patient
 
@@ -69,7 +70,9 @@ class Mission(BaseModel):
         consolidated_patient_needs = self._consolidate_patient_needs()
         
         for need, count in consolidated_patient_needs.items():
-            requirements[need] = requirements.get(need, 0) + count
+            old_value = requirements.get(need, 0)
+            new_value = old_value + count
+            requirements[need] = new_value
             if need == "AMBULANCE":
                 patient_needs_count += count
         

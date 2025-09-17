@@ -205,7 +205,7 @@ class RequirementParser:
                 if self.probability_detector.is_resource_indicator(requirement_type, match_context):
                     logger.debug(f"🚫 Ignoré indicateur de ressource: {requirement_type} ({quantity})")
                     continue
-                
+
                 requirement = MissionRequirement(
                     vehicle_type=requirement_type,
                     quantity=quantity,

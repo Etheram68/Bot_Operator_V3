@@ -42,19 +42,19 @@ class ProbabilityDetector:
     
     def is_resource_indicator(self, requirement_type: str, context: str) -> bool:
         """Vérifie si un requirement_type est un indicateur de ressource."""
-        return (
-            self._is_explicit_resource_type(requirement_type) or
-            self._is_configured_resource_indicator(requirement_type) or
-            self._is_probability_context(requirement_type, context)
-        )
+        explicit = self._is_explicit_resource_type(requirement_type)
+        configured = self._is_configured_resource_indicator(requirement_type)
+        probability = self._is_probability_context(requirement_type, context)
+
+        return explicit or configured or probability
     
     def _is_explicit_resource_type(self, requirement_type: str) -> bool:
         """Vérifie si le type est explicitement une ressource non-déployable."""
         resource_only_types = {
-            "WATER_REQUIRED", "EAU_NECESSAIRE", 
+            "WATER_REQUIRED", "EAU_NECESSAIRE",
             "MIN_FIREFIGHTERS", "MIN_POLICE", "MIN_PUMP_CAPACITY"
         }
-        
+
         if requirement_type.upper() in resource_only_types:
             logger.debug(f"🚫 Type de ressource non-déployable: {requirement_type}")
             return True
@@ -63,7 +63,7 @@ class ProbabilityDetector:
     def _is_configured_resource_indicator(self, requirement_type: str) -> bool:
         """Vérifie si le type est configuré comme indicateur de ressource."""
         resource_indicators = self.needs_labels.get("resource_indicators", {})
-        
+
         for resource_code in resource_indicators:
             if requirement_type.upper() == resource_code.upper():
                 logger.debug(f"🚫 Resource indicator détecté: {requirement_type}")
