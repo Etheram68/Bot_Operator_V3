@@ -26,7 +26,13 @@ class ContextualParser:
         """
         matches = []
         matched_spans = set()
-        
+
+        # Optimisation: pré-diviser le texte en lignes une seule fois
+        lines = text.split('\n')
+        line_starts = [0]
+        for line in lines[:-1]:
+            line_starts.append(line_starts[-1] + len(line) + 1)
+
         for pattern in patterns:
             for match in pattern.finditer(text):
                 # Éviter les doublons de même position
@@ -35,14 +41,13 @@ class ContextualParser:
                     continue
                 matched_spans.add(match_span)
 
-
-                # Extraire quantité et optionalité
-                quantity = self._extract_quantity_from_match_and_context(text, match)
+                # Extraire quantité et optionalité (optimisé avec lignes pré-calculées)
+                quantity = self._extract_quantity_optimized(text, match, lines, line_starts)
                 optional = self._is_optional_requirement(match.group())
-                
-                # Extraire le contexte de la ligne spécifique
-                context = self._extract_line_context(text, match.start())
-                
+
+                # Extraire le contexte de la ligne spécifique (optimisé)
+                context = self._extract_line_context_optimized(match.start(), lines, line_starts)
+
                 matches.append((quantity, optional, context))
         
         # Fallback si aucun match avec quantité explicite
@@ -142,7 +147,88 @@ class ContextualParser:
                 pass
 
         return 1  # Valeur par défaut
-    
+
+    def _extract_quantity_optimized(self, text: str, match: re.Match, lines: List[str], line_starts: List[int]) -> int:
+        """Version optimisée d'extraction de quantité avec lignes pré-calculées."""
+        # Trouver la ligne du match plus efficacement
+        match_pos = match.start()
+        line_idx = 0
+        for i, start in enumerate(line_starts):
+            if i == len(line_starts) - 1 or match_pos < line_starts[i + 1]:
+                line_idx = i
+                break
+
+        current_line = lines[line_idx].strip()
+        if not current_line:
+            return 1
+
+        # Pour HTML tabulaire: chercher le nombre dans la cellule <td>
+        table_cell_pattern = r'<td[^>]*>\s*(\d+)\s*</td>'
+        table_match = re.search(table_cell_pattern, current_line)
+        if table_match:
+            try:
+                return int(table_match.group(1))
+            except (ValueError, IndexError):
+                pass
+
+        # Fallback: chercher le nombre qui suit directement le pattern dans la même ligne
+        match_in_line = match_pos - line_starts[line_idx]
+        if match_in_line >= 0 and match_in_line < len(current_line):
+            text_after_match_in_line = current_line[match_in_line + len(match.group()):]
+            immediate_number = re.search(r'^\s*(\d+)', text_after_match_in_line)
+            if immediate_number:
+                try:
+                    return int(immediate_number.group(1))
+                except (ValueError, IndexError):
+                    pass
+
+        # Patterns spécifiques pour les formats tabulaires
+        tabular_patterns = [
+            r'^\s*[^0-9]+?\s+(\d+)\s*$',
+            r'requis\s+(\d+)',
+            r'nécessaires?\s+(\d+)',
+        ]
+
+        for pattern in tabular_patterns:
+            matches = re.findall(pattern, current_line, re.IGNORECASE)
+            if matches:
+                try:
+                    return int(matches[0])
+                except (ValueError, IndexError):
+                    continue
+
+        # Fallback : chercher n'importe quel nombre dans la ligne
+        numbers = re.findall(r'\d+', current_line)
+        if numbers:
+            try:
+                return int(numbers[-1])
+            except (ValueError, IndexError):
+                pass
+
+        return 1
+
+    def _extract_line_context_optimized(self, match_pos: int, lines: List[str], line_starts: List[int]) -> str:
+        """Version optimisée d'extraction de contexte avec lignes pré-calculées."""
+        # Trouver la ligne du match plus efficacement
+        line_idx = 0
+        for i, start in enumerate(line_starts):
+            if i == len(line_starts) - 1 or match_pos < line_starts[i + 1]:
+                line_idx = i
+                break
+
+        # Retourner les lignes de contexte (ligne courante + voisines si nécessaire)
+        context_lines = []
+        start_idx = max(0, line_idx - 1)
+        end_idx = min(len(lines), line_idx + 2)
+
+        for i in range(start_idx, end_idx):
+            if i < len(lines):
+                line = lines[i].strip()
+                if line:
+                    context_lines.append(line)
+
+        return ' '.join(context_lines)
+
     def _is_optional_requirement(self, match_text: str) -> bool:
         """Détermine si une exigence est optionnelle basée sur le texte."""
         optional_indicators = [

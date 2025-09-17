@@ -18,6 +18,7 @@ class RequirementParser:
     _probability_detector = None
     _contextual_parser = None
     _text_cleaner = None
+    _pattern_cache = {}  # Cache global pour patterns compilés
 
     def __new__(cls, needs_labels_path: str = None, vehicles_mapping_path: str = None, missing_config_path: str = None):
         if cls._instance is None:
@@ -123,11 +124,16 @@ class RequirementParser:
             compiled[requirement_type] = []
             for pattern in patterns:
                 try:
-                    # Optimisation: ajouter des anchors et non-capturing groups quand possible
-                    optimized_pattern = self._optimize_pattern(pattern)
-                    compiled_pattern = re.compile(optimized_pattern, regex_flags)
+                    # Optimisation: utiliser le cache pour les patterns déjà compilés
+                    cache_key = f"{pattern}_{regex_flags}"
+                    if cache_key in self.__class__._pattern_cache:
+                        compiled_pattern = self.__class__._pattern_cache[cache_key]
+                    else:
+                        optimized_pattern = self._optimize_pattern(pattern)
+                        compiled_pattern = re.compile(optimized_pattern, regex_flags)
+                        self.__class__._pattern_cache[cache_key] = compiled_pattern
+
                     compiled[requirement_type].append(compiled_pattern)
-                    logger.debug(f"Pattern optimisé compilé pour {requirement_type}: {optimized_pattern}")
                 except re.error as e:
                     logger.warning(f"Pattern regex invalide pour {requirement_type}: {pattern} - {e}")
                     continue
@@ -139,17 +145,26 @@ class RequirementParser:
         """Optimise les patterns regex pour de meilleures performances"""
         optimized = pattern
 
-        # Ne pas optimiser les patterns avec lookbehind/lookahead
+        # Ne pas optimiser les patterns avec lookbehind/lookahead complexes
         if '?<!' in pattern or '?!' in pattern or '?=' in pattern or '?<=' in pattern:
             return optimized
 
         # Remplacer (requis|nécessaires?) par (?:requis|nécessaires?) pour éviter les captures inutiles
-        # Mais seulement pour les groupes simples sans quantifieurs complexes
         optimized = re.sub(r'\(([^)]+)\)(?!\?)', r'(?:\1)', optimized)
 
-        # Optimiser les répétitions pour être plus efficaces seulement si pas de quantifieurs
-        if not re.search(r'\{|\*|\+', optimized):
-            optimized = optimized.replace('.*', '.*?')  # Non-greedy matching
+        # Optimiser les répétitions pour être plus efficaces
+        optimized = optimized.replace('.*', '.*?')  # Non-greedy matching
+        optimized = optimized.replace('.+', '.+?')  # Non-greedy matching
+
+        # Optimiser les classes de caractères communes
+        optimized = optimized.replace('[\\s\\S]', '.')  # Plus efficace
+        optimized = optimized.replace('\\s+', '\\s+?')  # Non-greedy whitespace
+
+        # Ajouter des anchors de mot quand approprié pour éviter les faux positifs
+        if not optimized.startswith('^') and not optimized.startswith('\\b') and not optimized.startswith('(?'):
+            # Si le pattern commence par une lettre, ajouter un word boundary
+            if optimized[0].isalpha() or optimized.startswith('['):
+                optimized = '\\b' + optimized
 
         return optimized
 
@@ -224,16 +239,25 @@ class RequirementParser:
     def _deduplicate_overlapping_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
         """
         Supprime les doublons quand un pattern spécifique et un pattern générique matchent le même texte.
-        
-        Priorité donnée aux patterns les plus spécifiques (plus longs ou contenant des combinaisons).
-        
+
         Args:
             requirements: Liste des exigences à dédupliquer
-            
+
         Returns:
             List[MissionRequirement]: Liste déduplicatée
         """
-        if not requirements:
+        if len(requirements) <= 1:
+            return requirements
+
+        # Optimisation: grouper par type de véhicule d'abord pour éviter les comparaisons inutiles
+        type_groups = {}
+        for req in requirements:
+            if req.vehicle_type not in type_groups:
+                type_groups[req.vehicle_type] = []
+            type_groups[req.vehicle_type].append(req)
+
+        # Si tous les requirements sont de types différents, pas de déduplication nécessaire
+        if all(len(group) == 1 for group in type_groups.values()):
             return requirements
         
         # Définir les overlaps connus (spécifique -> générique)
