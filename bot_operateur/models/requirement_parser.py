@@ -8,6 +8,10 @@ from .mission import MissionRequirement
 from .probability_detector import ProbabilityDetector
 from .contextual_parser import ContextualParser
 from .text_cleaner import TextCleaner
+from ..utils.cache_manager import get_cached_json
+from ..utils.regex_factory import get_regex_factory, compile_many_regex, precompile_patterns
+from ..utils.object_pool import get_pool_manager, create_pool, PooledResource
+from ..config.constants import PERFORMANCE_CONFIG, CRITICAL_VEHICLE_TYPES
 
 
 class RequirementParser:
@@ -18,6 +22,7 @@ class RequirementParser:
     _probability_detector = None
     _contextual_parser = None
     _text_cleaner = None
+    _pools_initialized = False
     _pattern_cache = {}  # Cache global pour patterns compilés
 
     def __new__(cls, needs_labels_path: str = None, vehicles_mapping_path: str = None, missing_config_path: str = None):
@@ -111,35 +116,84 @@ class RequirementParser:
             return {}
     
     def _compile_patterns(self) -> Dict[str, List[re.Pattern]]:
-        """Compile toutes les regex pour optimiser les performances avec optimisations CPU"""
-        compiled = {}
-
+        """Compile toutes les regex pour optimiser les performances avec factory optimisée"""
         if not self.needs_labels.get("vehicle_requirements"):
-            return compiled
+            return {}
 
-        # Flags optimisés pour de meilleures performances
+        # Initialiser les pools d'objets si pas fait
+        if not self.__class__._pools_initialized:
+            self._initialize_pools()
+
+        # Utiliser la factory de regex optimisée
+        regex_factory = get_regex_factory()
         regex_flags = re.IGNORECASE | re.MULTILINE
+
+        # Collecter tous les patterns pour compilation en batch
+        all_patterns = []
+        pattern_to_type = {}
+
+        for requirement_type, patterns in self.needs_labels["vehicle_requirements"].items():
+            for pattern in patterns:
+                optimized_pattern = self._optimize_pattern(pattern)
+                cache_key = f"{optimized_pattern}_{regex_flags}"
+                all_patterns.append(optimized_pattern)
+                pattern_to_type[optimized_pattern] = requirement_type
+
+        # Pré-compiler les patterns critiques en priorité
+        critical_patterns = [p for p in all_patterns
+                           if any(critical_type in pattern_to_type.get(p, '')
+                                 for critical_type in CRITICAL_VEHICLE_TYPES)]
+
+        if PERFORMANCE_CONFIG.get('PRECOMPILE_CRITICAL_REGEX', True) and critical_patterns:
+            logger.debug(f"Pré-compilation de {len(critical_patterns)} patterns critiques...")
+            precompile_patterns(critical_patterns, regex_flags)
+
+        # Compiler tous les patterns en batch
+        compiled_patterns = compile_many_regex(all_patterns, regex_flags, optimize=True)
+
+        # Organiser par type de véhicule
+        compiled = {}
+        pattern_index = 0
 
         for requirement_type, patterns in self.needs_labels["vehicle_requirements"].items():
             compiled[requirement_type] = []
             for pattern in patterns:
-                try:
-                    # Optimisation: utiliser le cache pour les patterns déjà compilés
-                    cache_key = f"{pattern}_{regex_flags}"
-                    if cache_key in self.__class__._pattern_cache:
-                        compiled_pattern = self.__class__._pattern_cache[cache_key]
-                    else:
-                        optimized_pattern = self._optimize_pattern(pattern)
-                        compiled_pattern = re.compile(optimized_pattern, regex_flags)
-                        self.__class__._pattern_cache[cache_key] = compiled_pattern
-
-                    compiled[requirement_type].append(compiled_pattern)
-                except re.error as e:
-                    logger.warning(f"Pattern regex invalide pour {requirement_type}: {pattern} - {e}")
-                    continue
+                if pattern_index < len(compiled_patterns) and compiled_patterns[pattern_index]:
+                    compiled[requirement_type].append(compiled_patterns[pattern_index])
+                pattern_index += 1
 
         logger.info(f"Patterns compilés et optimisés pour {len(compiled)} types de véhicules")
         return compiled
+
+    def _initialize_pools(self):
+        """Initialise les pools d'objets pour optimiser les performances."""
+        if self.__class__._pools_initialized:
+            return
+
+        try:
+            pool_manager = get_pool_manager()
+
+            # Pool pour les MissionRequirement
+            def create_mission_requirement():
+                return MissionRequirement(vehicle_type="", quantity=1, optional=False)
+
+            def reset_mission_requirement(req):
+                req.vehicle_type = ""
+                req.quantity = 1
+                req.optional = False
+
+            create_pool('mission_requirements',
+                       create_mission_requirement,
+                       max_size=PERFORMANCE_CONFIG.get('MAX_POOL_SIZE', 15),
+                       min_size=PERFORMANCE_CONFIG.get('MIN_POOL_SIZE', 3),
+                       reset_func=reset_mission_requirement)
+
+            self.__class__._pools_initialized = True
+            logger.debug("Pools d'objets initialisés pour RequirementParser")
+
+        except Exception as e:
+            logger.warning(f"Erreur initialisation pools: {e}")
+            self.__class__._pools_initialized = True  # Éviter de boucler
 
     def _optimize_pattern(self, pattern: str) -> str:
         """Optimise les patterns regex pour de meilleures performances"""

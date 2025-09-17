@@ -110,6 +110,19 @@ PERFORMANCE_CONFIG = {
     'REGEX_COMPILE_CACHE': True,  # Active la mise en cache des regex compilées
     'LAZY_LOADING': True,  # Active le chargement paresseux
     'GC_THRESHOLD': 50,  # Déclenchement du garbage collector plus fréquent
+
+    # Nouvelles configurations pour les pools et optimisations
+    'MAX_POOL_SIZE': 15,  # Taille max des pools d'objets (réduite pour 2GB RAM)
+    'MIN_POOL_SIZE': 3,   # Taille min des pools (pré-allocation)
+    'MAX_IDLE_TIME_SECONDS': 180,  # 3 minutes max idle pour objets poolés
+    'MAX_REGEX_CACHE_SIZE': 100,   # Cache regex réduit pour économiser RAM
+    'REGEX_CACHE_TTL_SECONDS': 1800,  # 30 minutes TTL pour regex
+    'BATCH_DOM_OPERATIONS': True,     # Active les opérations DOM en batch
+    'PRECOMPILE_CRITICAL_REGEX': True,  # Pré-compile les regex critiques au démarrage
+    'MEMORY_MONITORING': True,        # Active le monitoring mémoire
+    'AUTO_GC_INTERVAL_SECONDS': 120,  # Garbage collection automatique toutes les 2 minutes
+    'DOM_BATCH_SIZE': 8,              # Taille des batches DOM (réduite pour 2GB RAM)
+    'DOM_BATCH_TIMEOUT_MS': 50,       # Timeout batch DOM en ms (plus agressif)
 }
 
 # Métadonnées du bot
