@@ -124,9 +124,9 @@ class ContextualParser:
 
         # Patterns spécifiques pour les formats tabulaires (dans la ligne courante déjà extraite)
         tabular_patterns = [
-            r'^\s*[^0-9]+?\s+(\d+)\s*$',  # Ligne avec texte puis nombre à la fin
-            r'requis\s+(\d+)',           # "requis 1"
-            r'nécessaires?\s+(\d+)',     # "nécessaire 2"
+            r'(?:requis|nécessaires?)\s+(\d+)',    # "requis 1" ou "nécessaires 2"
+            r'(\d+)\s+(?:requis|nécessaires?)',    # "1 requis" ou "2 nécessaires"
+            r'^\s*[^0-9]+?\s+(\d+)\s*$',           # Ligne avec texte puis nombre à la fin
         ]
 
         for pattern in tabular_patterns:
@@ -137,14 +137,51 @@ class ContextualParser:
                 except (ValueError, IndexError):
                     continue
 
-        # Fallback : chercher n'importe quel nombre dans la ligne
-        numbers = re.findall(r'\d+', current_line)
-        if numbers:
-            # Prendre le dernier nombre (souvent la quantité dans un format tabulaire)
-            try:
-                return int(numbers[-1])
-            except (ValueError, IndexError):
-                pass
+        # NOUVEAU: Gestion spéciale pour structure HTML tabulaire
+        # Quand le match est sur une ligne et la quantité sur la ligne suivante
+        lines = text.split('\n')
+        match_line_idx = None
+
+        # Trouver l'index de la ligne contenant le match
+        pos = match.start()
+        line_start = 0
+        for i, line in enumerate(lines):
+            line_end = line_start + len(line)
+            if line_start <= pos <= line_end:
+                match_line_idx = i
+                break
+            line_start = line_end + 1
+
+        if match_line_idx is not None and match_line_idx + 1 < len(lines):
+            next_line = lines[match_line_idx + 1].strip()
+            # Si la ligne suivante ne contient qu'un nombre (typique des tables HTML)
+            if re.match(r'^\d+$', next_line):
+                try:
+                    quantity = int(next_line)
+                    # Vérification de cohérence : quantités raisonnables pour des véhicules
+                    if 1 <= quantity <= 50:
+                        return quantity
+                except (ValueError, IndexError):
+                    pass
+
+        # Fallback amélioré : chercher un nombre proche des mots-clés pertinents
+        # Éviter de prendre n'importe quel nombre (comme dans "Eau nécessaire 1500")
+        keyword_proximity_patterns = [
+            r'\b(?:fourgon|véhicule|ambulance|camion)s?\b.*?(\d+)',      # Nombre après un type de véhicule
+            r'(\d+).*?\b(?:fourgon|véhicule|ambulance|camion)s?\b',      # Nombre avant un type de véhicule
+        ]
+
+        for pattern in keyword_proximity_patterns:
+            matches = re.findall(pattern, current_line, re.IGNORECASE)
+            if matches:
+                try:
+                    # Prendre le plus petit nombre (plus probable d'être une quantité de véhicule)
+                    numbers = [int(m) for m in matches]
+                    reasonable_numbers = [n for n in numbers if 1 <= n <= 20]  # Filtre de bon sens
+                    if reasonable_numbers:
+                        return min(reasonable_numbers)
+                except (ValueError, IndexError):
+                    continue
 
         return 1  # Valeur par défaut
 
@@ -184,9 +221,9 @@ class ContextualParser:
 
         # Patterns spécifiques pour les formats tabulaires
         tabular_patterns = [
-            r'^\s*[^0-9]+?\s+(\d+)\s*$',
-            r'requis\s+(\d+)',
-            r'nécessaires?\s+(\d+)',
+            r'(?:requis|nécessaires?)\s+(\d+)',    # "requis 1" ou "nécessaires 2"
+            r'(\d+)\s+(?:requis|nécessaires?)',    # "1 requis" ou "2 nécessaires"
+            r'^\s*[^0-9]+?\s+(\d+)\s*$',           # Ligne avec texte puis nombre à la fin
         ]
 
         for pattern in tabular_patterns:
@@ -197,14 +234,40 @@ class ContextualParser:
                 except (ValueError, IndexError):
                     continue
 
-        # Fallback : chercher n'importe quel nombre dans la ligne
-        numbers = re.findall(r'\d+', current_line)
-        if numbers:
-            try:
-                return int(numbers[-1])
-            except (ValueError, IndexError):
-                pass
+        # NOUVEAU: Gestion spéciale pour structure HTML tabulaire
+        # Quand le match est sur une ligne et la quantité sur la ligne suivante
+        if line_idx + 1 < len(lines):
+            next_line = lines[line_idx + 1].strip()
+            # Si la ligne suivante ne contient qu'un nombre (typique des tables HTML)
+            if re.match(r'^\d+$', next_line):
+                try:
+                    quantity = int(next_line)
+                    # Vérification de cohérence : quantités raisonnables pour des véhicules
+                    if 1 <= quantity <= 50:
+                        return quantity
+                except (ValueError, IndexError):
+                    pass
 
+        # Fallback amélioré : chercher un nombre proche des mots-clés pertinents
+        # Éviter de prendre n'importe quel nombre (comme dans "Eau nécessaire 1500")
+        keyword_proximity_patterns = [
+            r'\b(?:fourgon|véhicule|ambulance|camion)s?\b.*?(\d+)',      # Nombre après un type de véhicule
+            r'(\d+).*?\b(?:fourgon|véhicule|ambulance|camion)s?\b',      # Nombre avant un type de véhicule
+        ]
+
+        for pattern in keyword_proximity_patterns:
+            matches = re.findall(pattern, current_line, re.IGNORECASE)
+            if matches:
+                try:
+                    # Prendre le plus petit nombre (plus probable d'être une quantité de véhicule)
+                    numbers = [int(m) for m in matches]
+                    reasonable_numbers = [n for n in numbers if 1 <= n <= 20]  # Filtre de bon sens
+                    if reasonable_numbers:
+                        return min(reasonable_numbers)
+                except (ValueError, IndexError):
+                    continue
+
+        # Ultime fallback : valeur par défaut
         return 1
 
     def _extract_line_context_optimized(self, match_pos: int, lines: List[str], line_starts: List[int]) -> str:

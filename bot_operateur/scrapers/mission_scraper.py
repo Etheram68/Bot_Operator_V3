@@ -437,29 +437,36 @@ class MissionScraper:
     async def _scrape_requirements_from_current_page(self) -> List[MissionRequirement]:
         """Scrape les exigences depuis la page courante avec parser intelligent"""
         requirements = []
-        
+
         try:
-            # Extraire le texte spécifiquement de la seconde colonne des besoins
+            # NOUVEAU: Extraction structurée par <tr> pour relier véhicule + quantité
+            structured_requirements = await self._extract_requirements_from_table_rows()
+            if structured_requirements:
+                requirements = structured_requirements
+                logger.debug(f"Trouvé {len(requirements)} exigences via extraction structurée <tr>")
+                return requirements
+
+            # Fallback : Extraire le texte spécifiquement de la seconde colonne des besoins
             requirements_text = await self._extract_requirements_text_from_columns()
-            
+
             # Utiliser le parser intelligent pour extraire les exigences
             requirements = self.requirement_parser.parse_mission_text(requirements_text) if requirements_text else []
-            
+
             # Fallback : méthode traditionnelle si le parser ne trouve rien
             if not requirements:
                 requirement_elements = await self.page.query_selector_all("ul li, .mission-requirement, .alert")
-                
+
                 for element in requirement_elements:
                     text = await element.inner_text()
                     requirement = self._parse_requirement_text(text)
                     if requirement:
                         requirements.append(requirement)
-            
+
             logger.debug(f"Trouvé {len(requirements)} exigences sur la page")
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du scraping des exigences: {e}")
-        
+
         return requirements
     
     def _parse_requirement_text(self, text: str) -> Optional[MissionRequirement]:
@@ -479,9 +486,82 @@ class MissionScraper:
             )
         
         return None
-    
-    
-    
+
+    async def _extract_requirements_from_table_rows(self) -> List[MissionRequirement]:
+        """Extraction structurée des exigences basée sur les <tr> pour relier véhicule + quantité"""
+        requirements = []
+
+        try:
+            # Chercher toutes les tables et identifier celle des exigences
+            target_table = None
+            tables = await self.page.query_selector_all("table")
+
+            for table in tables:
+                headers = await table.query_selector_all("th")
+                for header in headers:
+                    header_text = await header.inner_text()
+                    if "Exigences" in header_text and "véhicules" in header_text:
+                        target_table = table
+                        logger.debug(f"Table des exigences trouvée: '{header_text}'")
+                        break
+                if target_table:
+                    break
+
+            if not target_table:
+                logger.debug("Table des exigences non trouvée")
+                return []
+
+            # Extraire tous les <tr> avec 2 <td> (label + valeur)
+            rows = await target_table.query_selector_all("tbody tr")
+
+            for row in rows:
+                cells = await row.query_selector_all("td")
+                if len(cells) == 2:
+                    # Extraire le label (véhicule) et la valeur (quantité)
+                    label_cell = cells[0]
+                    value_cell = cells[1]
+
+                    label_text = await label_cell.inner_text()
+                    value_text = await value_cell.inner_text()
+
+                    # Nettoyer les textes
+                    label_clean = label_text.strip()
+                    value_clean = value_text.strip()
+
+                    logger.debug(f"Ligne extraite: '{label_clean}' -> '{value_clean}'")
+
+                    # Ignorer les indicateurs de ressources (Eau nécessaire, etc.)
+                    if "Eau nécessaire" in label_clean:
+                        logger.debug(f"Ignoré indicateur de ressource: {label_clean}")
+                        continue
+
+                    # Vérifier que la valeur est un nombre (quantité de véhicules)
+                    try:
+                        quantity = int(value_clean)
+                        if 1 <= quantity <= 50:  # Filtre de cohérence
+                            # Créer un texte formaté pour le parser
+                            formatted_text = f"{label_clean} {quantity}"
+
+                            # Utiliser le parser intelligent pour détecter le type de véhicule
+                            parsed_requirements = self.requirement_parser.parse_mission_text(formatted_text)
+
+                            if parsed_requirements:
+                                requirements.extend(parsed_requirements)
+                                logger.debug(f"✅ Ajouté via <tr>: {label_clean} -> {quantity}")
+                            else:
+                                logger.debug(f"⚠️ Pas de match parser pour: {repr(formatted_text)}")
+                        else:
+                            logger.debug(f"Quantité hors limites ignorée: {value_clean}")
+                    except ValueError:
+                        logger.debug(f"Valeur non numérique ignorée: {value_clean}")
+
+            logger.info(f"Extraction structurée <tr>: {len(requirements)} exigences trouvées")
+
+        except Exception as e:
+            logger.error(f"Erreur lors de l'extraction structurée <tr>: {e}")
+
+        return requirements
+
     async def analyze_mission_conditions(self, mission_id: str) -> Optional[Dict]:
         """Analyse les conditions de réalisation d'une mission pour enrichir les données"""
         try:

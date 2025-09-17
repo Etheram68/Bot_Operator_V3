@@ -152,13 +152,44 @@ class RequirementParser:
         # Remplacer (requis|nécessaires?) par (?:requis|nécessaires?) pour éviter les captures inutiles
         optimized = re.sub(r'\(([^)]+)\)(?!\?)', r'(?:\1)', optimized)
 
+        # IMPORTANT: Empêcher les patterns de matcher à travers les lignes AVANT les autres optimisations
+        # Remplacer tous les types d'espaces par des espaces horizontaux seulement
+        # Éviter les nested sets en ne remplaçant pas \\s dans les classes de caractères existantes
+
+        # Remplacer \\s seulement quand il n'est pas dans une classe de caractères [...]
+        def safe_replace_spaces(text):
+            result = ""
+            in_char_class = False
+            i = 0
+            while i < len(text):
+                if text[i] == '[' and (i == 0 or text[i-1] != '\\'):
+                    in_char_class = True
+                    result += text[i]
+                elif text[i] == ']' and in_char_class and (i == 0 or text[i-1] != '\\'):
+                    in_char_class = False
+                    result += text[i]
+                elif not in_char_class and text[i:i+3] == '\\s+':
+                    result += '[ \t]+'
+                    i += 2  # Skip next 2 characters
+                elif not in_char_class and text[i:i+3] == '\\s*':
+                    result += '[ \t]*'
+                    i += 2  # Skip next 2 characters
+                elif not in_char_class and text[i:i+2] == '\\s':
+                    result += '[ \t]'
+                    i += 1  # Skip next character
+                else:
+                    result += text[i]
+                i += 1
+            return result
+
+        optimized = safe_replace_spaces(optimized)
+
         # Optimiser les répétitions pour être plus efficaces
         optimized = optimized.replace('.*', '.*?')  # Non-greedy matching
         optimized = optimized.replace('.+', '.+?')  # Non-greedy matching
 
         # Optimiser les classes de caractères communes
         optimized = optimized.replace('[\\s\\S]', '.')  # Plus efficace
-        optimized = optimized.replace('\\s+', '\\s+?')  # Non-greedy whitespace
 
         # Ajouter des anchors de mot quand approprié pour éviter les faux positifs
         if not optimized.startswith('^') and not optimized.startswith('\\b') and not optimized.startswith('(?'):
