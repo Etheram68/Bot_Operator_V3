@@ -154,28 +154,43 @@ class RequirementParser:
             'BLS_CSL': ['BLS'],  # "BLS ou CSL" doit primer sur "BLS"
             'FPT_SR': ['FPT', 'VSR'],  # "Fourgons d'incendie secours routiers" prime sur FPT et VSR séparés
             'FPT_BEA': ['FPT', 'BEA'],  # "Fourgons d'incendie ou moyens elévateur aérien"
+            'FPT_VIM': ['FPT', 'VIM'],  # "Fourgons d'incendie ou VIM" prime sur FPT et VIM séparés
             'FPT_SR_BEA': ['FPT', 'VSR', 'BEA', 'FPT_SR', 'FPT_BEA'],  # Super-combinaison
             'CARS_POLICE_VR': ['CARS_POLICE', 'VR_CRS'],  # Voitures de police avec VR
             'CARS_POLICE_PATROUILLE_VR': ['CARS_POLICE', 'CARS_POLICE_PATROUILLE', 'VR_CRS'],
             'CHEF_DE_GROUPE': ['VLHR'],  # "Chefs de groupe ou VLHR" peut parfois primer
         }
         
-        # Identifier les types présents
-        present_types = {req.vehicle_type for req in requirements}
-        
-        # Types à supprimer (génériques remplacés par spécifiques)
-        types_to_remove = set()
-        
+        # Identifier les requirements par type et quantité
+        requirements_by_type = {}
+        for req in requirements:
+            if req.vehicle_type not in requirements_by_type:
+                requirements_by_type[req.vehicle_type] = []
+            requirements_by_type[req.vehicle_type].append(req)
+
+        # Requirements à supprimer (indices précis)
+        requirements_to_remove = set()
+
         for specific_type, generic_types in overlap_rules.items():
-            if specific_type in present_types:
-                # Le type spécifique est présent, supprimer les génériques
-                for generic_type in generic_types:
-                    if generic_type in present_types:
-                        types_to_remove.add(generic_type)
-                        logger.debug(f"🔄 Déduplication: {specific_type} remplace {generic_type}")
-        
-        # Filtrer les requirements
-        deduplicated = [req for req in requirements if req.vehicle_type not in types_to_remove]
+            if specific_type in requirements_by_type:
+                specific_reqs = requirements_by_type[specific_type]
+
+                # Pour chaque requirement spécifique
+                for specific_req in specific_reqs:
+                    # Chercher les generics à supprimer avec la même quantité
+                    for generic_type in generic_types:
+                        if generic_type in requirements_by_type:
+                            generic_reqs = requirements_by_type[generic_type]
+
+                            # Supprimer les generics avec la même quantité que le specific
+                            for i, req in enumerate(requirements):
+                                if (req.vehicle_type == generic_type and
+                                    req.quantity == specific_req.quantity):
+                                    requirements_to_remove.add(i)
+                                    logger.debug(f"🔄 Déduplication: {specific_type} x{specific_req.quantity} remplace {generic_type} x{req.quantity}")
+
+        # Filtrer les requirements par index
+        deduplicated = [req for i, req in enumerate(requirements) if i not in requirements_to_remove]
         
         if len(deduplicated) != len(requirements):
             removed_count = len(requirements) - len(deduplicated)

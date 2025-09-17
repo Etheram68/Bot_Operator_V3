@@ -1,7 +1,7 @@
 {
   "_schema_version": "2.0",
   "_description": "Configuration des véhicules disponibles et leur mapping vers les besoins",
-  "_last_updated": "2025-09-01",
+  "_last_updated": "2025-09-17",
 
   "vehicle_mapping": {
     "fire_rescue": {
@@ -16,6 +16,10 @@
       "FPT_BEA": {
         "primary": ["FPT", "FPT(SR)", "CCR(SR)", "BEA", "EPA"],
         "secondary": ["FS", "VPI"]
+      },
+      "FPT_VIM": {
+        "primary": ["FPT", "FPT(SR)", "CCR(SR)","VIM"],
+        "secondary": ["VPI"]
       },
       "FPT_CONSTRAINED": {
         "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
@@ -177,6 +181,10 @@
       },
       "VSA": {
         "primary": ["VSA"],
+        "secondary": []
+      },
+      "MAH": {
+        "primary": ["MAH"],
         "secondary": []
       }
     },
