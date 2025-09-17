@@ -103,6 +103,7 @@ services:
       - "${MONITORING_PORT:-8081}:80"  # Port configurable, défaut 8081
     volumes:
       - ./data/logs:/usr/share/nginx/html/logs:ro
+      - ./bot_operateur/data:/usr/share/nginx/html/data:ro  # Accès aux données du bot (patterns non reconnus)
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Accès Docker pour stats
     depends_on:
       - bot-operateur

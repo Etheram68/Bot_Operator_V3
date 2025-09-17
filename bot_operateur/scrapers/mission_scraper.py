@@ -219,7 +219,7 @@ class MissionScraper:
             return details
             
         except Exception as e:
-            logger.error(f"Erreur lors de la récupération des détails de la mission {mission_id} : {e}")
+            logger.error(f"Erreur lors de la récupération des détails de la mission {mission.id} : {e}")
             return None
     
     async def _scrape_patients(self) -> List[Patient]:

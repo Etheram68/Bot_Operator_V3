@@ -78,30 +78,44 @@ class ContextualParser:
     
     def _extract_quantity_from_match_and_context(self, text: str, match: re.Match) -> int:
         """Extrait la quantité d'un match en analysant le contexte de ligne."""
-        # Extraire la ligne contenant le match
+
+        # 🔥 Méthode optimisée pour format HTML tabulaire
+        # Chercher directement le nombre qui suit le pattern trouvé
+        match_end = match.end()
+        text_after_match = text[match_end:match_end + 50]  # Regarder 50 chars après le match
+
+        # Pattern pour capturer le nombre immédiatement après le match
+        immediate_number = re.search(r'^\s*(\d+)', text_after_match)
+        if immediate_number:
+            try:
+                return int(immediate_number.group(1))
+            except (ValueError, IndexError):
+                pass
+
+        # Extraction de ligne classique en fallback
         lines = text.split('\n')
         match_pos = match.start()
         line_start = 0
         current_line = ""
-        
+
         for line in lines:
             line_end = line_start + len(line)
             if line_start <= match_pos <= line_end:
                 current_line = line.strip()
                 break
             line_start = line_end + 1
-        
+
         if not current_line:
             return 1
-        
+
         # Patterns spécifiques pour les formats tabulaires
-        # Format: "Type de véhicule    Quantité" 
+        # Format: "Type de véhicule    Quantité"
         tabular_patterns = [
             r'^\s*[^0-9]+?\s+(\d+)\s*$',  # Ligne avec texte puis nombre à la fin
             r'requis\s+(\d+)',           # "requis 1"
             r'nécessaires?\s+(\d+)',     # "nécessaire 2"
         ]
-        
+
         for pattern in tabular_patterns:
             matches = re.findall(pattern, current_line, re.IGNORECASE)
             if matches:
@@ -109,7 +123,7 @@ class ContextualParser:
                     return int(matches[0])
                 except (ValueError, IndexError):
                     continue
-        
+
         # Fallback : chercher n'importe quel nombre dans la ligne
         numbers = re.findall(r'\d+', current_line)
         if numbers:
@@ -118,7 +132,7 @@ class ContextualParser:
                 return int(numbers[-1])
             except (ValueError, IndexError):
                 pass
-        
+
         return 1  # Valeur par défaut
     
     def _is_optional_requirement(self, match_text: str) -> bool:

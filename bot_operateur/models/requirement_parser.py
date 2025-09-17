@@ -152,7 +152,32 @@ class RequirementParser:
             optimized = optimized.replace('.*', '.*?')  # Non-greedy matching
 
         return optimized
-    
+
+    def reload_patterns(self, needs_labels_path: str = None):
+        """Recharge les patterns depuis le fichier JSON (utile pour les mises à jour à chaud)"""
+        logger.info("🔄 Rechargement des patterns de véhicules...")
+
+        # Recharger les données depuis le fichier
+        self.needs_labels = self._load_needs_labels(needs_labels_path)
+
+        # Vider le cache des patterns compilés
+        self._compiled_patterns_cache = None
+
+        # Recompiler les patterns
+        _ = self.compiled_patterns
+
+        logger.success(f"✅ Patterns rechargés avec succès - {len(self.compiled_patterns)} types disponibles")
+
+    @classmethod
+    def clear_singleton(cls):
+        """Vide le singleton pour forcer une réinitialisation complète"""
+        cls._instance = None
+        cls._compiled_patterns = None
+        cls._probability_detector = None
+        cls._contextual_parser = None
+        cls._text_cleaner = None
+        logger.info("🗑️ Cache singleton RequirementParser vidé")
+
     def parse_mission_text(self, mission_text: str) -> List[MissionRequirement]:
         """
         Analyse intelligente du texte de mission pour extraire les exigences.

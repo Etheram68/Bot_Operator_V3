@@ -701,8 +701,12 @@ class MissionManager:
                         # Extraire la partie après "Véhicules manquants:"
                         missing_part = div_text.split("Véhicules manquants:")[1].strip()
                         
+                        # Nettoyer les entités HTML (&nbsp; -> espaces normaux)
+                        import html
+                        missing_part_cleaned = html.unescape(missing_part)
+
                         # Diviser par les virgules pour traiter chaque véhicule manquant séparément
-                        missing_items = [item.strip() for item in missing_part.split(',')]
+                        missing_items = [item.strip() for item in missing_part_cleaned.split(',')]
                         
                         # Utiliser le système de mapping existant depuis les fichiers JSON
                         from ..models.requirement_parser import RequirementParser
@@ -722,18 +726,23 @@ class MissionManager:
                                     if requirement.quantity > 0:
                                         vehicle_type = requirement.vehicle_type
                                         quantity = requirement.quantity
-                                        
+
+                                        # ✅ Pattern reconnu - marquer immédiatement
+                                        found_match = True
+
                                         # Vérifier si des véhicules de ce type sont EN ROUTE (ignorer)
                                         # Mais PAS ceux sur site (table mission_vehicle_at_mission)
                                         should_add = True
                                         vehicles_en_route = vehicles_en_route_by_type.get(vehicle_type, 0)
                                         if vehicles_en_route > 0:
                                             should_add = False
-                                        
+
                                         if should_add:
                                             missing_vehicles_needs[vehicle_type] = missing_vehicles_needs.get(vehicle_type, 0) + quantity
-                                        
-                                        found_match = True
+                                            logger.debug(f"✅ Pattern '{missing_item}' reconnu comme {vehicle_type} x{quantity}, ajouté aux besoins")
+                                        else:
+                                            logger.debug(f"⏭️ Pattern '{missing_item}' reconnu comme {vehicle_type} x{quantity}, mais ignoré car {vehicles_en_route} véhicules en route")
+
                                         break
                                 
                                 if not found_match:

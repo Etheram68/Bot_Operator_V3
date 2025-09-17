@@ -151,6 +151,10 @@
         "primary": ["CEEM"],
         "secondary": []
       },
+      "CEPC": {
+        "primary": ["CEPC"],
+        "secondary": []
+      },
       "VTP(ers)_CONSTRAINED": {
         "primary": ["VTP(ers)"],
         "secondary": []
