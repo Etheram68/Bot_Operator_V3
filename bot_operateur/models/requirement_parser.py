@@ -270,6 +270,7 @@ class RequirementParser:
     def _deduplicate_overlapping_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
         """
         Supprime les doublons quand un pattern spécifique et un pattern générique matchent le même texte.
+        AMÉLIORATION: Gestion intelligente des exigences multiples qui se chevauchent.
 
         Args:
             requirements: Liste des exigences à dédupliquer
@@ -280,91 +281,76 @@ class RequirementParser:
         if len(requirements) <= 1:
             return requirements
 
-        # Optimisation: grouper par type de véhicule d'abord pour éviter les comparaisons inutiles
-        type_groups = {}
-        for req in requirements:
-            if req.vehicle_type not in type_groups:
-                type_groups[req.vehicle_type] = []
-            type_groups[req.vehicle_type].append(req)
-
-        # Si tous les requirements sont de types différents, pas de déduplication nécessaire
-        if all(len(group) == 1 for group in type_groups.values()):
-            return requirements
-        
-        # Définir la hiérarchie de spécificité (plus spécifique → moins spécifique)
-        specificity_hierarchy = {
-            # Super-combinaisons (priorité maximale)
-            'FPT_SR_BEA': 100,  # "Fourgons, secours routier ou moyens elévateur aérien"
-
-            # Combinaisons doubles (priorité élevée)
-            'FPT_SR': 90,   # "Fourgons d'incendie ou véhicules de secours routier"
-            'FPT_BEA': 90,  # "Fourgons d'incendie ou moyens elévateur aérien"
-            'FPT_VIM': 90,  # "Fourgons d'incendie ou VIM"
-            'BLS_CSL': 90,  # "BLS ou CSL"
-            'CARS_POLICE_PATROUILLE_VR': 90,
-            'CARS_POLICE_VR': 85,
-
-            # Types simples mais spécifiques (priorité moyenne)
-            'CHEF_DE_GROUPE': 50,  # "Chefs de groupe ou VLHR" peut primer sur VLHR seul
-
-            # Types de base (priorité normale)
-            'FPT': 10,
-            'VSR': 10,
-            'BEA': 10,
-            'VIM': 10,
-            'BLS': 10,
-            'VLHR': 10,
-            'CARS_POLICE': 10,
-            'VR_CRS': 10,
+        # Regrouper les exigences par "famille" de véhicules compatibles
+        compatible_groups = {
+            'fourgons': ['FPT', 'FPT_SR', 'FPT_BEA', 'FPT_VIM', 'FPT_SR_BEA'],
+            'secours_routier': ['VSR', 'FPT_SR', 'FPT_SR_BEA'],
+            'elevateur_aerien': ['BEA', 'FPT_BEA', 'FPT_SR_BEA'],
+            'commandement': ['CHEF_DE_GROUPE', 'VLHR'],
+            'police': ['CARS_POLICE', 'CARS_POLICE_VR', 'CARS_POLICE_PATROUILLE_VR'],
         }
 
-        # Mapping des overlaps : type spécifique → types qu'il remplace
-        overlap_rules = {
-            'FPT_SR_BEA': ['FPT', 'VSR', 'BEA', 'FPT_SR', 'FPT_BEA'],
-            'FPT_SR': ['FPT', 'VSR'],
-            'FPT_BEA': ['FPT', 'BEA'],
-            'FPT_VIM': ['FPT', 'VIM'],
-            'BLS_CSL': ['BLS'],
-            'CARS_POLICE_VR': ['CARS_POLICE', 'VR_CRS'],
-            'CARS_POLICE_PATROUILLE_VR': ['CARS_POLICE', 'CARS_POLICE_PATROUILLE', 'VR_CRS'],
-            'CHEF_DE_GROUPE': ['VLHR'],
-        }
-        
-        # Identifier les requirements par type et quantité
-        requirements_by_type = {}
-        for req in requirements:
-            if req.vehicle_type not in requirements_by_type:
-                requirements_by_type[req.vehicle_type] = []
-            requirements_by_type[req.vehicle_type].append(req)
-
-        # Requirements à supprimer (indices précis)
+        # Pour chaque famille, prendre la quantité maximale requise
         requirements_to_remove = set()
+        processed_families = set()
 
+        for family_name, family_types in compatible_groups.items():
+            family_requirements = []
+            family_indices = []
+
+            # Collecter tous les requirements de cette famille
+            for i, req in enumerate(requirements):
+                if req.vehicle_type in family_types:
+                    family_requirements.append(req)
+                    family_indices.append(i)
+
+            if len(family_requirements) > 1:  # Plusieurs requirements de la même famille
+                # Trouver la quantité maximale
+                max_quantity = max(req.quantity for req in family_requirements)
+                max_requirement = next(req for req in family_requirements if req.quantity == max_quantity)
+
+                # Marquer les autres pour suppression
+                for i, req in zip(family_indices, family_requirements):
+                    if req.quantity < max_quantity:
+                        requirements_to_remove.add(i)
+                        logger.debug(f"🔄 {family_name}: supprimé {req.vehicle_type} x{req.quantity} (max: {max_quantity})")
+
+                processed_families.add(family_name)
+                logger.info(f"🧹 Famille {family_name}: consolidée à {max_quantity} véhicules (était {sum(req.quantity for req in family_requirements)})")
+
+        # Appliquer aussi les règles d'overlap classiques pour les cas non couverts
+        specificity_hierarchy = {
+            'FPT_SR_BEA': 100, 'FPT_SR': 90, 'FPT_BEA': 90, 'FPT_VIM': 90,
+            'BLS_CSL': 90, 'CARS_POLICE_PATROUILLE_VR': 90, 'CARS_POLICE_VR': 85,
+            'CHEF_DE_GROUPE': 50, 'FPT': 10, 'VSR': 10, 'BEA': 10, 'VIM': 10,
+            'BLS': 10, 'VLHR': 10, 'CARS_POLICE': 10, 'VR_CRS': 10,
+        }
+
+        overlap_rules = {
+            'BLS_CSL': ['BLS'],
+            'VIM': ['VIMP'],  # Un VIM peut satisfaire les besoins VIMP
+        }
+
+        # Appliquer les règles d'overlap pour les cas non gérés par les familles
         for specific_type, generic_types in overlap_rules.items():
-            if specific_type in requirements_by_type:
-                specific_reqs = requirements_by_type[specific_type]
+            specific_reqs = [req for req in requirements if req.vehicle_type == specific_type]
 
-                # Pour chaque requirement spécifique
+            if specific_reqs:
                 for specific_req in specific_reqs:
-                    # Chercher les generics à supprimer avec la même quantité
-                    for generic_type in generic_types:
-                        if generic_type in requirements_by_type:
-                            generic_reqs = requirements_by_type[generic_type]
+                    for i, req in enumerate(requirements):
+                        if (req.vehicle_type in generic_types and
+                            req.quantity <= specific_req.quantity and
+                            i not in requirements_to_remove):
+                            requirements_to_remove.add(i)
+                            logger.debug(f"🔄 Overlap: {specific_type} x{specific_req.quantity} remplace {req.vehicle_type} x{req.quantity}")
 
-                            # Supprimer les generics avec la même quantité que le specific
-                            for i, req in enumerate(requirements):
-                                if (req.vehicle_type == generic_type and
-                                    req.quantity == specific_req.quantity):
-                                    requirements_to_remove.add(i)
-                                    logger.debug(f"🔄 Déduplication: {specific_type} x{specific_req.quantity} remplace {generic_type} x{req.quantity}")
-
-        # Filtrer les requirements par index
+        # Filtrer les requirements
         deduplicated = [req for i, req in enumerate(requirements) if i not in requirements_to_remove]
-        
+
         if len(deduplicated) != len(requirements):
             removed_count = len(requirements) - len(deduplicated)
             logger.info(f"🧹 Supprimé {removed_count} doublon(s) dans les exigences")
-        
+
         return deduplicated
     
     def _post_process_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
@@ -393,8 +379,15 @@ class RequirementParser:
                 else:
                     logger.debug(f"🔄 Dédoublonné {vehicle_type}: quantité {req.quantity} déjà vue")
             
-            # Sommer les quantités uniques, prendre le plus strict pour optionnel
-            total_quantity = sum(req.quantity for req in unique_reqs)
+            # AMÉLIORATION: Prendre le maximum au lieu de sommer pour éviter les sur-déploiements
+            # Cas typiques: "FPT: 8", "FPT_SR: 9", "FPT_BEA: 10" → prendre max(8,9,10) = 10
+            if len(unique_reqs) > 1:
+                max_quantity = max(req.quantity for req in unique_reqs)
+                logger.debug(f"🔄 {vehicle_type}: prise du maximum {max_quantity} au lieu de somme {sum(req.quantity for req in unique_reqs)}")
+                total_quantity = max_quantity
+            else:
+                total_quantity = unique_reqs[0].quantity
+
             is_optional = all(req.optional for req in unique_reqs)
             
             consolidated.append(MissionRequirement(
