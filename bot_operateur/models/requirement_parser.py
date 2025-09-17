@@ -12,19 +12,59 @@ from .text_cleaner import TextCleaner
 
 class RequirementParser:
     """Parseur intelligent pour analyser les exigences de missions basé sur les labels réels"""
-    
+
+    _instance = None
+    _compiled_patterns = None
+    _probability_detector = None
+    _contextual_parser = None
+    _text_cleaner = None
+
+    def __new__(cls, needs_labels_path: str = None, vehicles_mapping_path: str = None, missing_config_path: str = None):
+        if cls._instance is None:
+            cls._instance = super(RequirementParser, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, needs_labels_path: str = None, vehicles_mapping_path: str = None, missing_config_path: str = None):
+        # Éviter la réinitialisation sur le singleton
+        if hasattr(self, '_initialized'):
+            return
+
         self.needs_labels = self._load_needs_labels(needs_labels_path)
         self.vehicles_mapping = self._load_vehicles_mapping(vehicles_mapping_path)
         self.missing_config = self._load_missing_config(missing_config_path)
-        
-        # Compile des regex pour optimiser les performances
-        self.compiled_patterns = self._compile_patterns()
-        
-        # Composants de parsing
-        self.probability_detector = ProbabilityDetector(self.needs_labels)
-        self.contextual_parser = ContextualParser()
-        self.text_cleaner = TextCleaner()
+
+        # Lazy loading des patterns compilés
+        self._compiled_patterns_cache = None
+
+        self._initialized = True
+
+    @property
+    def compiled_patterns(self):
+        """Lazy loading des patterns compilés"""
+        if self._compiled_patterns_cache is None:
+            self._compiled_patterns_cache = self._compile_patterns()
+        return self._compiled_patterns_cache
+
+    @property
+    def probability_detector(self):
+        """Lazy loading du détecteur de probabilités"""
+        if RequirementParser._probability_detector is None:
+            RequirementParser._probability_detector = ProbabilityDetector(self.needs_labels)
+        return RequirementParser._probability_detector
+
+    @property
+    def contextual_parser(self):
+        """Lazy loading du parseur contextuel"""
+        if RequirementParser._contextual_parser is None:
+            RequirementParser._contextual_parser = ContextualParser()
+        return RequirementParser._contextual_parser
+
+    @property
+    def text_cleaner(self):
+        """Lazy loading du nettoyeur de texte"""
+        if RequirementParser._text_cleaner is None:
+            RequirementParser._text_cleaner = TextCleaner()
+        return RequirementParser._text_cleaner
         
     def _load_needs_labels(self, path: str = None) -> Dict:
         """Charge le fichier de mapping des labels de besoins avec cache"""
@@ -70,25 +110,48 @@ class RequirementParser:
             return {}
     
     def _compile_patterns(self) -> Dict[str, List[re.Pattern]]:
-        """Compile toutes les regex pour optimiser les performances"""
+        """Compile toutes les regex pour optimiser les performances avec optimisations CPU"""
         compiled = {}
-        
+
         if not self.needs_labels.get("vehicle_requirements"):
             return compiled
-        
+
+        # Flags optimisés pour de meilleures performances
+        regex_flags = re.IGNORECASE | re.MULTILINE
+
         for requirement_type, patterns in self.needs_labels["vehicle_requirements"].items():
             compiled[requirement_type] = []
             for pattern in patterns:
                 try:
-                    compiled_pattern = re.compile(pattern, re.IGNORECASE | re.MULTILINE)
+                    # Optimisation: ajouter des anchors et non-capturing groups quand possible
+                    optimized_pattern = self._optimize_pattern(pattern)
+                    compiled_pattern = re.compile(optimized_pattern, regex_flags)
                     compiled[requirement_type].append(compiled_pattern)
-                    logger.debug(f"Pattern compilé pour {requirement_type}: {pattern}")
+                    logger.debug(f"Pattern optimisé compilé pour {requirement_type}: {optimized_pattern}")
                 except re.error as e:
                     logger.warning(f"Pattern regex invalide pour {requirement_type}: {pattern} - {e}")
                     continue
-        
-        logger.info(f"Patterns compilés pour {len(compiled)} types de véhicules")
+
+        logger.info(f"Patterns compilés et optimisés pour {len(compiled)} types de véhicules")
         return compiled
+
+    def _optimize_pattern(self, pattern: str) -> str:
+        """Optimise les patterns regex pour de meilleures performances"""
+        optimized = pattern
+
+        # Ne pas optimiser les patterns avec lookbehind/lookahead
+        if '?<!' in pattern or '?!' in pattern or '?=' in pattern or '?<=' in pattern:
+            return optimized
+
+        # Remplacer (requis|nécessaires?) par (?:requis|nécessaires?) pour éviter les captures inutiles
+        # Mais seulement pour les groupes simples sans quantifieurs complexes
+        optimized = re.sub(r'\(([^)]+)\)(?!\?)', r'(?:\1)', optimized)
+
+        # Optimiser les répétitions pour être plus efficaces seulement si pas de quantifieurs
+        if not re.search(r'\{|\*|\+', optimized):
+            optimized = optimized.replace('.*', '.*?')  # Non-greedy matching
+
+        return optimized
     
     def parse_mission_text(self, mission_text: str) -> List[MissionRequirement]:
         """

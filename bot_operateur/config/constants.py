@@ -100,12 +100,16 @@ ERROR_MESSAGES = {
     'CONFIGURATION_INVALID': "Configuration invalide: {detail}",
 }
 
-# Configuration de performance
+# Configuration de performance (optimisée pour 2GB RAM / 2 CPU cores)
 PERFORMANCE_CONFIG = {
-    'PARALLEL_MISSION_LIMIT': 3,
-    'CONCURRENT_VEHICLE_CHECKS': 5,
-    'DOM_POLLING_INTERVAL_MS': 100,
-    'CACHE_TTL_SECONDS': 300,  # 5 minutes
+    'PARALLEL_MISSION_LIMIT': 2,  # Réduit pour économiser la RAM
+    'CONCURRENT_VEHICLE_CHECKS': 3,  # Réduit pour économiser le CPU
+    'DOM_POLLING_INTERVAL_MS': 250,  # Augmenté pour réduire la charge CPU
+    'CACHE_TTL_SECONDS': 600,  # 10 minutes - cache plus long pour réduire les I/O
+    'MAX_CACHE_ENTRIES': 30,  # Limite la taille du cache en mémoire
+    'REGEX_COMPILE_CACHE': True,  # Active la mise en cache des regex compilées
+    'LAZY_LOADING': True,  # Active le chargement paresseux
+    'GC_THRESHOLD': 50,  # Déclenchement du garbage collector plus fréquent
 }
 
 # Métadonnées du bot

@@ -13,11 +13,13 @@ from ..config.constants import PERFORMANCE_CONFIG
 
 class CacheManager:
     """Gestionnaire de cache pour les données de configuration."""
-    
-    def __init__(self, ttl_seconds: int = PERFORMANCE_CONFIG['CACHE_TTL_SECONDS']):
+
+    def __init__(self, ttl_seconds: int = PERFORMANCE_CONFIG['CACHE_TTL_SECONDS'], max_entries: int = PERFORMANCE_CONFIG['MAX_CACHE_ENTRIES']):
         self.cache: Dict[str, Dict[str, Any]] = {}
         self.ttl_seconds = ttl_seconds
+        self.max_entries = max_entries
         self._access_stats = {'hits': 0, 'misses': 0}
+        self._access_order = []  # LRU tracking
     
     def get(self, file_path: str) -> Optional[Dict[str, Any]]:
         """
@@ -36,6 +38,10 @@ class CacheManager:
             # Vérifier le cache
             if self._is_cache_valid(normalized_path):
                 self._access_stats['hits'] += 1
+                # Update LRU order
+                if normalized_path in self._access_order:
+                    self._access_order.remove(normalized_path)
+                self._access_order.append(normalized_path)
                 logger.debug(f"Cache HIT: {Path(file_path).name}")
                 return self.cache[normalized_path]['data']
             
@@ -101,18 +107,29 @@ class CacheManager:
             return None
     
     def _store_in_cache(self, file_path: str, data: Dict[str, Any]):
-        """Stocke les données dans le cache."""
+        """Stocke les données dans le cache avec gestion LRU."""
         try:
+            # Limiter la taille du cache (LRU eviction)
+            if len(self.cache) >= self.max_entries and file_path not in self.cache:
+                oldest_key = self._access_order.pop(0)
+                del self.cache[oldest_key]
+                logger.debug(f"Cache LRU éviction: {Path(oldest_key).name}")
+
             file_stat = Path(file_path).stat()
-            
+
             self.cache[file_path] = {
                 'data': data,
                 'timestamp': time.time(),
                 'file_mtime': file_stat.st_mtime
             }
-            
+
+            # Update LRU order
+            if file_path in self._access_order:
+                self._access_order.remove(file_path)
+            self._access_order.append(file_path)
+
             logger.debug(f"Données mises en cache: {Path(file_path).name}")
-            
+
         except Exception as e:
             logger.warning(f"Erreur stockage cache pour {file_path}: {e}")
     

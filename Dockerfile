@@ -1,56 +1,34 @@
-# Dockerfile ultra-simple pour Bot Opérateur 112 - QNAP
-FROM python:3.11-slim
+# Dockerfile robuste pour QNAP avec toutes les optimisations
+FROM mcr.microsoft.com/playwright/python:v1.40.0-jammy
 
-# Variables d'environnement
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Installation des dépendances système pour Playwright
-RUN apt-get update && apt-get install -y \
-    wget \
-    curl \
-    ca-certificates \
-    xvfb \
-    libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgbm1 \
-    libxss1 \
-    libasound2 \
-    && rm -rf /var/lib/apt/lists/*
+# Variables d'environnement optimisées
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONOPTIMIZE=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1
 
 # Répertoire de travail
 WORKDIR /app
 
-# Copier requirements et installer Python packages
+# Copier requirements et installer
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Installer Playwright (sans install-deps car déjà installé manuellement)
-RUN playwright install chromium
-
-# Copier tout le code
+# Copier le code
 COPY . .
 
-# Créer dossiers avec bonnes permissions
-RUN mkdir -p /app/logs /app/data /app/cache /app/config
-RUN chmod 777 /app/logs /app/data /app/cache /app/config
+# Créer dossiers et permissions
+RUN mkdir -p logs data cache config && \
+    chmod 777 logs data cache config
 
 # Script d'entrée
 RUN chmod +x docker-entrypoint.sh
 
-# Volumes
-VOLUME ["/app/logs", "/app/data", "/app/cache"]
+# Variables d'environnement configurables via .env (pas de valeurs par défaut hardcodées)
 
-# Port
-EXPOSE 8080
+# Volumes pour persistance
+VOLUME ["/app/logs", "/app/data", "/app/cache"]
 
 # Point d'entrée
 ENTRYPOINT ["./docker-entrypoint.sh"]
