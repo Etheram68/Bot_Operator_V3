@@ -139,10 +139,13 @@ class OperateurBot:
         self._ensure_running()
         return await self.mission_manager.auto_deploy_missions(max_missions)
     
-    async def run_continuous(self, cycles: int = -1, max_missions: int = None) -> None:
+    async def run_continuous(self, cycles: int = -1, max_missions: int = None, cycle_delay: int = None) -> None:
         """Lance le bot en mode continu"""
         self._ensure_running()
-        await self.mission_manager.run_mission_cycle(cycles, max_missions)
+        # Utiliser le délai configuré dans les settings si non spécifié
+        if cycle_delay is None:
+            cycle_delay = self.settings.cycle_delay
+        await self.mission_manager.run_mission_cycle(cycles, max_missions, cycle_delay)
     
     def _ensure_running(self) -> None:
         """Vérifie que le bot est en cours d'exécution"""

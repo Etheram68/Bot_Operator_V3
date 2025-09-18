@@ -39,6 +39,7 @@ class Settings(BaseModel):
     # Sécurité
     max_concurrent_missions: int = Field(default=5, description="Nombre max de missions simultanées")
     mission_cooldown: int = Field(default=5, description="Cooldown entre missions (ultra-optimisé)")
+    cycle_delay: int = Field(default=5, description="Délai entre cycles en mode continu (secondes)")
     
     # Optimisation des déploiements
     vehicle_threshold: int = Field(default=3, description="DEPRECATED: Utiliser optimization_threshold et deployment_threshold")
@@ -77,6 +78,7 @@ class Settings(BaseModel):
             
             max_concurrent_missions=int(os.getenv("MAX_CONCURRENT_MISSIONS", "5")),
             mission_cooldown=int(os.getenv("MISSION_COOLDOWN", "5")),
+            cycle_delay=int(os.getenv("CYCLE_DELAY", "5")),
             
             vehicle_threshold=int(os.getenv("VEHICLE_THRESHOLD", "3")),
             optimization_threshold=int(os.getenv("OPTIMIZATION_THRESHOLD", os.getenv("VEHICLE_THRESHOLD", "3"))),

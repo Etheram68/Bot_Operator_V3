@@ -555,7 +555,7 @@ class MissionScraper:
                     except ValueError:
                         logger.debug(f"Valeur non numérique ignorée: {value_clean}")
 
-            logger.info(f"Extraction structurée <tr>: {len(requirements)} exigences trouvées")
+            logger.debug(f"Extraction structurée <tr>: {len(requirements)} exigences trouvées")
 
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction structurée <tr>: {e}")

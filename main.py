@@ -64,17 +64,22 @@ async def run_auto_mode(bot: OperateurBot, max_missions: int = None):
     logger.info(f"  - Missions ignorées: {stats['skipped']}")
 
 
-async def run_continuous_mode(bot: OperateurBot, cycles: int = -1, max_missions: int = None):
+async def run_continuous_mode(bot: OperateurBot, cycles: int = -1, max_missions: int = None, cycle_delay: int = None):
     """Exécute le mode continu"""
-    
+
+    # Utiliser le délai configuré dans les settings si non spécifié
+    if cycle_delay is None:
+        cycle_delay = bot.settings.cycle_delay
+
     logger.info(f"Mode continu activé (cycles: {'infini' if cycles < 0 else cycles})")
     if max_missions:
         logger.info(f"Limite de missions par cycle: {max_missions}")
+    logger.info(f"Délai entre cycles: {cycle_delay}s (configurable via CYCLE_DELAY)")
     logger.info("Appuyez sur Ctrl+C pour arrêter")
     
     try:
-        # Créer une tâche pour run_continuous
-        continuous_task = asyncio.create_task(bot.run_continuous(cycles, max_missions))
+        # Créer une tâche pour run_continuous avec le cycle_delay
+        continuous_task = asyncio.create_task(bot.run_continuous(cycles, max_missions, cycle_delay))
         
         # Attendre soit la fin du cycle, soit le signal d'arrêt
         done, pending = await asyncio.wait(
@@ -355,6 +360,8 @@ Exemples d'utilisation:
                        help="Nombre maximum de missions à analyser (défaut: 5)")
     parser.add_argument("--cycles", type=int, metavar="N",
                        help="Nombre de cycles à exécuter (mode continu)")
+    parser.add_argument("--cycle-delay", type=int, metavar="SECONDS",
+                       help="Délai entre cycles en mode continu (défaut: depuis CYCLE_DELAY)")
     parser.add_argument("--config", type=Path, metavar="FILE",
                        help="Fichier de configuration personnalisé")
     parser.add_argument("--headless", action="store_true",
@@ -425,7 +432,10 @@ async def main():
             
             elif args.continuous:
                 cycles = args.cycles if args.cycles is not None else -1
-                await run_continuous_mode(bot, cycles, args.max_missions)
+                # Utiliser cycle_delay depuis les arguments CLI s'il est fourni, sinon depuis settings
+                # Note: argparse convertit --cycle-delay en cycle_delay automatiquement
+                cycle_delay = getattr(args, 'cycle_delay', None)
+                await run_continuous_mode(bot, cycles, args.max_missions, cycle_delay)
             
             elif args.status:
                 await show_status(bot)

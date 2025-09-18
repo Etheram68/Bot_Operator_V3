@@ -2504,27 +2504,36 @@ class MissionManager:
         
         return eligible
     
-    async def run_mission_cycle(self, cycles: int = -1, max_missions: int = None) -> None:
+    async def run_mission_cycle(self, cycles: int = -1, max_missions: int = None, cycle_delay: int = None) -> None:
         """Exécute des cycles de missions automatiques"""
         cycle_count = 0
-        
+
+        # Utiliser le délai configuré par défaut si non spécifié
+        if cycle_delay is None:
+            cycle_delay = self.settings.cycle_delay
+
         logger.info(f"Démarrage des cycles de missions (cycles: {'infini' if cycles < 0 else cycles})")
         if max_missions:
             logger.info(f"Max missions par cycle: {max_missions}")
-        
+        logger.info(f"Délai entre cycles: {cycle_delay}s (configurable via CYCLE_DELAY)")
+
         try:
             while cycles < 0 or cycle_count < cycles:
                 cycle_count += 1
                 logger.info(f"--- Cycle {cycle_count} ---")
-                
+
                 stats = await self.auto_deploy_missions(max_missions)
-                
+
                 if stats["deployed"] == 0:
-                    logger.info("Aucune mission déployée, pause plus longue...")
-                    await asyncio.sleep(300)  # 5 minutes
+                    # Si aucune mission déployée, pause plus longue (5x le délai normal)
+                    extended_delay = cycle_delay * 5
+                    logger.info(f"Aucune mission déployée, pause plus longue de {extended_delay}s...")
+                    await asyncio.sleep(extended_delay)
                 else:
-                    # Attendre avant le prochain cycle
-                    await asyncio.sleep(60)  # 1 minute
+                    # Utiliser le délai configuré entre les cycles
+                    if cycles < 0 or cycle_count < cycles:  # Ne pas attendre après le dernier cycle
+                        logger.info(f"⏸️ Pause de {cycle_delay}s avant le prochain cycle...")
+                        await asyncio.sleep(cycle_delay)
                 
         except KeyboardInterrupt:
             logger.info("Interruption utilisateur - arrêt des cycles")
