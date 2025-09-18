@@ -11,6 +11,7 @@ from ..utils.dom_utils import DOMUtils
 from ..utils.text_utils import extract_number_from_text
 from ..utils.exceptions import ExceptionContext, MissionParsingError, handle_playwright_exceptions
 from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS, SELECTORS
+from ..utils.simple_cache import cache_result
 from .conditions_analyzer import ConditionsAnalyzer
 from .patient_scraper import PatientScraper
 
@@ -37,6 +38,7 @@ class MissionScraper:
         self.conditions_analyzer = ConditionsAnalyzer(page)
         self.patient_scraper = PatientScraper(page)
     
+    @cache_result(ttl=30, key_func=lambda self: "all_missions")  # Cache 30s pour missions actives
     async def get_all_missions(self) -> List[Mission]:
         """
         Récupère toutes les missions disponibles de tous les types.

@@ -6,6 +6,7 @@ from loguru import logger
 from ..config.settings import Settings
 from ..utils.retry import RetryHandler
 from ..utils.dom_base import DOMOperationsBase
+from ..utils.smart_navigation import SmartNavigation
 
 
 class BrowserManager:
@@ -19,6 +20,7 @@ class BrowserManager:
         self.page: Optional[Page] = None
         self.retry_handler = RetryHandler(settings)
         self._dom_ops: Optional[DOMOperationsBase] = None
+        self._smart_nav: Optional[SmartNavigation] = None
         
     async def start(self) -> None:
         """Démarre le navigateur et initialise une page"""
@@ -46,8 +48,9 @@ class BrowserManager:
             self.page.set_default_timeout(self.settings.element_wait_timeout * 1000)
             self.page.set_default_navigation_timeout(self.settings.page_load_timeout * 1000)
             
-            # Initialiser les opérations DOM
+            # Initialiser les opérations DOM et navigation intelligente
             self._dom_ops = DOMOperationsBase(self.page, self.settings.element_wait_timeout * 1000)
+            self._smart_nav = SmartNavigation(self.page)
             
             logger.info("Navigateur démarré avec succès")
             
@@ -73,6 +76,7 @@ class BrowserManager:
             finally:
                 self.page = None
                 self._dom_ops = None  # Nettoyer la référence DOM
+                self._smart_nav = None  # Nettoyer la navigation intelligente
                 
         # Fermer le contexte
         if self.context:
@@ -137,6 +141,24 @@ class BrowserManager:
                     raise
 
         await self.retry_handler.execute_with_retry(_navigate, f"Navigation vers {url}")
+
+    async def smart_navigate_to(self, url: str, force: bool = False) -> bool:
+        """
+        Navigation intelligente qui évite les rechargements inutiles
+
+        Args:
+            url: URL de destination
+            force: Force la navigation même si déjà sur la page
+
+        Returns:
+            bool: True si navigation effectuée, False si évitée
+        """
+        if not self._smart_nav:
+            # Fallback vers navigation normale
+            await self.navigate_to(url, fast_navigation=True)
+            return True
+
+        return await self._smart_nav.navigate_if_needed(url, force)
     
     async def wait_for_selector(self, selector: str, timeout: Optional[int] = None) -> bool:
         """Attend qu'un sélecteur soit présent avec timeout"""

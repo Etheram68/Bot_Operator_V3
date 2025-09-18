@@ -7,6 +7,7 @@ from loguru import logger
 from ..models.vehicle import Vehicle, VehicleStatus
 from ..models.mission import Mission, MissionType
 from ..utils.dom_utils import DOMUtils
+from ..utils.simple_cache import cache_result
 
 
 class VehicleScraper:
