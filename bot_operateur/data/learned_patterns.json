@@ -1,0 +1,47 @@
+{
+  "mission_technique": {
+    "common_vehicles": {
+      "FPT": 2,
+      "VSR": 1,
+      "CHEF_DE_GROUPE": 2,
+      "CARS_POLICE": 3,
+      "AMBULANCE": 1
+    },
+    "avg_complexity": 0,
+    "mission_count": 1
+  },
+  "mission_securite": {
+    "common_vehicles": {
+      "CARS_POLICE": 3
+    },
+    "avg_complexity": 0,
+    "mission_count": 2
+  },
+  "mission_incendie": {
+    "common_vehicles": {
+      "AMBULANCE": 1
+    },
+    "avg_complexity": 0,
+    "mission_count": 1
+  },
+  "mission_medicale": {
+    "common_vehicles": {
+      "AMBULANCE": 1
+    },
+    "avg_complexity": 0,
+    "mission_count": 1
+  },
+  "mission_chimique": {
+    "common_vehicles": {
+      "FPT": 4,
+      "BEA": 1,
+      "CHEF_DE_GROUPE": 2,
+      "CARS_POLICE": 4,
+      "CAMION_DEVIDOIRS": 1,
+      "MOTOPOMPES": 1,
+      "FMOGP": 1
+    },
+    "avg_complexity": 0,
+    "mission_count": 1
+  }
+}

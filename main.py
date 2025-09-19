@@ -352,7 +352,7 @@ Exemples d'utilisation:
                              help="Tester le scraping complet d'une mission spécifique (patients, exigences)")
     
     # Options
-    parser.add_argument("--strategy", choices=["balanced", "smart", "minimum", "optimal"],
+    parser.add_argument("--strategy", choices=["balanced", "smart", "smart_optimized", "minimum", "optimal"],
                        help="Stratégie de déploiement")
     parser.add_argument("--max-missions", type=int, metavar="N",
                        help="Nombre maximum de missions à déployer (mode auto)")

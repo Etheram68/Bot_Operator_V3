@@ -453,9 +453,28 @@ class VehicleScraper:
                 logger.info("🎉 Tous les besoins sont déjà satisfaits ! Aucun véhicule supplémentaire nécessaire.")
                 return (-1, 0)  # Code spécial pour indiquer que tous les besoins sont déjà satisfaits
             
+            # Vérifier d'abord si la mission est terminée
+            mission_complete_selector = ".mission-success"
+            mission_complete = await self.page.query_selector(mission_complete_selector)
+
+            if mission_complete:
+                logger.info("🏁 Mission terminée détectée - aucun déploiement supplémentaire nécessaire")
+                return (-2, 0)  # Code spécial pour mission terminée (différent de -1 pour besoins satisfaits)
+
             # Attendre que le tableau soit visible
             table_selector = self._get_vehicle_table_selector(mission_type or MissionType.NORMAL)
-            await self.page.wait_for_selector(table_selector, timeout=10000)
+
+            try:
+                await self.page.wait_for_selector(table_selector, timeout=10000)
+            except Exception as e:
+                # Double vérification si la mission s'est terminée pendant l'attente
+                mission_complete = await self.page.query_selector(mission_complete_selector)
+                if mission_complete:
+                    logger.info("🏁 Mission terminée pendant l'attente du tableau véhicules")
+                    return (-2, 0)  # Code spécial pour mission terminée
+                else:
+                    # Vraie erreur de timeout
+                    raise e
             
             # Récupérer les lignes de véhicules visibles (triées par proximité)
             vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")

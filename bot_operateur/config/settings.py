@@ -25,14 +25,14 @@ class Settings(BaseModel):
     
     # Logging
     log_level: str = Field(default="INFO", description="Niveau de logging")
-    log_file: Optional[str] = Field(default="bot.log", description="Fichier de log")
+    log_file: Optional[str] = Field(default="logs/bot.log", description="Fichier de log")
     
     # Navigation
     headless: bool = Field(default=True, description="Mode headless du navigateur")
     browser_slow_mo: int = Field(default=100, description="Ralentissement du navigateur (ms)")
     
     # Stratégies
-    default_strategy: str = Field(default="balanced", description="Stratégie par défaut")
+    default_strategy: str = Field(default="smart_optimized", description="Stratégie par défaut")
     auto_deploy: bool = Field(default=True, description="Déploiement automatique")
     min_credits_threshold: int = Field(default=1000, description="Seuil minimum de crédits")
     
@@ -67,12 +67,12 @@ class Settings(BaseModel):
             max_retries=int(os.getenv("MAX_RETRIES", "1")),
             
             log_level=os.getenv("LOG_LEVEL", "INFO"),
-            log_file=os.getenv("LOG_FILE", "bot.log"),
+            log_file=os.getenv("LOG_FILE", "logs/bot.log"),
             
             headless=os.getenv("HEADLESS", "true").lower() == "true",
             browser_slow_mo=int(os.getenv("BROWSER_SLOW_MO", "100")),
             
-            default_strategy=os.getenv("DEFAULT_STRATEGY", "balanced"),
+            default_strategy=os.getenv("DEFAULT_STRATEGY", "smart_optimized"),
             auto_deploy=os.getenv("AUTO_DEPLOY", "true").lower() == "true",
             min_credits_threshold=int(os.getenv("MIN_CREDITS_THRESHOLD", "1000")),
             

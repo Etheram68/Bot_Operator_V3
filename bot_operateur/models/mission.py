@@ -23,6 +23,14 @@ class MissionStatus(Enum):
     FAILED = "failed"
 
 
+class MissionState(Enum):
+    """État réel de la mission selon l'interface (data-mission-state-filter)"""
+    UNATTENDED = "unattended"  # Mission en attente de traitement
+    ATTENDED = "attended"      # Mission avec véhicules déployés mais non terminée
+    FINISHING = "finishing"    # Mission terminée ou tous besoins satisfaits
+    UNKNOWN = "unknown"        # État non défini
+
+
 class MissionRequirement(BaseModel):
     vehicle_type: str = Field(description="Type de véhicule requis")
     quantity: int = Field(description="Quantité requise")
@@ -34,6 +42,7 @@ class Mission(BaseModel):
     title: str = Field(description="Titre de la mission")
     type: MissionType = Field(description="Type de mission")
     status: MissionStatus = Field(default=MissionStatus.AVAILABLE)
+    state: MissionState = Field(default=MissionState.UNKNOWN, description="État réel de la mission")
     credits: Optional[int] = Field(default=None, description="Crédits moyens")
     
     # Exigences

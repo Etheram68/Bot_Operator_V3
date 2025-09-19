@@ -125,7 +125,7 @@
       },
       "VIRT": {
         "primary": ["VIRT"],
-        "secondary": []
+        "secondary": ["CMIC"]
       },
       "VTU": {
         "primary": ["FS", "VPI"],
@@ -153,6 +153,10 @@
       },
       "CEPC": {
         "primary": ["CEPC"],
+        "secondary": []
+      },
+      "CMIC": {
+        "primary": ["CMIC"],
         "secondary": []
       },
       "VTP(ers)_CONSTRAINED": {

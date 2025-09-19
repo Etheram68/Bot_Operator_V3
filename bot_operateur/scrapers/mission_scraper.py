@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 from playwright.async_api import Page
 from loguru import logger
 
-from ..models.mission import Mission, MissionType, MissionRequirement
+from ..models.mission import Mission, MissionType, MissionRequirement, MissionState
 from ..models.patient import Patient, PatientSeverity
 from ..models.requirement_parser import RequirementParser
 from ..utils.dom_utils import DOMUtils
@@ -109,6 +109,7 @@ class MissionScraper:
             search_attribute = await parent_element.get_attribute("search_attribute")
             mission_type_id = await parent_element.get_attribute("mission_type_id")
             additive_overlays = await parent_element.get_attribute("data-additive-overlays")
+            mission_state_filter = await parent_element.get_attribute("data-mission-state-filter")
             
             if not sortable_data_raw:
                 logger.warning(f"Pas de data-sortable-by trouvé pour mission {mission_id}")
@@ -133,11 +134,22 @@ class MissionScraper:
                     logger.debug(f"🔗 URL avec additive_overlays '{additive_overlays}': {help_url}")
                 else:
                     help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?mission_id={mission_id}"
-            
+
+            # Convertir l'état de la mission
+            state = MissionState.UNKNOWN
+            if mission_state_filter:
+                try:
+                    state = MissionState(mission_state_filter)
+                    logger.debug(f"🎯 État mission {mission_id}: {state.value}")
+                except ValueError:
+                    logger.warning(f"⚠️ État mission inconnu pour {mission_id}: '{mission_state_filter}'")
+                    state = MissionState.UNKNOWN
+
             mission = Mission(
                 id=mission_id,
                 title=title,
                 type=mission_type,
+                state=state,
                 location=location,
                 deploy_url=deploy_url,
                 help_url=help_url,

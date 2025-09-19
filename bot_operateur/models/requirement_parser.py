@@ -324,7 +324,7 @@ class RequirementParser:
     def _deduplicate_overlapping_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
         """
         Supprime les doublons quand un pattern spécifique et un pattern générique matchent le même texte.
-        AMÉLIORATION: Gestion intelligente des exigences multiples qui se chevauchent.
+        Version optimisée avec timeouts pour éviter les blocages.
 
         Args:
             requirements: Liste des exigences à dédupliquer
@@ -332,8 +332,14 @@ class RequirementParser:
         Returns:
             List[MissionRequirement]: Liste déduplicatée
         """
+        import time
+        start_time = time.time()
+        max_processing_time = 5.0  # 5 secondes max
+
         if len(requirements) <= 1:
             return requirements
+
+        logger.debug(f"🔄 Déduplication de {len(requirements)} exigences")
 
         # Regrouper les exigences par "famille" de véhicules compatibles
         compatible_groups = {
@@ -349,6 +355,11 @@ class RequirementParser:
         processed_families = set()
 
         for family_name, family_types in compatible_groups.items():
+            # Timeout check
+            if time.time() - start_time > max_processing_time:
+                logger.warning(f"⚠️ Timeout déduplication famille {family_name} - arrêt forcé")
+                break
+
             family_requirements = []
             family_indices = []
 
@@ -357,6 +368,8 @@ class RequirementParser:
                 if req.vehicle_type in family_types:
                     family_requirements.append(req)
                     family_indices.append(i)
+
+            logger.debug(f"Famille {family_name}: {len(family_requirements)} exigences trouvées")
 
             if len(family_requirements) > 1:  # Plusieurs requirements de la même famille
                 # Trouver la quantité maximale
@@ -370,40 +383,46 @@ class RequirementParser:
                         logger.debug(f"🔄 {family_name}: supprimé {req.vehicle_type} x{req.quantity} (max: {max_quantity})")
 
                 processed_families.add(family_name)
-                logger.info(f"🧹 Famille {family_name}: consolidée à {max_quantity} véhicules (était {sum(req.quantity for req in family_requirements)})")
+                total_before = sum(req.quantity for req in family_requirements)
+                logger.info(f"🧹 Famille {family_name}: consolidée à {max_quantity} véhicules (était {total_before})")
 
-        # Appliquer aussi les règles d'overlap classiques pour les cas non couverts
-        specificity_hierarchy = {
-            'FPT_SR_BEA': 100, 'FPT_SR': 90, 'FPT_BEA': 90, 'FPT_VIM': 90,
-            'BLS_CSL': 90, 'CARS_POLICE_PATROUILLE_VR': 90, 'CARS_POLICE_VR': 85,
-            'CHEF_DE_GROUPE': 50, 'FPT': 10, 'VSR': 10, 'BEA': 10, 'VIM': 10,
-            'BLS': 10, 'VLHR': 10, 'CARS_POLICE': 10, 'VR_CRS': 10,
-        }
+        # Timeout check avant les règles d'overlap
+        if time.time() - start_time > max_processing_time:
+            logger.warning("⚠️ Timeout déduplication - skip règles overlap")
+        else:
+            # Appliquer aussi les règles d'overlap classiques pour les cas non couverts
+            overlap_rules = {
+                'BLS_CSL': ['BLS'],
+                'VIM': ['VIMP'],  # Un VIM peut satisfaire les besoins VIMP
+            }
 
-        overlap_rules = {
-            'BLS_CSL': ['BLS'],
-            'VIM': ['VIMP'],  # Un VIM peut satisfaire les besoins VIMP
-        }
+            # Appliquer les règles d'overlap pour les cas non gérés par les familles
+            for specific_type, generic_types in overlap_rules.items():
+                # Timeout check dans la loop
+                if time.time() - start_time > max_processing_time:
+                    logger.warning(f"⚠️ Timeout déduplication overlap {specific_type} - arrêt forcé")
+                    break
 
-        # Appliquer les règles d'overlap pour les cas non gérés par les familles
-        for specific_type, generic_types in overlap_rules.items():
-            specific_reqs = [req for req in requirements if req.vehicle_type == specific_type]
+                specific_reqs = [req for req in requirements if req.vehicle_type == specific_type]
 
-            if specific_reqs:
-                for specific_req in specific_reqs:
-                    for i, req in enumerate(requirements):
-                        if (req.vehicle_type in generic_types and
-                            req.quantity <= specific_req.quantity and
-                            i not in requirements_to_remove):
-                            requirements_to_remove.add(i)
-                            logger.debug(f"🔄 Overlap: {specific_type} x{specific_req.quantity} remplace {req.vehicle_type} x{req.quantity}")
+                if specific_reqs:
+                    for specific_req in specific_reqs:
+                        for i, req in enumerate(requirements):
+                            if (req.vehicle_type in generic_types and
+                                req.quantity <= specific_req.quantity and
+                                i not in requirements_to_remove):
+                                requirements_to_remove.add(i)
+                                logger.debug(f"🔄 Overlap: {specific_type} x{specific_req.quantity} remplace {req.vehicle_type} x{req.quantity}")
 
         # Filtrer les requirements
         deduplicated = [req for i, req in enumerate(requirements) if i not in requirements_to_remove]
 
+        processing_time = time.time() - start_time
         if len(deduplicated) != len(requirements):
             removed_count = len(requirements) - len(deduplicated)
-            logger.info(f"🧹 Supprimé {removed_count} doublon(s) dans les exigences")
+            logger.info(f"🧹 Supprimé {removed_count} doublon(s) dans les exigences (temps: {processing_time:.2f}s)")
+        else:
+            logger.debug(f"🧹 Déduplication terminée sans changement (temps: {processing_time:.2f}s)")
 
         return deduplicated
     

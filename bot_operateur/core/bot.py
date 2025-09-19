@@ -48,6 +48,9 @@ class OperateurBot:
             
             # Initialiser le gestionnaire de missions
             self.mission_manager = MissionManager(self.browser_manager, self.settings)
+
+            # Charger les patterns d'apprentissage précédemment sauvegardés
+            await self.mission_manager.initialize()
             
             self.is_running = True
             logger.info("Bot démarré avec succès!")
@@ -65,12 +68,16 @@ class OperateurBot:
         logger.info("Arrêt du bot...")
         
         try:
+            # Sauvegarder les patterns d'apprentissage avant l'arrêt
+            if self.mission_manager:
+                await self.mission_manager.finalize()
+
             # Arrêter le navigateur
             await self.browser_manager.stop()
-            
+
             self.is_running = False
             logger.info("Bot arrêté")
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de l'arrêt: {e}")
     

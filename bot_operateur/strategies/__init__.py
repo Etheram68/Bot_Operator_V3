@@ -1,5 +1,5 @@
 from .base_strategy import BaseStrategy
-from .balanced_strategy import BalancedStrategy
 from .smart_strategy import SmartStrategy
+from .smart_strategy_optimized import SmartStrategyOptimized
 
-__all__ = ["BaseStrategy", "BalancedStrategy", "SmartStrategy"]
+__all__ = ["BaseStrategy", "SmartStrategy", "SmartStrategyOptimized"]

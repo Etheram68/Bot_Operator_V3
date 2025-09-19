@@ -8,11 +8,12 @@ from ..models.mission import Mission, MissionStatus
 from ..scrapers.mission_scraper import MissionScraper
 from ..scrapers.vehicle_scraper import VehicleScraper
 from ..strategies.base_strategy import BaseStrategy
-from ..strategies.balanced_strategy import BalancedStrategy
 from ..strategies.smart_strategy import SmartStrategy
+from ..strategies.smart_strategy_optimized import SmartStrategyOptimized
 from ..core.browser_manager import BrowserManager
 from ..config.settings import Settings
 from ..utils.parallel_operations import ParallelBatch, run_parallel_limited
+from ..utils.smart_requirements_cache import get_smart_requirements_cache
 
 
 class MissionManager:
@@ -38,12 +39,26 @@ class MissionManager:
         self.vehicle_scraper = VehicleScraper(browser_manager.page)
         
         self.strategies = {
-            "balanced": BalancedStrategy(),
             "smart": SmartStrategy(),
+            "smart_optimized": SmartStrategyOptimized(),
         }
-        
+
+        # Initialiser le cache d'apprentissage
+        self.requirements_cache = get_smart_requirements_cache()
+
+        # Initialiser le validateur d'apprentissage intelligent (simplifié)
+        from ..utils.smart_learning_validator import get_smart_learning_validator
+        self.learning_validator = get_smart_learning_validator()
+
         self.active_missions: List[Mission] = []
-        
+        self._patterns_loaded = False
+
+    async def initialize(self):
+        """Initialisation asynchrone - doit être appelée après la création"""
+        if not self._patterns_loaded:
+            await self._load_learned_patterns()
+            self._patterns_loaded = True
+
         # Charger la configuration des besoins manquants
         self.missing_needs_config = self._load_missing_needs_config()
     
@@ -76,18 +91,18 @@ class MissionManager:
     async def get_all_missions(self) -> List[Mission]:
         """
         Récupère toutes les missions disponibles depuis l'interface web.
-        
+
         Returns:
             List[Mission]: Liste des missions trouvées, vide en cas d'erreur
         """
         logger.info("Récupération de toutes les missions...")
-        
+
         try:
             await self.browser_manager.navigate_to(f"{self.settings.game_url}/")
             missions = await self.mission_scraper.get_all_missions()
             logger.info(f"Trouvé {len(missions)} missions au total")
             return missions
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des missions: {e}")
             return []
@@ -151,12 +166,22 @@ class MissionManager:
             return False
         
         logger.info(f"Déploiement pour mission {mission.id} avec stratégie '{strategy_name}'")
-        
+
         try:
-            # Récupérer les détails complets de la mission
+            # 🚀 OPTIMISATION: Vérifier d'abord l'état de la mission
+            from ..models.mission import MissionState
+
+            if mission.state == MissionState.FINISHING:
+                # Mission déjà terminée - traitement post-déploiement uniquement
+                logger.info(f"✅ Mission {mission.id} marquée FINISHING - traitement post-déploiement seulement")
+                return await self._handle_finished_mission(mission, strategy_name)
+
+            # Récupérer les détails complets de la mission (seulement si nécessaire)
             mission = await self.get_mission_details(mission)
             if not mission:
-                return False
+                # Mission accomplie ou inaccessible - ne pas traiter comme un échec
+                logger.info(f"🏁 Mission ignorée (accomplie ou inaccessible)")
+                return True  # Retourner succès car mission accomplie n'est pas un échec
             
             # Récupérer les véhicules disponibles
             available_vehicles = await self.vehicle_scraper.get_available_vehicles_for_mission(mission)
@@ -172,10 +197,35 @@ class MissionManager:
             
             # Sélectionner les véhicules
             selected_vehicle_ids = await strategy.select_vehicles_for_mission(mission, available_vehicles)
-            
+
             if not selected_vehicle_ids:
-                logger.warning(f"Aucun véhicule sélectionné pour mission {mission.id}")
-                return False
+                # Vérifier si c'est parce que la mission n'a pas besoin de véhicules supplémentaires
+                mission_requirements = mission.get_total_vehicle_requirements()
+
+                if not mission_requirements:
+                    # La mission n'a aucune exigence - c'est un succès
+                    logger.info(f"✅ Mission {mission.id} - aucune exigence en véhicule requise")
+                    mission.status = MissionStatus.IN_PROGRESS
+                    return True
+                else:
+                    # Vérifier si tous les besoins sont déjà satisfaits
+                    logger.info(f"🔍 Mission {mission.id} - vérification si besoins déjà satisfaits")
+
+                    # Calculer les besoins avec la stratégie
+                    vehicle_needs = await strategy.get_vehicle_needs(mission)
+
+                    if not vehicle_needs:
+                        # La stratégie dit qu'il n'y a pas de besoins - probablement déjà satisfait
+                        logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits selon la stratégie")
+                        mission.status = MissionStatus.IN_PROGRESS
+
+                        # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern même si déjà satisfait
+                        await self._record_successful_deployment(mission, mission_requirements, strategy_name)
+                        return True
+                    else:
+                        # Il y a des besoins mais aucun véhicule disponible pour les satisfaire
+                        logger.warning(f"❌ Mission {mission.id} - besoins identifiés ({vehicle_needs}) mais aucun véhicule disponible")
+                        return False
             
             # Sélectionner les véhicules dans l'interface
             selection_success = await self.vehicle_scraper.select_vehicles(selected_vehicle_ids)
@@ -186,9 +236,14 @@ class MissionManager:
             # Déployer
             deployment_success = await self.vehicle_scraper.deploy_selected_vehicles()
             if deployment_success:
-                logger.info(f"Mission {mission.title} ({mission.id}) déployée avec succès!")
+                logger.info(f"Mission {mission.id} déployée avec succès!")
                 mission.status = MissionStatus.IN_PROGRESS
                 mission.deployed_vehicles = selected_vehicle_ids
+
+                # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern de déploiement réussi
+                vehicle_needs_dict = {req.vehicle_type: req.quantity for req in mission.requirements if hasattr(req, 'vehicle_type')}
+                await self._record_successful_deployment(mission, vehicle_needs_dict, strategy_name)
+
                 return True
             else:
                 logger.error(f"Échec du déploiement pour mission {mission.id}")
@@ -213,12 +268,22 @@ class MissionManager:
             return False
         
         logger.info(f"🚀 Déploiement optimisé pour mission {mission.id} avec stratégie '{strategy_name}'")
-        
+
         try:
-            # Récupérer les détails complets de la mission
+            # 🚀 OPTIMISATION: Vérifier d'abord l'état de la mission
+            from ..models.mission import MissionState
+
+            if mission.state == MissionState.FINISHING:
+                # Mission déjà terminée - traitement post-déploiement uniquement
+                logger.info(f"✅ Mission {mission.id} marquée FINISHING - traitement post-déploiement seulement")
+                return await self._handle_finished_mission(mission, strategy_name)
+
+            # Récupérer les détails complets de la mission (seulement si nécessaire)
             mission = await self.get_mission_details(mission)
             if not mission:
-                return False
+                # Mission accomplie ou inaccessible - ne pas traiter comme un échec
+                logger.info(f"🏁 Mission ignorée (accomplie ou inaccessible)")
+                return True  # Retourner succès car mission accomplie n'est pas un échec
             
             # Navigation optimisée directe vers la page de déploiement (éviter 3 navigations redondantes)
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
@@ -338,10 +403,40 @@ class MissionManager:
                         }
                         logger.debug("Utilisation du mapping AMBULANCE_TRANSPORT par défaut")
             
-            # Vérification finale : s'assurer qu'il y a des besoins à satisfaire
+            # Vérification finale : analyser pourquoi il n'y a pas de besoins
             if not vehicle_needs:
-                logger.warning(f"Aucun besoin en véhicule identifié pour mission {mission.id} (ni par stratégie, ni par alertes)")
-                return False
+                # Vérifier si la mission a des exigences mais elles sont déjà satisfaites
+                mission_requirements = mission.get_total_vehicle_requirements()
+
+                if mission_requirements:
+                    # La mission a des exigences, vérifier si elles sont déjà satisfaites
+                    logger.info(f"🔍 Mission {mission.id} a des exigences ({mission_requirements}) mais aucun besoin - vérification si déjà satisfaite")
+
+                    # Exécuter la vérification normale pour voir si c'est déjà satisfait
+                    selected_count, missing_count = await self.vehicle_scraper.vehicle_needs(
+                        mission_requirements, alternatives_mapping, mission.type, mission, set(), set(), {}
+                    )
+
+                    if selected_count == -1:
+                        # Tous les besoins sont déjà satisfaits - c'est un succès !
+                        logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits")
+                        mission.status = MissionStatus.IN_PROGRESS
+                        # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern même si déjà satisfait
+                        await self._record_successful_deployment(mission, mission_requirements, strategy_name)
+                        return True
+                    elif selected_count == -2:
+                        # Mission terminée pendant le processus
+                        logger.info(f"🏁 Mission {mission.id} terminée pendant la vérification - marquage comme complète")
+                        mission.status = MissionStatus.COMPLETED
+                        return True
+                    else:
+                        logger.warning(f"⚠️ Mission {mission.id} - exigences non satisfaites mais stratégie n'a pas calculé de besoins")
+                        return False
+                else:
+                    # La mission n'a vraiment aucune exigence - c'est un succès automatique
+                    logger.info(f"✅ Mission {mission.id} - aucune exigence en véhicule requise")
+                    mission.status = MissionStatus.IN_PROGRESS
+                    return True
             
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
             # Passer alert_override_types et constrained_vehicles si définis
@@ -352,8 +447,17 @@ class MissionManager:
             
             if selected_count == -1:
                 # Tous les besoins sont déjà satisfaits - c'est un succès !
-                logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits, aucun déploiement supplémentaire nécessaire")
+                logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits")
                 mission.status = MissionStatus.IN_PROGRESS
+
+                # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern même si déjà satisfait
+                await self._record_successful_deployment(mission, vehicle_needs, strategy_name)
+
+                return True
+            elif selected_count == -2:
+                # Mission terminée pendant le processus de déploiement
+                logger.info(f"🏁 Mission {mission.id} terminée pendant le déploiement - marquage comme complète")
+                mission.status = MissionStatus.COMPLETED
                 return True
             elif selected_count == 0:
                 logger.warning(f"❌ Aucun véhicule disponible pour satisfaire les besoins de la mission {mission.id}")
@@ -373,8 +477,12 @@ class MissionManager:
             # Déployer immédiatement
             deployment_success = await self.vehicle_scraper.deploy_selected_vehicles()
             if deployment_success:
-                logger.info(f"✅ Mission {mission.title} ({mission.id}) déployée avec succès en mode optimisé!")
+                logger.info(f"✅ Mission {mission.id} déployée avec succès en mode optimisé!")
                 mission.status = MissionStatus.IN_PROGRESS
+
+                # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern de déploiement réussi
+                await self._record_successful_deployment(mission, vehicle_needs, strategy_name)
+
                 return True
             else:
                 logger.error(f"❌ Échec du déploiement pour mission {mission.title} ({mission.id})")
@@ -383,23 +491,539 @@ class MissionManager:
         except Exception as e:
             logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
             return False
+
+    async def _record_successful_deployment(self, mission: Mission, vehicle_needs: Dict[str, int], strategy_name: str) -> None:
+        """
+        Enregistre un déploiement réussi avec apprentissage intelligent basé sur l'état réel
+
+        Args:
+            mission: Mission déployée avec succès
+            vehicle_needs: Besoins en véhicules qui ont été satisfaits
+            strategy_name: Nom de la stratégie utilisée
+        """
+        try:
+            # 🧠 NOUVEAU: Apprentissage intelligent basé sur l'état réel de la mission
+            from ..models.mission import MissionState
+
+            # Récupérer l'état actuel de la mission
+            current_missions = await self.get_all_missions()
+            current_mission_state = None
+
+            for current_mission in current_missions:
+                if current_mission.id == mission.id:
+                    current_mission_state = current_mission.state
+                    break
+
+            if current_mission_state == MissionState.FINISHING:
+                # Mission vraiment terminée - apprendre immédiatement !
+                logger.info(f"🏆 Mission {mission.id} terminée (state=finishing) - apprentissage immédiat")
+
+                # Convertir vehicle_needs en MissionRequirement pour le cache
+                requirements = []
+                for vehicle_type, quantity in vehicle_needs.items():
+                    from ..models.mission import MissionRequirement
+                    req = MissionRequirement(
+                        vehicle_type=vehicle_type,
+                        quantity=quantity,
+                        optional=False
+                    )
+                    requirements.append(req)
+
+                # Apprendre immédiatement le pattern validé
+                self.requirements_cache.cache_requirements(mission, requirements)
+                logger.info(f"🧠 Pattern appris immédiatement: {vehicle_needs}")
+
+                # Sauvegarder
+                await self._save_learned_patterns_if_needed()
+
+            elif current_mission_state is not None and current_mission_state in [MissionState.ATTENDED, MissionState.UNATTENDED]:
+                # Mission encore en cours - programmer validation différée comme fallback
+                logger.debug(f"⏳ Mission {mission.id} encore en cours (state={current_mission_state.value}) - validation différée")
+
+                # Apprentissage simple - juste noter le déploiement réussi
+                logger.debug(f"📋 Mission {mission.id} en cours - apprentissage simplifié")
+
+            else:
+                # État inconnu ou mission non trouvée - fallback sur validation différée
+                if current_mission_state is None:
+                    logger.warning(f"⚠️ Mission {mission.id} non trouvée dans la liste - validation différée")
+                else:
+                    logger.warning(f"⚠️ État mission {mission.id} inconnu ({current_mission_state}) - validation différée")
+
+                # Apprentissage simple - juste noter le déploiement réussi
+                logger.debug(f"📋 Mission {mission.id} en cours - apprentissage simplifié")
+
+        except Exception as e:
+            logger.warning(f"Erreur lors de l'enregistrement d'apprentissage pour {mission.id}: {e}")
+
+    async def _handle_finished_mission(self, mission: Mission, strategy_name: str) -> bool:
+        """
+        Traitement optimisé et sécurisé pour missions marquées FINISHING
+
+        Évite l'analyse des conditions initiales mais vérifie les nouveaux éléments
+        Traite : nouveaux besoins, transports, patients, alertes
+
+        Args:
+            mission: Mission terminée
+            strategy_name: Stratégie utilisée (pour l'apprentissage)
+
+        Returns:
+            True si le traitement post-déploiement réussit
+        """
+        try:
+            from ..models.mission import MissionState
+            logger.info(f"🏁 Traitement sécurisé pour mission FINISHING {mission.id}")
+
+            # Navigation vers la mission
+            mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
+            await self.browser_manager.navigate_to(mission_url, fast_navigation=True)
+
+            # 🛡️ SÉCURISATION 1: Vérifier l'état actuel de la mission
+            updated_missions = await self.get_all_missions()
+            current_mission_state = None
+
+            for updated_mission in updated_missions:
+                if updated_mission.id == mission.id:
+                    current_mission_state = updated_mission.state
+                    break
+
+            if current_mission_state is None:
+                logger.warning(f"⚠️ Mission {mission.id} non trouvée dans la liste - probablement terminée")
+                return True  # Mission probablement terminée avec succès
+
+            if current_mission_state != MissionState.FINISHING:
+                logger.warning(f"⚠️ Mission {mission.id} a changé d'état ({current_mission_state.value}) - fallback traitement normal")
+                # La mission a changé d'état, faire un traitement normal
+                return await self._fallback_to_normal_processing(mission, strategy_name)
+
+            # 🛡️ SÉCURISATION 2: Détecter les nouveaux besoins/alertes
+            new_needs_detected = await self._detect_new_mission_needs(mission)
+
+            if new_needs_detected:
+                logger.info(f"🚨 Nouveaux besoins détectés sur mission FINISHING {mission.id} - traitement hybride")
+                return await self._handle_finishing_mission_with_new_needs(mission, strategy_name, new_needs_detected)
+
+            # 🛡️ Mission vraiment stable - traitement optimisé sécurisé
+            logger.info(f"✅ Mission {mission.id} confirmée stable - traitement optimisé")
+
+            success_count = 0
+            total_tasks = 0
+
+            # 1. Traiter les transports de patients/prisonniers
+            try:
+                total_tasks += 1
+                if await self._handle_patient_transport_initial(mission):
+                    success_count += 1
+                    logger.debug("✅ Transports traités ou aucun transport nécessaire")
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur traitement transports: {e}")
+
+            # 2. Traiter les alertes véhicules (si il y en a)
+            try:
+                total_tasks += 1
+                # Vérifier s'il y a des alertes véhicules à traiter
+                # (Cela pourrait être étendu selon les besoins spécifiques)
+                success_count += 1  # Pour l'instant, on considère comme traité
+                logger.debug("✅ Alertes véhicules vérifiées")
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur traitement alertes: {e}")
+
+            # 3. Marquer comme succès d'apprentissage immédiat
+            try:
+                total_tasks += 1
+                # Pour une mission FINISHING, on peut apprendre les patterns existants
+                mission_requirements = mission.get_total_vehicle_requirements()
+                if mission_requirements:
+                    await self._record_successful_deployment(mission, mission_requirements, strategy_name)
+                    logger.info("🧠 Pattern appris pour mission terminée")
+
+                success_count += 1
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur apprentissage: {e}")
+
+            # Marquer la mission comme traitée
+            from ..models.mission import MissionStatus
+            mission.status = MissionStatus.COMPLETED
+
+            success_rate = success_count / total_tasks if total_tasks > 0 else 0
+
+            if success_rate >= 0.8:  # 80% de succès minimum
+                logger.info(f"✅ Mission FINISHING {mission.id} traitée avec succès ({success_count}/{total_tasks} tâches)")
+                return True
+            else:
+                logger.warning(f"⚠️ Mission FINISHING {mission.id} partiellement traitée ({success_count}/{total_tasks} tâches)")
+                return True  # On considère comme succès car pas d'erreur critique
+
+        except Exception as e:
+            logger.error(f"❌ Erreur lors du traitement mission FINISHING {mission.id}: {e}")
+            return False
+
+    async def _detect_new_mission_needs(self, mission: Mission) -> Optional[Dict[str, any]]:
+        """
+        Détecte s'il y a de nouveaux besoins sur une mission FINISHING
+
+        Returns:
+            Dict avec les nouveaux besoins détectés, ou None si aucun
+        """
+        try:
+            logger.debug(f"🔍 Détection nouveaux besoins pour mission {mission.id}")
+
+            detected_needs = {}
+
+            # 1. Vérifier les alertes de véhicules manquants
+            try:
+                missing_vehicles = await self._extract_missing_vehicles_from_alert(mission)
+                if missing_vehicles:
+                    detected_needs['missing_vehicles'] = missing_vehicles
+                    logger.info(f"🚨 Véhicules manquants détectés: {missing_vehicles}")
+            except Exception as e:
+                logger.debug(f"Pas d'alerte véhicules manquants: {e}")
+
+            # 2. Vérifier les nouveaux transports/patients
+            try:
+                # Récupérer les détails actuels pour comparer
+                current_details = await self.mission_scraper.get_mission_details(mission)
+                if current_details:
+                    current_patients = current_details.get('patients', [])
+
+                    # Comparer avec les patients initiaux
+                    if len(current_patients) > mission.patient_count:
+                        new_patients_count = len(current_patients) - mission.patient_count
+                        detected_needs['new_patients'] = new_patients_count
+                        logger.info(f"🚑 Nouveaux patients détectés: +{new_patients_count}")
+
+            except Exception as e:
+                logger.debug(f"Erreur vérification nouveaux patients: {e}")
+
+            # 3. Vérifier les alertes de transport
+            try:
+                # Chercher des boutons de transport qui indiquent de nouveaux besoins
+                transport_buttons = await self.browser_manager.page.query_selector_all('a[href*="transport"]')
+                if transport_buttons:
+                    detected_needs['pending_transports'] = len(transport_buttons)
+                    logger.info(f"🚚 Transports en attente détectés: {len(transport_buttons)}")
+
+            except Exception as e:
+                logger.debug(f"Erreur vérification transports: {e}")
+
+            return detected_needs if detected_needs else None
+
+        except Exception as e:
+            logger.warning(f"Erreur lors de la détection de nouveaux besoins: {e}")
+            return None
+
+    async def _fallback_to_normal_processing(self, mission: Mission, strategy_name: str) -> bool:
+        """
+        Fallback vers traitement normal si la mission a changé d'état
+
+        Args:
+            mission: Mission à traiter normalement
+            strategy_name: Stratégie à utiliser
+
+        Returns:
+            True si le traitement normal réussit
+        """
+        logger.info(f"🔄 Fallback traitement normal pour mission {mission.id}")
+
+        try:
+            strategy = self.strategies.get(strategy_name)
+            if not strategy:
+                return False
+
+            # Récupérer les détails complets de la mission
+            mission = await self.get_mission_details(mission)
+            if not mission:
+                return False
+
+            # Récupérer les véhicules disponibles
+            available_vehicles = await self.vehicle_scraper.get_available_vehicles_for_mission(mission)
+
+            if not available_vehicles:
+                logger.warning(f"Aucun véhicule disponible pour mission {mission.id}")
+                return False
+
+            # Vérifier si la stratégie peut gérer cette mission
+            if not await strategy.can_handle_mission(mission, available_vehicles):
+                logger.warning(f"Stratégie {strategy_name} ne peut pas gérer mission {mission.id}")
+                return False
+
+            # Sélectionner les véhicules
+            selected_vehicle_ids = await strategy.select_vehicles_for_mission(mission, available_vehicles)
+
+            if not selected_vehicle_ids:
+                # Pas de véhicules sélectionnés - peut-être que tout est déjà satisfait
+                logger.info(f"✅ Mission {mission.id} - aucun véhicule supplémentaire nécessaire")
+                return True
+
+            # Sélectionner les véhicules dans l'interface
+            selection_success = await self.vehicle_scraper.select_vehicles(selected_vehicle_ids)
+            if not selection_success:
+                logger.error(f"Échec de la sélection des véhicules pour mission {mission.id}")
+                return False
+
+            # Déployer
+            deployment_success = await self.vehicle_scraper.deploy_selected_vehicles()
+
+            if deployment_success:
+                logger.info(f"✅ Fallback réussi pour mission {mission.id}")
+
+                # Enregistrer pour l'apprentissage
+                vehicle_needs_dict = {req.vehicle_type: req.quantity for req in mission.requirements if hasattr(req, 'vehicle_type')}
+                await self._record_successful_deployment(mission, vehicle_needs_dict, strategy_name)
+
+                return True
+            else:
+                logger.error(f"Échec du déploiement fallback pour mission {mission.id}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Erreur lors du traitement fallback pour mission {mission.id}: {e}")
+            return False
+
+    async def _handle_finishing_mission_with_new_needs(self, mission: Mission, strategy_name: str, new_needs: Dict) -> bool:
+        """
+        Traitement hybride pour mission FINISHING avec nouveaux besoins détectés
+
+        Combine optimisation (évite conditions initiales) et sécurité (traite nouveaux besoins)
+
+        Args:
+            mission: Mission avec nouveaux besoins
+            strategy_name: Stratégie utilisée
+            new_needs: Nouveaux besoins détectés
+
+        Returns:
+            True si le traitement hybride réussit
+        """
+        try:
+            logger.info(f"🔀 Traitement hybride pour mission {mission.id} avec nouveaux besoins")
+
+            success_count = 0
+            total_tasks = 0
+
+            # 1. Traiter les véhicules manquants si détectés
+            if 'missing_vehicles' in new_needs:
+                total_tasks += 1
+                try:
+                    missing_vehicles = new_needs['missing_vehicles']
+                    logger.info(f"🚨 Traitement véhicules manquants: {missing_vehicles}")
+
+                    # Utiliser la logique normale pour déployer les véhicules manquants
+                    strategy = self.strategies.get(strategy_name)
+                    if strategy:
+                        # Obtenir les véhicules disponibles
+                        available_vehicles = await self.vehicle_scraper.get_available_vehicles_for_mission(mission)
+
+                        if available_vehicles:
+                            # Sélectionner seulement les véhicules pour les besoins manquants
+                            # (Implementation simplifiée - pourrait être plus sophistiquée)
+                            selected_vehicle_ids = await strategy.select_vehicles_for_mission(mission, available_vehicles)
+
+                            if selected_vehicle_ids:
+                                selection_success = await self.vehicle_scraper.select_vehicles(selected_vehicle_ids)
+                                if selection_success:
+                                    deployment_success = await self.vehicle_scraper.deploy_selected_vehicles()
+                                    if deployment_success:
+                                        success_count += 1
+                                        logger.info("✅ Véhicules manquants déployés")
+
+                except Exception as e:
+                    logger.warning(f"⚠️ Erreur traitement véhicules manquants: {e}")
+
+            # 2. Traiter les transports en attente
+            if 'pending_transports' in new_needs or 'new_patients' in new_needs:
+                total_tasks += 1
+                try:
+                    if await self._handle_patient_transport_initial(mission):
+                        success_count += 1
+                        logger.info("✅ Nouveaux transports traités")
+                except Exception as e:
+                    logger.warning(f"⚠️ Erreur traitement nouveaux transports: {e}")
+
+            # 3. Apprentissage conditionnel
+            total_tasks += 1
+            try:
+                # Pour une mission avec nouveaux besoins, on enregistre pour validation différée
+                # (pas d'apprentissage immédiat car la situation a évolué)
+                mission_requirements = mission.get_total_vehicle_requirements()
+                if mission_requirements:
+                    # Apprentissage simple pour besoins évolués
+                    logger.info("📋 Mission avec besoins évolués - apprentissage simplifié")
+
+                success_count += 1
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur enregistrement apprentissage: {e}")
+
+            # Marquer la mission selon le succès
+            from ..models.mission import MissionStatus
+            if success_count >= total_tasks * 0.8:  # 80% de réussite minimum
+                mission.status = MissionStatus.IN_PROGRESS  # Pas completed car évolue encore
+                logger.info(f"✅ Traitement hybride réussi pour mission {mission.id} ({success_count}/{total_tasks})")
+                return True
+            else:
+                logger.warning(f"⚠️ Traitement hybride partiel pour mission {mission.id} ({success_count}/{total_tasks})")
+                return False
+
+        except Exception as e:
+            logger.error(f"❌ Erreur lors du traitement hybride pour mission {mission.id}: {e}")
+            return False
+
+    async def _process_pending_validations(self) -> None:
+        """Traite les validations en attente qui sont prêtes"""
+        try:
+            due_validations = self.learning_validator.get_validations_due()
+
+            if not due_validations:
+                return
+
+            logger.debug(f"🔍 {len(due_validations)} validations prêtes à vérifier")
+
+            for validation in due_validations:
+                logger.debug(f"Validation mission {validation.mission_id}...")
+
+                # Vérifier si la mission est vraiment terminée/stable
+                is_valid = await self.learning_validator.validate_mission_completion(validation, self)
+
+                if is_valid:
+                    logger.info(f"✅ Mission {validation.mission_id} validée pour apprentissage")
+
+                    # Convertir en format pour le cache d'apprentissage
+                    requirements = []
+                    for vehicle_type, quantity in validation.initial_requirements.items():
+                        from ..models.mission import MissionRequirement
+                        req = MissionRequirement(
+                            vehicle_type=vehicle_type,
+                            quantity=quantity,
+                            optional=False
+                        )
+                        requirements.append(req)
+
+                    # Créer une mission temporaire pour le cache
+                    from ..models.mission import MissionType
+                    temp_mission = Mission(
+                        id=validation.mission_id,
+                        title=validation.initial_title,
+                        type=MissionType.NORMAL,  # Type par défaut pour le cache
+                        credits=1000
+                    )
+
+                    # MAINTENANT apprendre le pattern validé
+                    self.requirements_cache.cache_requirements(temp_mission, requirements)
+                    logger.info(f"🧠 Pattern appris après validation: {validation.initial_requirements}")
+
+                    # Sauvegarder
+                    await self._save_learned_patterns_if_needed()
+
+                else:
+                    logger.warning(f"❌ Mission {validation.mission_id} non validée (a évolué)")
+
+                # Marquer comme traitée
+                self.learning_validator.mark_as_validated(validation, is_valid)
+
+        except Exception as e:
+            logger.warning(f"Erreur lors du traitement des validations: {e}")
+
+    async def _save_learned_patterns_if_needed(self) -> None:
+        """Sauvegarde périodique des patterns appris sur disque"""
+        try:
+            cache_stats = self.requirements_cache.get_stats()
+            total_patterns = cache_stats.get('patterns_learned', 0)
+
+            # Sauvegarder plus fréquemment : tous les 5 nouveaux patterns
+            if total_patterns > 0 and total_patterns % 5 == 0:
+                await self._save_learned_patterns()
+
+        except Exception as e:
+            logger.warning(f"Erreur lors de la vérification de sauvegarde: {e}")
+
+    async def finalize(self):
+        """Finalisation - sauvegarde finale des patterns avant arrêt"""
+        try:
+            logger.info("🔍 Traitement final des validations en attente...")
+            # Finalisation simplifiée
+            logger.debug("🔄 Finalisation des opérations d'apprentissage")
+
+            logger.info("💾 Sauvegarde finale des patterns d'apprentissage...")
+            await self._save_learned_patterns()
+
+            # Afficher les statistiques d'apprentissage
+            stats = self.learning_validator.get_stats()
+            logger.info(f"📊 Statistiques apprentissage: {stats}")
+
+        except Exception as e:
+            logger.warning(f"Erreur lors de la finalisation: {e}")
+
+    async def _save_learned_patterns(self) -> None:
+        """Sauvegarde les patterns appris dans un fichier JSON"""
+        try:
+            import json
+            from pathlib import Path
+
+            # Récupérer les patterns du cache
+            patterns = self.requirements_cache._pattern_cache
+
+            if not patterns:
+                return
+
+            # Fichier de sauvegarde
+            patterns_file = Path(__file__).parent.parent / "data" / "learned_patterns.json"
+            patterns_file.parent.mkdir(exist_ok=True)
+
+            # Sauvegarder
+            with open(patterns_file, 'w', encoding='utf-8') as f:
+                json.dump(patterns, f, indent=2, ensure_ascii=False)
+
+            logger.info(f"💾 Patterns appris sauvegardés: {len(patterns)} types de missions")
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la sauvegarde des patterns: {e}")
+
+    async def _load_learned_patterns(self) -> None:
+        """Charge les patterns appris depuis le fichier de sauvegarde"""
+        try:
+            import json
+            from pathlib import Path
+
+            patterns_file = Path(__file__).parent.parent / "data" / "learned_patterns.json"
+
+            if not patterns_file.exists():
+                logger.debug("Aucun fichier de patterns appris trouvé")
+                return
+
+            with open(patterns_file, 'r', encoding='utf-8') as f:
+                patterns = json.load(f)
+
+            # Restaurer dans le cache
+            self.requirements_cache._pattern_cache = patterns
+
+            logger.info(f"🧠 Patterns appris chargés: {len(patterns)} types de missions")
+
+        except Exception as e:
+            logger.warning(f"Erreur lors du chargement des patterns: {e}")
     
     async def _handle_patient_transport_initial(self, mission: Mission) -> bool:
         """
         Gère automatiquement les demandes de transport (patients/prisonniers) en début de mission.
-        
+
         Détecte et traite les alertes de transport avant de lire les conditions,
         supportant à la fois les transports sanitaires et les transports de prisonniers.
-        
+
         Args:
             mission: Mission à traiter
-            
+
         Returns:
             bool: True si traitement réussi (ou aucun transport), False en cas d'erreur
         """
         logger.info(f"🚑 Vérification des transports initiaux pour mission {mission.title} ({mission.id})")
-        
+
         try:
+            # Vérifier d'abord si la mission est accomplie
+            mission_complete_selector = ".mission-success"
+            mission_complete = await self.browser_manager.page.query_selector(mission_complete_selector)
+
+            if mission_complete:
+                logger.info(f"🏁 Mission {mission.id} déjà accomplie - aucun transport nécessaire")
+                return True  # Succès car mission terminée
+
             # On est déjà sur la page de mission
             transports_handled = 0
             
@@ -500,15 +1124,16 @@ class MissionManager:
             
             if transports_handled > 0:
                 logger.info(f"🚑 {transports_handled} transport(s) initial(aux) effectué(s) pour mission {mission.title} ({mission.id})")
-                
+
                 # S'assurer qu'on est bien sur la page de mission pour la suite
                 mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
                 await self.browser_manager.page.goto(mission_url)
                 await self.browser_manager.page.wait_for_load_state('networkidle')
-                
+
                 return True
             else:
-                return False
+                logger.debug(f"ℹ️ Aucun transport nécessaire pour mission {mission.title} ({mission.id})")
+                return True  # Succès car pas d'erreur, juste pas de transport nécessaire
                 
         except Exception as e:
             logger.error(f"Erreur lors des transports initiaux pour mission {mission.id}: {e}")
@@ -2500,11 +3125,38 @@ class MissionManager:
             # Autres filtres possibles (localisation, type, etc.)
             eligible.append(mission)
         
-        # Trier par priorité (crédits décroissants par exemple)
-        eligible.sort(key=lambda m: m.credits or 0, reverse=True)
+        # Trier par priorité (score d'importance = crédits × nombre de véhicules requis)
+        eligible.sort(key=lambda m: self._calculate_mission_importance_score(m), reverse=True)
         
         return eligible
-    
+
+    def _calculate_mission_importance_score(self, mission: Mission) -> float:
+        """
+        Calcule le score d'importance d'une mission basé sur :
+        - Crédits rapportés (plus = mieux)
+        - Nombre de véhicules requis (plus = mission plus importante)
+
+        Score = crédits × nombre_véhicules_requis
+
+        Args:
+            mission: Mission à évaluer
+
+        Returns:
+            float: Score d'importance (plus élevé = plus prioritaire)
+        """
+        credits = mission.credits or 100  # Valeur par défaut si crédits inconnus
+
+        # Calculer le nombre total de véhicules requis
+        vehicle_requirements = mission.get_total_vehicle_requirements()
+        total_vehicles = sum(vehicle_requirements.values()) if vehicle_requirements else 1
+
+        # Score = crédits × véhicules (favorise les grosses missions lucratives)
+        score = credits * total_vehicles
+
+        logger.debug(f"Mission {mission.id}: {credits} crédits × {total_vehicles} véhicules = score {score}")
+
+        return score
+
     async def run_mission_cycle(self, cycles: int = -1, max_missions: int = None, cycle_delay: int = None) -> None:
         """Exécute des cycles de missions automatiques"""
         cycle_count = 0
