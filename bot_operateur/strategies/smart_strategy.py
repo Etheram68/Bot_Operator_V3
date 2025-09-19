@@ -163,39 +163,92 @@ class SmartStrategy(BaseStrategy):
         return selections
     
     def _select_vehicles_with_alternatives(self, primary_type: str, needed_count: int, alternatives: List[str], vehicles_by_type: Dict[str, List[Vehicle]]) -> List[Vehicle]:
-        """Sélectionne des véhicules avec système de fallback intelligent."""
-        
+        """Sélectionne des véhicules avec système à 2 passes : primary puis secondary."""
+
+        # Obtenir les alternatives séparées
+        primary_alternatives, secondary_alternatives = self.parser.get_vehicle_alternatives_separated(primary_type)
+
         selected = []
         remaining_needed = needed_count
-        
-        # Types génériques vs spécifiques
-        if primary_type in ["AMBULANCE", "Ambulance"] and alternatives:
-            self.logger.debug(f"Type générique {primary_type} - utilisation directe des alternatives: {alternatives}")
-        else:
+
+        # PASSE 1: Essayer d'abord avec le type primaire
+        if primary_type not in ["AMBULANCE", "Ambulance"]:
             primary_vehicles = vehicles_by_type.get(primary_type, [])
             available_primary = min(len(primary_vehicles), remaining_needed)
-            
+
             if available_primary > 0:
                 selected.extend(primary_vehicles[:available_primary])
                 remaining_needed -= available_primary
-                self.logger.debug(f"Sélectionné {available_primary} {primary_type} (primaire)")
-        
-        # Utiliser les alternatives dans l'ordre de priorité
-        for alt_type in alternatives:
+                self.logger.debug(f"Passe 1: Sélectionné {available_primary} {primary_type} (type demandé)")
+
+        # PASSE 2: Utiliser les alternatives PRIMARY
+        for alt_type in primary_alternatives:
             if remaining_needed <= 0:
                 break
-                
+
             alt_vehicles = vehicles_by_type.get(alt_type, [])
             available_alt = min(len(alt_vehicles), remaining_needed)
-            
+
             if available_alt > 0:
                 selected.extend(alt_vehicles[:available_alt])
                 remaining_needed -= available_alt
-                self.logger.debug(f"Sélectionné {available_alt} {alt_type} (alternative pour {primary_type})")
-        
+                self.logger.debug(f"Passe 2: Sélectionné {available_alt} {alt_type} (alternative primary pour {primary_type})")
+
+        # Si encore des besoins non satisfaits, on retourne et laisse le système charger plus de véhicules
+        # puis faire une PASSE 3 avec secondary
         if remaining_needed > 0:
-            self.logger.warning(f"Manque {remaining_needed} véhicules pour {primary_type} (trouvé {needed_count - remaining_needed}/{needed_count})")
-        
+            self.logger.info(f"Après passe 1+2: manque encore {remaining_needed} {primary_type} (trouvé {needed_count - remaining_needed}/{needed_count})")
+
+        return selected
+
+    def _select_vehicles_with_all_alternatives(self, primary_type: str, needed_count: int, vehicles_by_type: Dict[str, List[Vehicle]]) -> List[Vehicle]:
+        """Sélectionne des véhicules en utilisant TOUTES les alternatives (primary + secondary)."""
+
+        # Obtenir les alternatives séparées
+        primary_alternatives, secondary_alternatives = self.parser.get_vehicle_alternatives_separated(primary_type)
+
+        selected = []
+        remaining_needed = needed_count
+
+        # ÉTAPE 1: Type primaire
+        if primary_type not in ["AMBULANCE", "Ambulance"]:
+            primary_vehicles = vehicles_by_type.get(primary_type, [])
+            available_primary = min(len(primary_vehicles), remaining_needed)
+
+            if available_primary > 0:
+                selected.extend(primary_vehicles[:available_primary])
+                remaining_needed -= available_primary
+                self.logger.debug(f"Enrichissement: Sélectionné {available_primary} {primary_type} (type demandé)")
+
+        # ÉTAPE 2: Alternatives PRIMARY
+        for alt_type in primary_alternatives:
+            if remaining_needed <= 0:
+                break
+
+            alt_vehicles = vehicles_by_type.get(alt_type, [])
+            available_alt = min(len(alt_vehicles), remaining_needed)
+
+            if available_alt > 0:
+                selected.extend(alt_vehicles[:available_alt])
+                remaining_needed -= available_alt
+                self.logger.debug(f"Enrichissement: Sélectionné {available_alt} {alt_type} (alternative primary)")
+
+        # ÉTAPE 3: Alternatives SECONDARY (seulement si encore des besoins)
+        for alt_type in secondary_alternatives:
+            if remaining_needed <= 0:
+                break
+
+            alt_vehicles = vehicles_by_type.get(alt_type, [])
+            available_alt = min(len(alt_vehicles), remaining_needed)
+
+            if available_alt > 0:
+                selected.extend(alt_vehicles[:available_alt])
+                remaining_needed -= available_alt
+                self.logger.info(f"Enrichissement SECONDARY: Sélectionné {available_alt} {alt_type} (alternative secondary pour {primary_type})")
+
+        if remaining_needed > 0:
+            self.logger.warning(f"Même avec secondary: manque {remaining_needed} véhicules pour {primary_type} (trouvé {needed_count - remaining_needed}/{needed_count})")
+
         return selected
     
     def _add_support_vehicles_by_complexity(self, mission: Mission, current_selection: List[Vehicle], vehicles_by_type: Dict[str, List[Vehicle]], complexity: Dict) -> List[Vehicle]:

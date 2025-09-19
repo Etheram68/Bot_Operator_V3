@@ -1,85 +1,120 @@
 {
   "mission_technique": {
     "common_vehicles": {
-      "FPT": 6,
-      "VSR": 4,
-      "CHEF_DE_GROUPE": 3,
-      "CARS_POLICE": 6,
-      "AMBULANCE": 5,
-      "BEA": 2
+      "FPT": 10,
+      "VSR": 7,
+      "CHEF_DE_GROUPE": 5,
+      "CARS_POLICE": 9,
+      "AMBULANCE": 7,
+      "BEA": 4,
+      "VGRIMP": 1
     },
     "avg_complexity": 0,
-    "mission_count": 2
+    "mission_count": 4
   },
   "mission_securite": {
     "common_vehicles": {
-      "CARS_POLICE": 25,
-      "AMBULANCE": 1,
-      "VCT": 2,
-      "RAM": 2,
-      "VR_CRS": 13,
-      "VAT": 2,
-      "VTP_CRS": 2
+      "CARS_POLICE": 46,
+      "AMBULANCE": 6,
+      "VCT": 3,
+      "RAM": 5,
+      "VR_CRS": 32,
+      "VAT": 3,
+      "VTP_CRS": 5,
+      "FPT": 2,
+      "CHEF_DE_GROUPE": 1,
+      "BP": 2,
+      "ELE": 1,
+      "CARS_POLICE_VR": 3
     },
     "avg_complexity": 0,
-    "mission_count": 9
+    "mission_count": 19
   },
   "mission_incendie": {
     "common_vehicles": {
-      "AMBULANCE": 6,
-      "FPT": 14,
-      "CHEF_DE_GROUPE": 3,
-      "BEA": 5,
-      "CARS_POLICE": 4,
-      "VTU": 1,
+      "AMBULANCE": 12,
+      "FPT": 26,
+      "CHEF_DE_GROUPE": 8,
+      "BEA": 8,
+      "CARS_POLICE": 13,
+      "VTU": 3,
       "VSR": 4,
       "VAR": 2,
       "VIRT": 2,
-      "VPC": 1
+      "VPC": 1,
+      "CITERNE": 1,
+      "CCF": 1,
+      "VPL": 2,
+      "BLS_CSL": 2
     },
     "avg_complexity": 0,
-    "mission_count": 6
+    "mission_count": 20
   },
   "mission_medicale": {
     "common_vehicles": {
-      "AMBULANCE": 6
+      "AMBULANCE": 22,
+      "FPT": 9,
+      "VSR": 3,
+      "CHEF_DE_GROUPE": 4,
+      "CARS_POLICE": 5,
+      "BEA": 2,
+      "VIMP": 2,
+      "CITERNE": 1,
+      "VIRT": 1
     },
     "avg_complexity": 0,
-    "mission_count": 5
+    "mission_count": 20
   },
   "mission_chimique": {
     "common_vehicles": {
-      "FPT": 14,
+      "FPT": 15,
       "BEA": 2,
-      "CHEF_DE_GROUPE": 7,
-      "CARS_POLICE": 12,
+      "CHEF_DE_GROUPE": 8,
+      "CARS_POLICE": 14,
       "CAMION_DEVIDOIRS": 3,
       "MOTOPOMPES": 3,
       "FMOGP": 2,
       "VSR": 1,
       "FPT_SR": 6,
-      "VIRT": 2,
+      "VIRT": 4,
       "VPC": 1,
-      "VAR": 2
+      "VAR": 2,
+      "CMIC": 1
     },
     "avg_complexity": 0,
-    "mission_count": 3
+    "mission_count": 4
   },
   "mission_accident": {
     "common_vehicles": {
-      "FPT": 1,
-      "VSR": 1,
-      "CHEF_DE_GROUPE": 1,
-      "CARS_POLICE": 2
-    },
-    "avg_complexity": 0,
-    "mission_count": 1
-  },
-  "mission_transport": {
-    "common_vehicles": {
-      "AMBULANCE": 3
+      "FPT": 2,
+      "VSR": 4,
+      "CHEF_DE_GROUPE": 3,
+      "CARS_POLICE": 5,
+      "AMBULANCE": 1,
+      "VGRIMP": 2
     },
     "avg_complexity": 0,
     "mission_count": 3
+  },
+  "mission_transport": {
+    "common_vehicles": {
+      "AMBULANCE": 13,
+      "CARS_POLICE": 5,
+      "CHOUCAS": 1
+    },
+    "avg_complexity": 0,
+    "mission_count": 14
+  },
+  "mission_secours": {
+    "common_vehicles": {
+      "FPT": 2,
+      "CHEF_DE_GROUPE": 4,
+      "VSR": 4,
+      "FPT_SR": 2,
+      "CARS_POLICE": 6,
+      "AMBULANCE": 4
+    },
+    "avg_complexity": 0,
+    "mission_count": 2
   }
 }

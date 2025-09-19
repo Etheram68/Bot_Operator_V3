@@ -58,6 +58,13 @@ class VehicleScraper:
             await self.page.goto(mission_url)
             await self.page.wait_for_load_state('networkidle')
 
+            # Vérifier si la mission est terminée avant de chercher le bouton Conditions
+            mission_complete_selector = ".mission-success"
+            mission_complete = await self.page.query_selector(mission_complete_selector)
+            if mission_complete:
+                logger.info(f"🏁 Mission {mission.id} terminée - pas de véhicules supplémentaires nécessaires")
+                return vehicles  # Retourner liste vide (pas d'erreur)
+
             help_button = await self.page.query_selector("#mission_help")
             if not help_button:
                 logger.warning(f"Bouton 'Conditions' non trouvé pour la mission {mission.id}")
@@ -513,8 +520,11 @@ class VehicleScraper:
             
             logger.debug(f"📋 {len(vehicle_infos)} véhicules analysés en parallèle")
             
-            # Parcourir les véhicules avec informations pré-extraites
-            for vehicle_info in vehicle_infos:
+            # Trier les véhicules par priorité (primary avant secondary)
+            prioritized_vehicle_infos = self._prioritize_vehicles_by_alternatives(vehicle_infos, adjusted_vehicle_needs, alternatives_mapping)
+
+            # Parcourir les véhicules triés par priorité
+            for vehicle_info in prioritized_vehicle_infos:
                 try:
                     row, vehicle_type, vehicle_caption = vehicle_info
                     if not vehicle_type:
@@ -984,7 +994,63 @@ class VehicleScraper:
                         return (need_type, needed_count, already_selected)
         
         return None
-    
+
+    def _prioritize_vehicles_by_alternatives(self, vehicle_infos: list, vehicle_needs: dict, alternatives_mapping: dict = None) -> list:
+        """
+        Trie les véhicules par priorité : les véhicules primary d'abord, puis secondary.
+
+        Args:
+            vehicle_infos: Liste des infos véhicules (row, vehicle_type, vehicle_caption)
+            vehicle_needs: Besoins en véhicules par type
+            alternatives_mapping: Mapping des alternatives
+
+        Returns:
+            list: Liste triée par priorité
+        """
+        if not alternatives_mapping:
+            return vehicle_infos
+
+        primary_vehicles = []
+        secondary_vehicles = []
+        other_vehicles = []
+
+        for vehicle_info in vehicle_infos:
+            row, vehicle_type, vehicle_caption = vehicle_info
+            if not vehicle_type:
+                other_vehicles.append(vehicle_info)
+                continue
+
+            is_primary = False
+            is_secondary = False
+
+            # Vérifier si ce véhicule est primary ou secondary pour un besoin
+            for need_type in vehicle_needs.keys():
+                alternatives = alternatives_mapping.get(need_type, {})
+                primary_alternatives = alternatives.get('primary', [])
+                secondary_alternatives = alternatives.get('secondary', [])
+
+                if vehicle_type in primary_alternatives:
+                    is_primary = True
+                    break
+                elif vehicle_type in secondary_alternatives:
+                    is_secondary = True
+
+            # Classer le véhicule selon sa priorité
+            if is_primary:
+                primary_vehicles.append(vehicle_info)
+            elif is_secondary:
+                secondary_vehicles.append(vehicle_info)
+            else:
+                other_vehicles.append(vehicle_info)
+
+        # Retourner dans l'ordre de priorité : primary, puis other (types exacts), puis secondary
+        prioritized = primary_vehicles + other_vehicles + secondary_vehicles
+
+        if len(primary_vehicles) > 0 or len(secondary_vehicles) > 0:
+            logger.debug(f"🎯 Priorisation véhicules: {len(primary_vehicles)} primary, {len(other_vehicles)} types exacts, {len(secondary_vehicles)} secondary")
+
+        return prioritized
+
     async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, table_selector: str = None, mission: 'Mission' = None) -> int:
         """
         Charge tous les véhicules disponibles et sélectionne ceux manquants.

@@ -10,12 +10,12 @@
         "secondary": []
       },
       "FPT": {
-        "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
-        "secondary": ["FS", "VPI"]
+        "primary": ["FPT", "FPT(SR)", "CCR(SR)", "VPI"],
+        "secondary": ["FS"]
       },
       "FPT_BEA": {
-        "primary": ["FPT", "FPT(SR)", "CCR(SR)", "BEA", "EPA"],
-        "secondary": ["FS", "VPI"]
+        "primary": ["FPT", "FPT(SR)", "CCR(SR)", "VPI", "BEA", "EPA"],
+        "secondary": ["FS"]
       },
       "FPT_VIM": {
         "primary": ["FPT", "FPT(SR)", "CCR(SR)","VIM"],
@@ -96,21 +96,6 @@
       "RESCUE_DIRECTOR": {
         "primary": ["PC"],
         "secondary": ["CENOVI"]
-      },
-      "INTENSIVE_CARE": {
-        "primary": ["VSAV", "ASSU", "SMUR(A)"],
-        "secondary": ["Ambulance"],
-        "transport_capable": ["ASSU", "SMUR(A)"]
-      },
-      "BURN_UNIT": {
-        "primary": ["VSAV", "ASSU", "SMUR(A)"],
-        "secondary": ["Ambulance"],
-        "transport_capable": ["ASSU", "SMUR(A)"]
-      },
-      "PEDIATRIC": {
-        "primary": ["VSAV", "ASSU", "SMUR(A)"],
-        "secondary": ["Ambulance"],
-        "transport_capable": ["ASSU", "SMUR(A)"]
       }
     },
 
