@@ -178,7 +178,7 @@
     ],
     "DASH": ["Grands avions bombardiers d['’ ]eau nécessaire"],
     "PELICAN": ["Pélican nécessaire"],
-    "HBE": ["Hélicoptères bombardiers d['’ ]eau nécessaire", "Hélicoptères bombardiers d['’ ]eau"], 
+    "HBE": ["Hélicoptères bombardiers d['’ ]eau nécessaire", "\\d+\\s+Hélicoptères bombardiers d['’ ]eau"], 
     "FPT_BEA": ["Fourgons d['’ ]incendie ou moyens elévateur aérien"],
     "FPT_VIM": [
       "Fourgons d['’ ]incendie ou VIM",
