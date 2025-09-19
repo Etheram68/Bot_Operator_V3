@@ -240,28 +240,51 @@ class SmartStrategyOptimized(BaseStrategy):
 
     async def can_handle_mission(self, mission: Mission, available_vehicles: List[Vehicle]) -> bool:
         """Évalue si la stratégie peut gérer la mission avec les alternatives."""
+        import time
+        start_time = time.time()
+
         if not mission.requirements:
             return True
 
+        logger.info(f"🔍 can_handle_mission: Analyzing {len(available_vehicles)} vehicles for {len(mission.requirements)} requirements")
+
         filtered_vehicles = self.vehicle_optimizer.pre_filter_vehicles(available_vehicles, min_condition="available")
         if not filtered_vehicles:
+            logger.debug(f"❌ No vehicles after pre-filtering")
             return False
 
+        logger.debug(f"✅ {len(filtered_vehicles)} vehicles after pre-filtering")
+
         vehicles_by_type = self.vehicle_optimizer.optimize_vehicle_grouping(filtered_vehicles)
+        logger.debug(f"✅ Vehicles grouped into {len(vehicles_by_type)} types")
+
         alternatives_map = self._get_alternatives_mapping()
 
         for req in mission.requirements:
+            logger.debug(f"🔍 Checking requirement: {req.vehicle_type} x{req.quantity} (optional: {req.optional})")
             available_count = len(vehicles_by_type.get(req.vehicle_type, []))
+            logger.debug(f"  Direct available: {available_count}")
 
             if available_count < req.quantity:
-                for alt_type in alternatives_map.get(req.vehicle_type, []):
-                    available_count += len(vehicles_by_type.get(alt_type, []))
+                alternatives = alternatives_map.get(req.vehicle_type, [])
+                logger.debug(f"  Need alternatives: {alternatives}")
+                for alt_type in alternatives:
+                    alt_count = len(vehicles_by_type.get(alt_type, []))
+                    available_count += alt_count
+                    logger.debug(f"    {alt_type}: +{alt_count} (total: {available_count})")
                     if available_count >= req.quantity:
                         break
 
             if available_count < req.quantity and not req.optional:
+                logger.warning(f"❌ Impossible de satisfaire {req.vehicle_type} x{req.quantity} (disponible: {available_count}, alternatives: {alternatives_map.get(req.vehicle_type, [])})")
+                processing_time = time.time() - start_time
+                logger.info(f"⏱️ can_handle_mission FAILED after {processing_time:.2f}s")
                 return False
 
+            logger.debug(f"✅ {req.vehicle_type} x{req.quantity} satisfied (available: {available_count})")
+
+        processing_time = time.time() - start_time
+        logger.info(f"⏱️ can_handle_mission OK after {processing_time:.2f}s for {len(mission.requirements)} requirements")
         return True
 
     def clear_caches(self) -> None:
