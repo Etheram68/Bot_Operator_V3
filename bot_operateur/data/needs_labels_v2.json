@@ -124,6 +124,10 @@
     "CEEM": ["Requis CEEM", "CEEM"],
     "CEPC": ["Requis CEPC", "CEPC"],
     "CMIC": ["Requis CMIC", "CMIC"],
+    "CENOVI": ["Requis CENOVI", "CENOVI"],
+    "CEAR": ["Requis CEAR", "CEAR"],
+    "CMIR": ["Requis CMIR", "CMIR"],
+    "CEDEV": ["Requis CEDEV", "CEDEV"],
     "CARS_POLICE": [
       "Voitures? de police requises?",
       "voitures? de police nécessaires?",

@@ -83,7 +83,7 @@
       },
       "PCDSM": {
         "primary": ["PC"],
-        "secondary": []
+        "secondary": ["CENOVI"]
       },
       "DRAGON": {
         "primary": ["Dragon", "HeliSMUR"],
@@ -95,7 +95,7 @@
       },
       "RESCUE_DIRECTOR": {
         "primary": ["PC"],
-        "secondary": []
+        "secondary": ["CENOVI"]
       },
       "INTENSIVE_CARE": {
         "primary": ["VSAV", "ASSU", "SMUR(A)"],
@@ -137,11 +137,11 @@
       },
       "VPC": {
         "primary": ["VPC"],
-        "secondary": []
+        "secondary": ["CEPC"]
       },
       "VAR": {
         "primary": ["VAR"],
-        "secondary": []
+        "secondary": ["CEAR"]
       },
       "CEEP": {
         "primary": ["CEEP"],
@@ -157,6 +157,22 @@
       },
       "CMIC": {
         "primary": ["CMIC"],
+        "secondary": []
+      },
+      "CENOVI": {
+        "primary": ["CENOVI"],
+        "secondary": []
+      },
+      "CEAR": {
+        "primary": ["CEAR"],
+        "secondary": []
+      },
+      "CMIR": {
+        "primary": ["CMIR"],
+        "secondary": []
+      },
+      "CEDEV": {
+        "primary": ["CEDEV"],
         "secondary": []
       },
       "VTP(ers)_CONSTRAINED": {
@@ -207,12 +223,12 @@
         "secondary": []
       },
       "MOTOPOMPES": {
-        "primary": ["FDGP", "CEEP", "RLC"],
-        "secondary": []
+        "primary": ["FDGP", "RLC"],
+        "secondary": ["CEEP"]
       },
       "CAMION_DEVIDOIRS": {
         "primary": ["FDGP", "RLC"],
-        "secondary": []
+        "secondary": ["CEDEV"]
       }
     },
 
