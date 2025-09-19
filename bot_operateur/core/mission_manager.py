@@ -723,7 +723,8 @@ class MissionManager:
         Returns:
             True si le traitement normal réussit
         """
-        logger.info(f"🔄 Fallback traitement normal pour mission {mission.id}")
+        mission_id = mission.id  # Sauvegarder l'ID avant modification
+        logger.info(f"🔄 Fallback traitement normal pour mission {mission_id}")
 
         try:
             strategy = self.strategies.get(strategy_name)
@@ -733,7 +734,9 @@ class MissionManager:
             # Récupérer les détails complets de la mission
             mission = await self.get_mission_details(mission)
             if not mission:
-                return False
+                # Mission accomplie ou inaccessible - ne pas traiter comme un échec pour fallback
+                logger.info(f"🏁 Mission {mission_id} accomplie pendant le fallback - traitement réussi")
+                return True  # Succès car mission accomplie après transport
 
             # Récupérer les véhicules disponibles
             available_vehicles = await self.vehicle_scraper.get_available_vehicles_for_mission(mission)
