@@ -14,13 +14,13 @@
   },
   "mission_securite": {
     "common_vehicles": {
-      "CARS_POLICE": 46,
+      "CARS_POLICE": 53,
       "AMBULANCE": 6,
-      "VCT": 3,
-      "RAM": 5,
-      "VR_CRS": 32,
-      "VAT": 3,
-      "VTP_CRS": 5,
+      "VCT": 4,
+      "RAM": 6,
+      "VR_CRS": 44,
+      "VAT": 4,
+      "VTP_CRS": 6,
       "FPT": 2,
       "CHEF_DE_GROUPE": 1,
       "BP": 2,
@@ -28,27 +28,30 @@
       "CARS_POLICE_VR": 3
     },
     "avg_complexity": 0,
-    "mission_count": 19
+    "mission_count": 21
   },
   "mission_incendie": {
     "common_vehicles": {
       "AMBULANCE": 12,
-      "FPT": 26,
+      "FPT": 27,
       "CHEF_DE_GROUPE": 8,
       "BEA": 8,
       "CARS_POLICE": 13,
-      "VTU": 3,
+      "VTU": 4,
       "VSR": 4,
       "VAR": 2,
       "VIRT": 2,
       "VPC": 1,
       "CITERNE": 1,
-      "CCF": 1,
+      "CCF": 6,
       "VPL": 2,
-      "BLS_CSL": 2
+      "BLS_CSL": 2,
+      "VLHR": 1,
+      "HBE": 1,
+      "MOTOPOMPES": 1
     },
     "avg_complexity": 0,
-    "mission_count": 20
+    "mission_count": 22
   },
   "mission_medicale": {
     "common_vehicles": {

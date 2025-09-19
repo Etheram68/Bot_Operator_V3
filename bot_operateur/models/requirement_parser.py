@@ -23,7 +23,7 @@ class RequirementParser:
     _contextual_parser = None
     _text_cleaner = None
     _pools_initialized = False
-    _pattern_cache = {}  # Cache global pour patterns compilés
+# Removed: _pattern_cache (unused pattern caching)
 
     def __new__(cls, needs_labels_path: str = None, vehicles_mapping_path: str = None, missing_config_path: str = None):
         if cls._instance is None:
@@ -556,55 +556,6 @@ class RequirementParser:
                 unique_alternatives.append(alt)
         
         return unique_alternatives
-
-    def get_vehicle_alternatives_separated(self, vehicle_type: str) -> Tuple[List[str], List[str]]:
-        """Retourne les alternatives séparées : (primary, secondary)"""
-        primary_alternatives = []
-        secondary_alternatives = []
-
-        # Chercher dans le vehicle_mapping
-        vehicle_mapping = self.vehicles_mapping.get('vehicle_mapping', {})
-        found_in_mapping = False
-
-        for category_name, category_mapping in vehicle_mapping.items():
-            if vehicle_type in category_mapping:
-                mapping_info = category_mapping[vehicle_type]
-
-                primary_vehicles = mapping_info.get('primary', [])
-                secondary_vehicles = mapping_info.get('secondary', [])
-
-                primary_alternatives.extend(primary_vehicles)
-                secondary_alternatives.extend(secondary_vehicles)
-
-                found_in_mapping = True
-                logger.debug(f"Alternatives séparées pour {vehicle_type}: primary={primary_vehicles}, secondary={secondary_vehicles}")
-                break
-
-        # Fallback si pas trouvé dans vehicle_mapping
-        if not found_in_mapping:
-            fallback_strategy = self.vehicles_mapping.get("fallback_strategy", {})
-            if vehicle_type in fallback_strategy:
-                fallback = fallback_strategy[vehicle_type]
-
-                if "priority_order" in fallback:
-                    primary_alternatives.extend(fallback["priority_order"])
-
-                if "if_unavailable" in fallback:
-                    for alt_type in fallback["if_unavailable"]:
-                        alt_vehicles = self._map_requirement_to_vehicles(alt_type)
-                        secondary_alternatives.extend(alt_vehicles)
-
-        # Supprimer les doublons
-        def deduplicate(lst):
-            seen = set()
-            result = []
-            for item in lst:
-                if item not in seen:
-                    seen.add(item)
-                    result.append(item)
-            return result
-
-        return deduplicate(primary_alternatives), deduplicate(secondary_alternatives)
 
     def analyze_mission_complexity(self, requirements: List[MissionRequirement]) -> Dict[str, any]:
         """Analyse la complexité d'une mission basée sur ses exigences"""

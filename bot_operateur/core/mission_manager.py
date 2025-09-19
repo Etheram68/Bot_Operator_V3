@@ -13,7 +13,7 @@ from ..strategies.smart_strategy_optimized import SmartStrategyOptimized
 from ..core.browser_manager import BrowserManager
 from ..config.settings import Settings
 from ..utils.parallel_operations import ParallelBatch, run_parallel_limited
-from ..utils.smart_requirements_cache import get_smart_requirements_cache
+# Removed: smart_requirements_cache (unused learning system)
 
 
 class MissionManager:
@@ -44,20 +44,16 @@ class MissionManager:
         }
 
         # Initialiser le cache d'apprentissage
-        self.requirements_cache = get_smart_requirements_cache()
+# Removed: requirements_cache (unused learning system)
 
-        # Initialiser le validateur d'apprentissage intelligent (simplifié)
-        from ..utils.smart_learning_validator import get_smart_learning_validator
-        self.learning_validator = get_smart_learning_validator()
+# Removed: smart_learning_validator (unused learning system)
 
         self.active_missions: List[Mission] = []
-        self._patterns_loaded = False
+        # Removed: _patterns_loaded (unused)
 
     async def initialize(self):
         """Initialisation asynchrone - doit être appelée après la création"""
-        if not self._patterns_loaded:
-            await self._load_learned_patterns()
-            self._patterns_loaded = True
+# Removed: pattern loading logic (unused learning system)
 
         # Charger la configuration des besoins manquants
         self.missing_needs_config = self._load_missing_needs_config()
@@ -530,11 +526,11 @@ class MissionManager:
                     requirements.append(req)
 
                 # Apprendre immédiatement le pattern validé
-                self.requirements_cache.cache_requirements(mission, requirements)
+# Removed: requirements_cache caching (unused learning system)
                 logger.info(f"🧠 Pattern appris immédiatement: {vehicle_needs}")
 
                 # Sauvegarder
-                await self._save_learned_patterns_if_needed()
+# Removed: save_learned_patterns_if_needed (unused learning system)
 
             elif current_mission_state is not None and current_mission_state in [MissionState.ATTENDED, MissionState.UNATTENDED]:
                 # Mission encore en cours - programmer validation différée comme fallback
@@ -873,73 +869,12 @@ class MissionManager:
             logger.error(f"❌ Erreur lors du traitement hybride pour mission {mission.id}: {e}")
             return False
 
-    async def _process_pending_validations(self) -> None:
-        """Traite les validations en attente qui sont prêtes"""
-        try:
-            due_validations = self.learning_validator.get_validations_due()
-
-            if not due_validations:
-                return
-
-            logger.debug(f"🔍 {len(due_validations)} validations prêtes à vérifier")
-
-            for validation in due_validations:
-                logger.debug(f"Validation mission {validation.mission_id}...")
-
-                # Vérifier si la mission est vraiment terminée/stable
-                is_valid = await self.learning_validator.validate_mission_completion(validation, self)
-
-                if is_valid:
-                    logger.info(f"✅ Mission {validation.mission_id} validée pour apprentissage")
-
-                    # Convertir en format pour le cache d'apprentissage
-                    requirements = []
-                    for vehicle_type, quantity in validation.initial_requirements.items():
-                        from ..models.mission import MissionRequirement
-                        req = MissionRequirement(
-                            vehicle_type=vehicle_type,
-                            quantity=quantity,
-                            optional=False
-                        )
-                        requirements.append(req)
-
-                    # Créer une mission temporaire pour le cache
-                    from ..models.mission import MissionType
-                    temp_mission = Mission(
-                        id=validation.mission_id,
-                        title=validation.initial_title,
-                        type=MissionType.NORMAL,  # Type par défaut pour le cache
-                        credits=1000
-                    )
-
-                    # MAINTENANT apprendre le pattern validé
-                    self.requirements_cache.cache_requirements(temp_mission, requirements)
-                    logger.info(f"🧠 Pattern appris après validation: {validation.initial_requirements}")
-
-                    # Sauvegarder
-                    await self._save_learned_patterns_if_needed()
-
-                else:
-                    logger.warning(f"❌ Mission {validation.mission_id} non validée (a évolué)")
-
-                # Marquer comme traitée
-                self.learning_validator.mark_as_validated(validation, is_valid)
-
-        except Exception as e:
-            logger.warning(f"Erreur lors du traitement des validations: {e}")
+    # Removed: _process_pending_validations method (unused learning system)
 
     async def _save_learned_patterns_if_needed(self) -> None:
-        """Sauvegarde périodique des patterns appris sur disque"""
-        try:
-            cache_stats = self.requirements_cache.get_stats()
-            total_patterns = cache_stats.get('patterns_learned', 0)
-
-            # Sauvegarder plus fréquemment : tous les 5 nouveaux patterns
-            if total_patterns > 0 and total_patterns % 5 == 0:
-                await self._save_learned_patterns()
-
-        except Exception as e:
-            logger.warning(f"Erreur lors de la vérification de sauvegarde: {e}")
+        """Sauvegarde périodique des patterns appris sur disque - OBSOLETE"""
+        # Removed: Complete method (unused learning system)
+        pass
 
     async def finalize(self):
         """Finalisation - sauvegarde finale des patterns avant arrêt"""
@@ -949,10 +884,10 @@ class MissionManager:
             logger.debug("🔄 Finalisation des opérations d'apprentissage")
 
             logger.info("💾 Sauvegarde finale des patterns d'apprentissage...")
-            await self._save_learned_patterns()
+# Removed: save_learned_patterns (unused learning system)
 
             # Afficher les statistiques d'apprentissage
-            stats = self.learning_validator.get_stats()
+# Removed: learning_validator stats (unused learning system)
             logger.info(f"📊 Statistiques apprentissage: {stats}")
 
         except Exception as e:
@@ -965,20 +900,7 @@ class MissionManager:
             from pathlib import Path
 
             # Récupérer les patterns du cache
-            patterns = self.requirements_cache._pattern_cache
-
-            if not patterns:
-                return
-
-            # Fichier de sauvegarde
-            patterns_file = Path(__file__).parent.parent / "data" / "learned_patterns.json"
-            patterns_file.parent.mkdir(exist_ok=True)
-
-            # Sauvegarder
-            with open(patterns_file, 'w', encoding='utf-8') as f:
-                json.dump(patterns, f, indent=2, ensure_ascii=False)
-
-            logger.info(f"💾 Patterns appris sauvegardés: {len(patterns)} types de missions")
+# Removed: pattern cache access (unused learning system)
 
         except Exception as e:
             logger.error(f"Erreur lors de la sauvegarde des patterns: {e}")
@@ -998,10 +920,7 @@ class MissionManager:
             with open(patterns_file, 'r', encoding='utf-8') as f:
                 patterns = json.load(f)
 
-            # Restaurer dans le cache
-            self.requirements_cache._pattern_cache = patterns
-
-            logger.info(f"🧠 Patterns appris chargés: {len(patterns)} types de missions")
+# Removed: pattern cache restoration (unused learning system)
 
         except Exception as e:
             logger.warning(f"Erreur lors du chargement des patterns: {e}")
