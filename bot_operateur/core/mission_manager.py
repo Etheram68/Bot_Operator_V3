@@ -216,7 +216,7 @@ class MissionManager:
                         mission.status = MissionStatus.IN_PROGRESS
 
                         # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern même si déjà satisfait
-                        await self._record_successful_deployment(mission, mission_requirements, strategy_name)
+                        # Removed: successful deployment recording (unused learning system)
                         return True
                     else:
                         # Il y a des besoins mais aucun véhicule disponible pour les satisfaire
@@ -238,7 +238,7 @@ class MissionManager:
 
                 # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern de déploiement réussi
                 vehicle_needs_dict = {req.vehicle_type: req.quantity for req in mission.requirements if hasattr(req, 'vehicle_type')}
-                await self._record_successful_deployment(mission, vehicle_needs_dict, strategy_name)
+                # Removed: successful deployment recording (unused learning system)
 
                 return True
             else:
@@ -418,7 +418,7 @@ class MissionManager:
                         logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits")
                         mission.status = MissionStatus.IN_PROGRESS
                         # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern même si déjà satisfait
-                        await self._record_successful_deployment(mission, mission_requirements, strategy_name)
+                        # Removed: successful deployment recording (unused learning system)
                         return True
                     elif selected_count == -2:
                         # Mission terminée pendant le processus
@@ -447,7 +447,7 @@ class MissionManager:
                 mission.status = MissionStatus.IN_PROGRESS
 
                 # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern même si déjà satisfait
-                await self._record_successful_deployment(mission, vehicle_needs, strategy_name)
+                # Removed: successful deployment recording (unused learning system)
 
                 return True
             elif selected_count == -2:
@@ -476,8 +476,7 @@ class MissionManager:
                 logger.info(f"✅ Mission {mission.id} déployée avec succès en mode optimisé!")
                 mission.status = MissionStatus.IN_PROGRESS
 
-                # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern de déploiement réussi
-                await self._record_successful_deployment(mission, vehicle_needs, strategy_name)
+                # Removed: successful deployment recording (unused learning system)
 
                 return True
             else:
@@ -488,70 +487,7 @@ class MissionManager:
             logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
             return False
 
-    async def _record_successful_deployment(self, mission: Mission, vehicle_needs: Dict[str, int], strategy_name: str) -> None:
-        """
-        Enregistre un déploiement réussi avec apprentissage intelligent basé sur l'état réel
-
-        Args:
-            mission: Mission déployée avec succès
-            vehicle_needs: Besoins en véhicules qui ont été satisfaits
-            strategy_name: Nom de la stratégie utilisée
-        """
-        try:
-            # 🧠 NOUVEAU: Apprentissage intelligent basé sur l'état réel de la mission
-            from ..models.mission import MissionState
-
-            # Récupérer l'état actuel de la mission
-            current_missions = await self.get_all_missions()
-            current_mission_state = None
-
-            for current_mission in current_missions:
-                if current_mission.id == mission.id:
-                    current_mission_state = current_mission.state
-                    break
-
-            if current_mission_state == MissionState.FINISHING:
-                # Mission vraiment terminée - apprendre immédiatement !
-                logger.info(f"🏆 Mission {mission.id} terminée (state=finishing) - apprentissage immédiat")
-
-                # Convertir vehicle_needs en MissionRequirement pour le cache
-                requirements = []
-                for vehicle_type, quantity in vehicle_needs.items():
-                    from ..models.mission import MissionRequirement
-                    req = MissionRequirement(
-                        vehicle_type=vehicle_type,
-                        quantity=quantity,
-                        optional=False
-                    )
-                    requirements.append(req)
-
-                # Apprendre immédiatement le pattern validé
-# Removed: requirements_cache caching (unused learning system)
-                logger.info(f"🧠 Pattern appris immédiatement: {vehicle_needs}")
-
-                # Sauvegarder
-# Removed: save_learned_patterns_if_needed (unused learning system)
-
-            elif current_mission_state is not None and current_mission_state in [MissionState.ATTENDED, MissionState.UNATTENDED]:
-                # Mission encore en cours - programmer validation différée comme fallback
-                logger.debug(f"⏳ Mission {mission.id} encore en cours (state={current_mission_state.value}) - validation différée")
-
-                # Apprentissage simple - juste noter le déploiement réussi
-                logger.debug(f"📋 Mission {mission.id} en cours - apprentissage simplifié")
-
-            else:
-                # État inconnu ou mission non trouvée - fallback sur validation différée
-                if current_mission_state is None:
-                    logger.warning(f"⚠️ Mission {mission.id} non trouvée dans la liste - validation différée")
-                else:
-                    logger.warning(f"⚠️ État mission {mission.id} inconnu ({current_mission_state}) - validation différée")
-
-                # Apprentissage simple - juste noter le déploiement réussi
-                logger.debug(f"📋 Mission {mission.id} en cours - apprentissage simplifié")
-
-        except Exception as e:
-            logger.warning(f"Erreur lors de l'enregistrement d'apprentissage pour {mission.id}: {e}")
-
+    # Removed: _record_successful_deployment method (unused learning system)
     async def _handle_finished_mission(self, mission: Mission, strategy_name: str) -> bool:
         """
         Traitement optimisé et sécurisé pour missions marquées FINISHING
@@ -574,22 +510,20 @@ class MissionManager:
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.browser_manager.navigate_to(mission_url, fast_navigation=True)
 
-            # 🛡️ SÉCURISATION 1: Vérifier l'état actuel de la mission
-            updated_missions = await self.get_all_missions()
-            current_mission_state = None
+            # 🛡️ SÉCURISATION 1: Vérifier si la mission est terminée directement sur la page
+            mission_complete_selector = ".mission-success"
+            mission_complete = await self.browser_manager.page.query_selector(mission_complete_selector)
 
-            for updated_mission in updated_missions:
-                if updated_mission.id == mission.id:
-                    current_mission_state = updated_mission.state
-                    break
+            if mission_complete:
+                logger.info(f"🏁 Mission {mission.id} déjà terminée - aucun traitement supplémentaire nécessaire")
+                return True
 
-            if current_mission_state is None:
-                logger.warning(f"⚠️ Mission {mission.id} non trouvée dans la liste - probablement terminée")
-                return True  # Mission probablement terminée avec succès
+            # Si pas terminée, vérifier s'il y a des indicateurs d'état UNATTENDED
+            # Chercher des éléments qui pourraient indiquer un changement d'état
+            page_text = await self.browser_manager.page.content()
 
-            if current_mission_state != MissionState.FINISHING:
-                logger.warning(f"⚠️ Mission {mission.id} a changé d'état ({current_mission_state.value}) - fallback traitement normal")
-                # La mission a changé d'état, faire un traitement normal
+            if "Non attribuée" in page_text or "unattended" in page_text.lower():
+                logger.warning(f"⚠️ Mission {mission.id} semble avoir changé d'état (UNATTENDED détecté) - fallback traitement normal")
                 return await self._fallback_to_normal_processing(mission, strategy_name)
 
             # 🛡️ SÉCURISATION 2: Détecter les nouveaux besoins/alertes
@@ -630,7 +564,7 @@ class MissionManager:
                 # Pour une mission FINISHING, on peut apprendre les patterns existants
                 mission_requirements = mission.get_total_vehicle_requirements()
                 if mission_requirements:
-                    await self._record_successful_deployment(mission, mission_requirements, strategy_name)
+                    # Removed: successful deployment recording (unused learning system)
                     logger.info("🧠 Pattern appris pour mission terminée")
 
                 success_count += 1
@@ -771,7 +705,7 @@ class MissionManager:
 
                 # Enregistrer pour l'apprentissage
                 vehicle_needs_dict = {req.vehicle_type: req.quantity for req in mission.requirements if hasattr(req, 'vehicle_type')}
-                await self._record_successful_deployment(mission, vehicle_needs_dict, strategy_name)
+                # Removed: successful deployment recording (unused learning system)
 
                 return True
             else:
@@ -871,59 +805,22 @@ class MissionManager:
 
     # Removed: _process_pending_validations method (unused learning system)
 
-    async def _save_learned_patterns_if_needed(self) -> None:
-        """Sauvegarde périodique des patterns appris sur disque - OBSOLETE"""
-        # Removed: Complete method (unused learning system)
-        pass
+    # Removed: _save_learned_patterns_if_needed method (unused learning system)
 
     async def finalize(self):
-        """Finalisation - sauvegarde finale des patterns avant arrêt"""
+        """Finalisation du mission manager"""
         try:
-            logger.info("🔍 Traitement final des validations en attente...")
-            # Finalisation simplifiée
-            logger.debug("🔄 Finalisation des opérations d'apprentissage")
-
-            logger.info("💾 Sauvegarde finale des patterns d'apprentissage...")
-# Removed: save_learned_patterns (unused learning system)
-
-            # Afficher les statistiques d'apprentissage
-# Removed: learning_validator stats (unused learning system)
-            logger.info(f"📊 Statistiques apprentissage: {stats}")
+            logger.info("🔄 Finalisation du mission manager...")
+            # Nettoyer les missions actives
+            self.clear_completed_missions()
+            logger.info("✅ Finalisation terminée")
 
         except Exception as e:
             logger.warning(f"Erreur lors de la finalisation: {e}")
 
-    async def _save_learned_patterns(self) -> None:
-        """Sauvegarde les patterns appris dans un fichier JSON"""
-        try:
-            import json
-            from pathlib import Path
+    # Removed: _save_learned_patterns method (unused learning system)
 
-            # Récupérer les patterns du cache
-# Removed: pattern cache access (unused learning system)
-
-        except Exception as e:
-            logger.error(f"Erreur lors de la sauvegarde des patterns: {e}")
-
-    async def _load_learned_patterns(self) -> None:
-        """Charge les patterns appris depuis le fichier de sauvegarde"""
-        try:
-            import json
-            from pathlib import Path
-
-            patterns_file = Path(__file__).parent.parent / "data" / "learned_patterns.json"
-
-            if not patterns_file.exists():
-                logger.debug("Aucun fichier de patterns appris trouvé")
-                return
-
-            with open(patterns_file, 'r', encoding='utf-8') as f:
-                patterns = json.load(f)
-
-# Removed: pattern cache restoration (unused learning system)
-
-        except Exception as e:
-            logger.warning(f"Erreur lors du chargement des patterns: {e}")
+    # Removed: _load_learned_patterns method (unused learning system)
     
     async def _handle_patient_transport_initial(self, mission: Mission) -> bool:
         """
