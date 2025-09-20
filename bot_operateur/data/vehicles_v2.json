@@ -265,6 +265,10 @@
       "VR_CONSTRAINED": {
         "primary": ["VR"],
         "secondary": []
+      },
+      "VB_CONSTRAINED": {
+        "primary": ["VB"],
+        "secondary": []
       }
     },
 
