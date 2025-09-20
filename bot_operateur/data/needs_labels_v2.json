@@ -146,11 +146,7 @@
       "\\d+[ \\t]+unités?[ \\t]+cynophiles?",
       "\\d+[ \\t]+unité[ \\t]+cynophile"
     ],
-    "VR_CRS": [
-      "VR nécessaires?",
-      "véhicules? radios? CRS",
-      "\\bVR\\b(?!_PROBABILITY)"
-    ],
+    "VR_CRS": ["VR nécessaires?", "\\bVR\\b(?!_PROBABILITY)"],
     "VCT": ["VCT nécessaires?", "\\bVCT\\b(?!_PROBABILITY)"],
     "RAM": ["RAM nécessaires?", "\\bRAM\\b(?!_PROBABILITY)"],
     "VAT": ["VAT nécessaires?", "\\bVAT\\b(?!_PROBABILITY)"],
@@ -160,6 +156,7 @@
       "\\bVTP\\b(?!_PROBABILITY)"
     ],
     "VB": ["Requis véhicule banalisé"],
+    "OPJ": ["OPJ"],
     "VIC": ["Requis véhicule d['’ ]identification criminelle"],
     "ERI": ["Requis équipes d['’ ]intervention rapide"],
     "DRAGON": [
@@ -178,7 +175,10 @@
     ],
     "DASH": ["Grands avions bombardiers d['’ ]eau nécessaire"],
     "PELICAN": ["Pélican nécessaire"],
-    "HBE": ["Hélicoptères bombardiers d['’ ]eau nécessaire", "\\d+\\s+Hélicoptères bombardiers d['’ ]eau"], 
+    "HBE": [
+      "Hélicoptères bombardiers d['’ ]eau nécessaire",
+      "\\d+\\s+Hélicoptères bombardiers d['’ ]eau"
+    ],
     "FPT_BEA": ["Fourgons d['’ ]incendie ou moyens elévateur aérien"],
     "FPT_VIM": [
       "Fourgons d['’ ]incendie ou VIM",

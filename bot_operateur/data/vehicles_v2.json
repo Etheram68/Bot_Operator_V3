@@ -18,7 +18,7 @@
         "secondary": ["FS"]
       },
       "FPT_VIM": {
-        "primary": ["FPT", "FPT(SR)", "CCR(SR)","VIM"],
+        "primary": ["FPT", "FPT(SR)", "CCR(SR)", "VIM"],
         "secondary": ["VPI"]
       },
       "FPT_CONSTRAINED": {
@@ -234,6 +234,10 @@
         "primary": ["VB"],
         "secondary": []
       },
+      "OPJ": {
+        "primary": ["VB"],
+        "secondary": []
+      },
       "VIC": {
         "primary": ["VIC"],
         "secondary": []
@@ -351,7 +355,7 @@
       }
     }
   },
-  
+
   "vehicle_specs": {
     "VIRT": {
       "crew_size": 4
@@ -432,6 +436,9 @@
     "VR": {
       "crew_size": 6
     },
+    "VB": {
+      "crew_size": 4
+    },
     "VPL": {
       "crew_size": 3
     },
@@ -443,7 +450,12 @@
   "availability_config": {
     "default_check_interval": 60,
     "limited_availability_types": [
-      "VCT", "RAM", "VAT", "VTP(ris)", "BLS", "CSL"
+      "VCT",
+      "RAM",
+      "VAT",
+      "VTP(ris)",
+      "BLS",
+      "CSL"
     ],
     "transport_priorities": {
       "medical": ["ASSU", "SMUR(A)", "Ambulance"],
