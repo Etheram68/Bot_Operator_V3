@@ -296,9 +296,21 @@ class MissionManager:
             
             # Calculer les besoins en véhicules selon la stratégie
             vehicle_needs = await strategy.get_vehicle_needs(mission)
-            
+
             logger.info(f"📋 Besoins identifiés par stratégie: {vehicle_needs}")
-            
+
+            # Enrichir automatiquement les besoins avec les véhicules police pour les prisonniers
+            try:
+                prisoner_count = await self._extract_prisoner_count_from_mission_info()
+                if prisoner_count > 0:
+                    # Ajouter autant de CARS_POLICE que de prisonniers
+                    current_police_need = vehicle_needs.get('CARS_POLICE', 0)
+                    vehicle_needs['CARS_POLICE'] = current_police_need + prisoner_count
+                    logger.info(f"🚔 {prisoner_count} prisonnier(s) détecté(s) → ajout de {prisoner_count} CARS_POLICE aux besoins")
+                    logger.info(f"📋 Besoins enrichis avec prisonniers: {vehicle_needs}")
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors de l'enrichissement des besoins pour prisonniers: {e}")
+
             # Vérifier les véhicules manquants depuis l'alerte MÊME SI la stratégie ne trouve rien
             try:
                 missing_vehicles_needs = await self._extract_missing_vehicles_from_alert(mission)
@@ -1106,6 +1118,44 @@ class MissionManager:
             logger.error(f"Erreur lors de l'extraction des liens de transport de prisonniers: {e}")
             return []
     
+    async def _extract_prisoner_count_from_mission_info(self) -> int:
+        """
+        Extrait le nombre de prisonniers depuis mission_general_info.
+
+        Cherche dans la div class="mission_header_info row" -> div id="mission_general_info"
+        -> small pour trouver le nombre avant l'icône prisoner_dark.svg
+
+        Returns:
+            int: Nombre de prisonniers détectés (0 si aucun)
+        """
+        try:
+            # Chercher le div mission_general_info
+            general_info = await self.browser_manager.page.query_selector('div#mission_general_info small')
+
+            if not general_info:
+                logger.debug("Div mission_general_info non trouvée")
+                return 0
+
+            # Récupérer le contenu HTML pour analyser les icônes
+            content_html = await general_info.inner_html()
+
+            # Chercher le pattern: nombre + espace + <img src="/images/prisoner_dark.svg"
+            import re
+            prisoner_pattern = r'(\d+)\s*<img[^>]*prisoner_dark\.svg[^>]*>'
+            matches = re.findall(prisoner_pattern, content_html)
+
+            if matches:
+                prisoner_count = sum(int(match) for match in matches)
+                logger.debug(f"🚔 {prisoner_count} prisonnier(s) détecté(s) dans mission_general_info")
+                return prisoner_count
+            else:
+                logger.debug("Aucun prisonnier détecté dans mission_general_info")
+                return 0
+
+        except Exception as e:
+            logger.error(f"Erreur lors de l'extraction du nombre de prisonniers: {e}")
+            return 0
+
     async def _extract_missing_vehicles_from_alert(self, mission: 'Mission') -> dict:
         """
         Extrait les véhicules manquants depuis la div alert-missing-vehicles.
