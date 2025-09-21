@@ -155,9 +155,16 @@
       "véhicules? transports? personnel",
       "\\bVTP\\b(?!_PROBABILITY)"
     ],
-    "VB": ["Requis véhicule banalisé"],
+    "VB": [
+      "Requis v[éeÉE]hicule banalis[éeÉE]",
+      "\\d+\\s+v[éeÉE]hicule banalis[éeÉE]"
+    ],
     "OPJ": ["OPJ"],
-    "VIC": ["Requis véhicule d['’ ]identification criminelle"],
+    "VIC": [
+      "Requis v[éeÉE]hicule d['’ ]identification criminelle",
+      "v[éeÉE]hicule d['’ ]identification criminelle",
+      "\\d+\\s+v[éeÉE]hicule d['’ ]identification criminelle"
+    ],
     "ERI": ["Requis équipes d['’ ]intervention rapide"],
     "DRAGON": [
       "\\bDRAGON\\b",
@@ -219,7 +226,7 @@
       "Probabilité qu['’ ]un soutien aérien FAG soit requis"
     ],
     "VIRT_PROBABILITY": [
-      "Chances qu['’ ]un véhicule risques? technologiques? soit requis"
+      "Chances qu['’ ]un vehicule risques? technologiques? soit requis"
     ],
     "VLHR_PROBABILITY": ["Chances qu['’ ]un Chef de Groupe soit demandé"],
     "CHEF_DE_GROUPE_PROBABILITY": [
@@ -241,7 +248,7 @@
     "VSR_PROBABILITY": "Chances que les secours routiers soient requis",
     "DRAGON_PROBABILITY": "Probabilité qu'un soutien aérien soit requis",
     "CHOUCAS_PROBABILITY": "Probabilité qu'un soutien aérien FAG soit requis",
-    "VIRT_PROBABILITY": "Chances qu'un véhicule risques technologiques soit requis",
+    "VIRT_PROBABILITY": "Chances qu'un vehicule risques technologiques soit requis",
     "VLHR_PROBABILITY": "Chances qu'un Chef de Groupe soit demandé",
     "CHEF_DE_GROUPE_PROBABILITY": "Chances qu'un Chef de Groupe soit demandé",
     "RESCUE_DIRECTOR_PROBABILITY": "Chances qu'un Directeur des Secours Médicaux soit requis"
