@@ -848,102 +848,101 @@ class MissionManager:
 
             # On est déjà sur la page de mission
             transports_handled = 0
-            
-            while True:
-                # Chercher l'alerte de transport nécessaire (exclure les alertes de véhicules manquants)
-                transport_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger:not(.alert-missing-vehicles)')
-                
-                if not transport_alert:
-                    logger.debug("Aucune alerte de transport détectée")
-                    break
-                
-                # Vérifier si c'est bien une demande de transport
+
+            # D'abord, vérifier TOUJOURS les transports de prisonniers
+            logger.debug("Vérification des transports de prisonniers...")
+            prisoner_transport_data = await self._extract_prisoner_transport_links(mission)
+
+            # Ensuite, chercher les transports sanitaires classiques
+            transport_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger:not(.alert-missing-vehicles)')
+
+            transport_data = []
+
+            # Ajouter les transports de prisonniers s'il y en a
+            if prisoner_transport_data:
+                logger.debug(f"🚔 {len(prisoner_transport_data)} véhicule(s) avec transport de prisonniers détecté(s)")
+                transport_data.extend(prisoner_transport_data)
+
+            # Ajouter les transports sanitaires s'il y en a
+            if transport_alert:
                 alert_text = await transport_alert.inner_text()
-                if "Transport nécessaire" not in alert_text:
-                    logger.debug(f"Alerte détectée mais pas de transport (contenu: '{alert_text.strip()[:50]}...')")
-                    break
-                
-                # Récupérer TOUS les liens de transport (href + texte) avant navigation
-                transport_links = await transport_alert.query_selector_all('a.btn.btn-xs.btn-success')
-                if not transport_links:
-                    logger.debug("Alerte 'Transport nécessaire' détectée mais aucun lien de navigation disponible")
-                    # Ne pas faire break ici, car cela peut être un transport de prisonniers
-                
-                # Extraire les informations des liens avant navigation
-                transport_data = []
-                for link in transport_links:
-                    try:
-                        href = await link.get_attribute('href')
-                        text = await link.inner_text()
-                        transport_data.append({'href': href, 'text': text, 'type': 'patient'})
-                    except Exception as e:
-                        logger.error(f"Erreur lors de l'extraction d'un lien de transport: {e}")
-                        continue
-                
-                # Vérifier TOUJOURS les transports de prisonniers (même s'il y a des transports sanitaires)
-                logger.debug("Vérification des transports de prisonniers...")
-                prisoner_transport_data = await self._extract_prisoner_transport_links(mission)
-                if prisoner_transport_data:
-                    logger.debug(f"🚔 {len(prisoner_transport_data)} véhicule(s) avec transport de prisonniers détecté(s)")
-                    transport_data.extend(prisoner_transport_data)  # Ajouter aux transports sanitaires
-                
-                # Si aucun transport trouvé, continuer le traitement normal de la mission
-                if not transport_data:
-                    logger.debug("Aucun transport (sanitaire ou prisonniers) disponible, poursuite du traitement de la mission")
-                    break
-                
-                if len([t for t in transport_data if t.get('type') == 'patient']) > 0:
-                    logger.debug(f"🚑 {len([t for t in transport_data if t.get('type') == 'patient'])} transport(s) sanitaire(s) détecté(s)")
-                if len([t for t in transport_data if t.get('type') == 'prisoner']) > 0:
-                    logger.debug(f"🚔 {len([t for t in transport_data if t.get('type') == 'prisoner'])} transport(s) de prisonniers détecté(s)")
-                
-                # Traiter chaque véhicule de transport via son URL
-                for i, transport_info in enumerate(transport_data):
-                    try:
-                        href = transport_info['href']
-                        text = transport_info['text']
-                        transport_type = transport_info.get('type', 'patient')
+                if "Transport nécessaire" in alert_text:
+                    # Récupérer TOUS les liens de transport (href + texte) avant navigation
+                    transport_links = await transport_alert.query_selector_all('a.btn.btn-xs.btn-success')
+
+                    # Extraire les informations des liens avant navigation
+                    for link in transport_links:
+                        try:
+                            href = await link.get_attribute('href')
+                            text = await link.inner_text()
+                            transport_data.append({'href': href, 'text': text, 'type': 'patient'})
+                        except Exception as e:
+                            logger.error(f"Erreur lors de l'extraction d'un lien de transport: {e}")
+                            continue
+
+                    if len([t for t in transport_data if t.get('type') == 'patient']) > 0:
+                        logger.debug(f"🚑 {len([t for t in transport_data if t.get('type') == 'patient'])} transport(s) sanitaire(s) détecté(s)")
+                else:
+                    logger.debug(f"Alerte détectée mais pas de transport sanitaire (contenu: '{alert_text.strip()[:50]}...')")
+            else:
+                logger.debug("Aucune alerte de transport sanitaire détectée")
+
+            # Si aucun transport trouvé, continuer le traitement normal de la mission
+            if not transport_data:
+                logger.debug("Aucun transport (sanitaire ou prisonniers) disponible, poursuite du traitement de la mission")
+                logger.info(f"✅ Aucun transport initial requis pour mission {mission.title} ({mission.id})")
+                return True
+
+            # Afficher le résumé des transports trouvés
+            if len([t for t in transport_data if t.get('type') == 'patient']) > 0:
+                logger.debug(f"🚑 {len([t for t in transport_data if t.get('type') == 'patient'])} transport(s) sanitaire(s) détecté(s)")
+            if len([t for t in transport_data if t.get('type') == 'prisoner']) > 0:
+                logger.debug(f"🚔 {len([t for t in transport_data if t.get('type') == 'prisoner'])} transport(s) de prisonniers détecté(s)")
+
+            # Traiter chaque véhicule de transport via son URL
+            for i, transport_info in enumerate(transport_data):
+                try:
+                    href = transport_info['href']
+                    text = transport_info['text']
+                    transport_type = transport_info.get('type', 'patient')
+                    transport_emoji = "🚔" if transport_type == 'prisoner' else "🚑"
+                    logger.debug(f"{transport_emoji} Transport initial {i+1}/{len(transport_data)}: {text}")
+
+                    # Naviguer directement vers l'URL du transport
+                    transport_url = f"https://www.operateur112.fr{href}" if href.startswith('/') else href
+                    await self.browser_manager.page.goto(transport_url)
+                    await self.browser_manager.page.wait_for_load_state('networkidle')
+
+                    # Traiter selon le type de transport
+
+                    if transport_type == 'prisoner':
+                        # Pour les prisonniers, traitement différent (sélection prison)
+                        transport_success = await self._handle_prison_selection(mission)
+                    else:
+                        # Pour les patients, sélection d'hôpital
+                        transport_success = await self._handle_hospital_selection(mission)
+
+                    if transport_success:
+                        transports_handled += 1
                         transport_emoji = "🚔" if transport_type == 'prisoner' else "🚑"
-                        logger.debug(f"{transport_emoji} Transport initial {i+1}/{len(transport_data)}: {text}")
-                        
-                        # Naviguer directement vers l'URL du transport
-                        transport_url = f"https://www.operateur112.fr{href}" if href.startswith('/') else href
-                        await self.browser_manager.page.goto(transport_url)
-                        await self.browser_manager.page.wait_for_load_state('networkidle')
-                        
-                        # Traiter selon le type de transport
-                        
-                        if transport_type == 'prisoner':
-                            # Pour les prisonniers, traitement différent (sélection prison)
-                            transport_success = await self._handle_prison_selection(mission)
+                        logger.info(f"✅ {transport_emoji} Transport initial {transports_handled} effectué pour {text}")
+
+                        # Chercher le bouton "Passez au prochain véhicule"
+                        next_vehicle_button = await self.browser_manager.page.query_selector('a.btn.btn-success[id^="next-vehicle-fms-"]')
+
+                        if next_vehicle_button:
+                            logger.debug("🔄 Passage au prochain véhicule")
+                            await next_vehicle_button.click()
+                            await self.browser_manager.page.wait_for_load_state('networkidle')
                         else:
-                            # Pour les patients, sélection d'hôpital
-                            transport_success = await self._handle_hospital_selection(mission)
-                        
-                        if transport_success:
-                            transports_handled += 1
-                            transport_emoji = "🚔" if transport_type == 'prisoner' else "🚑"
-                            logger.info(f"✅ {transport_emoji} Transport initial {transports_handled} effectué pour {text}")
-                            
-                            # Chercher le bouton "Passez au prochain véhicule"
-                            next_vehicle_button = await self.browser_manager.page.query_selector('a.btn.btn-success[id^="next-vehicle-fms-"]')
-                            
-                            if next_vehicle_button:
-                                logger.debug("🔄 Passage au prochain véhicule")
-                                await next_vehicle_button.click()
-                                await self.browser_manager.page.wait_for_load_state('networkidle')
-                            else:
-                                logger.debug("Aucun véhicule suivant pour ce transport")
-                        else:
-                            logger.warning(f"Échec du transport pour {text}")
-                                
-                    except Exception as e:
-                        logger.error(f"Erreur lors du traitement du transport initial {i+1}: {e}")
-                        continue
-                
-                # Tous les transports de cette alerte ont été traités
-                break
-            
+                            logger.debug("Aucun véhicule suivant pour ce transport")
+                    else:
+                        logger.warning(f"Échec du transport pour {text}")
+
+                except Exception as e:
+                    logger.error(f"Erreur lors du traitement du transport initial {i+1}: {e}")
+                    continue
+
             if transports_handled > 0:
                 logger.info(f"🚑 {transports_handled} transport(s) initial(aux) effectué(s) pour mission {mission.title} ({mission.id})")
 
@@ -1050,23 +1049,20 @@ class MissionManager:
             list: Liste des données de transport (href, text, type, vehicle_id)
         """
         try:
-            # Vérifier qu'il y a bien les deux alertes requises pour les prisonniers
+            # Vérifier qu'il y a l'alerte de prisonniers à transporter
             missing_vehicles_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger.alert-missing-vehicles')
-            transport_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger:not(.alert-missing-vehicles)')
-            
-            if not missing_vehicles_alert or not transport_alert:
+
+            if not missing_vehicles_alert:
                 return []
-            
-            # Vérifier le contenu des deux alertes
+
+            # Vérifier le contenu de l'alerte principale
             missing_text = await missing_vehicles_alert.inner_text()
-            transport_text = await transport_alert.inner_text()
-            
-            if ("Des prisonniers doivent être transportés" not in missing_text or 
-                "Transport nécessaire" not in transport_text):
-                logger.debug("Contenu des alertes ne correspond pas au transport de prisonniers")
+
+            if "Des prisonniers doivent être transportés" not in missing_text:
+                logger.debug("Alerte détectée mais ne concerne pas les transports de prisonniers")
                 return []
-            
-            logger.debug("🚔 Transport de prisonniers requis détecté (deux alertes confirmées)")
+
+            logger.debug("🚔 Transport de prisonniers requis détecté")
             
             # Chercher tous les liens de transport de prisonniers dans les véhicules
             # Structure: td.vehicle_prisoner_select > div[id^="prison-select-"] 
