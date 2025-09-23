@@ -180,8 +180,14 @@
       "Hélicoptères?(?!.*bombardiers).*(nécessaires?|requis)",
       "helicoptere"
     ],
-    "DASH": ["Grands avions bombardiers d['’ ]eau nécessaire"],
-    "PELICAN": ["Pélican nécessaire"],
+    "DASH": [
+      "Grands avions bombardiers d['’ ]eau nécessaire",
+      "\\d+\\s+Gros avion bombardier d['’ ]eau"
+    ],
+    "PELICAN": [
+      "Pélican nécessaire",
+      "\\d+\\s+bombardier d['’ ]eau"
+    ],
     "HBE": [
       "Hélicoptères bombardiers d['’ ]eau nécessaire",
       "\\d+\\s+Hélicoptères bombardiers d['’ ]eau"
