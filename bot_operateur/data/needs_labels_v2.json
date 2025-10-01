@@ -165,7 +165,11 @@
       "v[éeÉE]hicule d['’ ]identification criminelle",
       "\\d+\\s+v[éeÉE]hicule d['’ ]identification criminelle"
     ],
-    "ERI": ["Requis équipes d['’ ]intervention rapide"],
+    "ERI": [
+      "Requis équipes d['’ ]intervention rapide",
+      "\\d+\\s+équipes?\\s+d['’ ]intervention\\s+rapides?",
+      "équipes?\\s+d['’ ]intervention\\s+rapides?"
+    ],
     "DRAGON": [
       "\\bDRAGON\\b",
       "\\bhélicoptères\\b(?!.*nécessaires?|.*requis)",
@@ -186,7 +190,10 @@
     ],
     "PELICAN": [
       "Pélican nécessaire",
-      "\\d+\\s+bombardier d['’ ]eau"
+      "\\d+\\s+bombardier d['’ ]eau",
+      "\\d+\\s+avions?\\s+bombardiers?\\s+d['’ ]eau",
+      "avions?\\s+bombardiers?\\s+d['’ ]eau",
+      "bombardiers?\\s+d['’ ]eau"
     ],
     "HBE": [
       "Hélicoptères bombardiers d['’ ]eau nécessaire",

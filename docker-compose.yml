@@ -48,14 +48,14 @@ services:
     
     # Volumes pour persistance données
     volumes:
+      # Code source du bot (pour persistance des modifications)
+      - ./bot_operateur:/app/bot_operateur:rw
+      # Fichiers de données JSON et patterns d'analyse (pour persistance des modifications)
+      - ./bot_operateur/data:/app/bot_operateur/data:rw
       # Logs persistants
       - ./data/logs:/app/logs:rw
-      # Cache persistant 
-      - ./data/cache:/app/cache:rw
-      # Configuration personnalisée (optionnelle)
-      - ./data/config:/app/config:ro
-      # Données du bot
-      - ./data/bot_data:/app/data:rw
+      # Cache navigateur persistant
+      - ./data/cache:/tmp/browser_cache:rw
     
     # Limits de ressources (augmentées pour meilleures performances)
     deploy:

@@ -1,5 +1,6 @@
 import asyncio
 from typing import Optional
+from pathlib import Path
 from playwright.async_api import Browser, BrowserContext, Page, Playwright, async_playwright
 from loguru import logger
 
@@ -28,17 +29,58 @@ class BrowserManager:
         
         try:
             self.playwright = await async_playwright().start()
-            
+
             # Lancement du navigateur
             self.browser = await self.playwright.chromium.launch(
                 headless=self.settings.headless,
                 slow_mo=self.settings.browser_slow_mo
             )
-            
-            # Création du contexte
+
+            # Configuration du répertoire de cache dans un dossier accessible
+            cache_dir = Path("/tmp/browser_cache")
+            cache_dir.mkdir(parents=True, exist_ok=True)
+
+            logger.info(f"Utilisation du cache navigateur: {cache_dir}")
+
+            # Création du contexte avec gestion sécurisée du cache
+            storage_file = cache_dir / "storage_state.json"
+            storage_state = None
+
+            # Vérifier si le fichier de cache existe et est valide
+            if storage_file.exists():
+                try:
+                    import json
+                    from datetime import datetime
+
+                    with open(storage_file, 'r') as f:
+                        storage_data = json.load(f)
+
+                    # Vérifier si les cookies de session sont expirés
+                    session_expired = False
+                    for cookie in storage_data.get("cookies", []):
+                        if cookie.get("name") == "_session_id":
+                            # Cookie de session trouvé, vérifier s'il est encore valide
+                            # Les sessions Opérateur112 expirent rapidement
+                            logger.info("Session existante détectée, vérification...")
+                            # Pour la sécurité, on supprime les anciennes sessions
+                            session_expired = True
+                            break
+
+                    if session_expired:
+                        logger.info("Session expirée détectée, démarrage avec session propre")
+                        storage_file.unlink(missing_ok=True)
+                    else:
+                        storage_state = str(storage_file)
+                        logger.info("Cache navigateur chargé avec succès")
+
+                except Exception as e:
+                    logger.warning(f"Cache corrompu, suppression: {e}")
+                    storage_file.unlink(missing_ok=True)
+
             self.context = await self.browser.new_context(
                 viewport={'width': 1920, 'height': 1080},
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                storage_state=storage_state
             )
             
             # Création de la page
@@ -78,6 +120,16 @@ class BrowserManager:
                 self._dom_ops = None  # Nettoyer la référence DOM
                 self._smart_nav = None  # Nettoyer la navigation intelligente
                 
+        # Sauvegarder l'état du cache avant fermeture
+        if self.context:
+            try:
+                cache_dir = Path("/tmp/browser_cache")
+                storage_file = cache_dir / "storage_state.json"
+                await self.context.storage_state(path=str(storage_file))
+                logger.info(f"Cache sauvegardé: {storage_file}")
+            except Exception as e:
+                logger.warning(f"Erreur sauvegarde cache: {e}")
+
         # Fermer le contexte
         if self.context:
             try:
