@@ -135,6 +135,7 @@
     "_description": "Règles de priorité pour éviter les doublons de détection",
     "VIMP": ["VGRIMP"],
     "BLS_CSL": ["BLS"],
+    "FPT": ["FPT_VIM"],
     "FPT_SR": ["FPT", "VSR"],
     "FPT_BEA": ["FPT", "BEA"], 
     "FPT_SR_BEA": ["FPT", "VSR", "BEA", "FPT_SR", "FPT_BEA"],

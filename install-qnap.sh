@@ -161,14 +161,33 @@ build_image() {
     # Nettoyer les images orphelines
     docker image prune -f 2>/dev/null || true
 
-    # Construire l'image
+    # Configuration QNAP pour éviter les problèmes de permissions
+    export DOCKER_BUILDKIT=0
+    export COMPOSE_DOCKER_CLI_BUILD=0
+
+    # Créer les répertoires nécessaires avec bonnes permissions
+    mkdir -p data/logs data/cache
+    chmod 777 data data/logs data/cache 2>/dev/null || true
+
+    # Construire l'image - essayer d'abord avec docker-compose
     if [[ -f "docker-compose.yml" ]]; then
-        $DOCKER_COMPOSE_CMD build --no-cache
+        log_info "Tentative avec Docker Compose..."
+        if ! $DOCKER_COMPOSE_CMD build --no-cache 2>/dev/null; then
+            log_warning "Docker Compose échoué, utilisation de Docker direct..."
+            # Fallback: construction directe avec Docker
+            docker build --no-cache -t "$IMAGE_NAME:latest" .
+        fi
     else
-        docker build --no-cache -t "$IMAGE_NAME" .
+        docker build --no-cache -t "$IMAGE_NAME:latest" .
     fi
 
-    log_success "Image construite avec succès"
+    # Vérifier que l'image a été créée
+    if docker images | grep -q "$IMAGE_NAME"; then
+        log_success "Image construite avec succès"
+    else
+        log_error "Échec de construction de l'image"
+        exit 1
+    fi
 }
 
 # Démarrer les services
@@ -226,7 +245,7 @@ check_status() {
         # Vérifier si monitoring est accessible
         if docker ps -q -f name="$MONITORING_CONTAINER_NAME" | grep -q .; then
             local qnap_ip=$(ip route get 1.1.1.1 | grep -oP 'src \K\S+' 2>/dev/null || echo "IP_DU_QNAP")
-            log_info "  - Monitoring: http://$qnap_ip:3001"
+            log_info "  - Monitoring: http://$qnap_ip:8081"
         fi
     else
         log_error "Certains services ont des problèmes. Vérifiez les logs."

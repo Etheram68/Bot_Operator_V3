@@ -1,0 +1,18 @@
+#!/bin/bash
+# Script pour remettre à zéro le fichier unrecognized_vehicle_patterns.jsonl
+
+PATTERNS_FILE="/usr/share/nginx/html/data/unrecognized_vehicle_patterns.jsonl"
+
+# Vérifier si le fichier existe
+if [ -f "$PATTERNS_FILE" ]; then
+    # Faire une sauvegarde avant suppression
+    BACKUP_FILE="/usr/share/nginx/html/data/unrecognized_vehicle_patterns_backup_$(date +%Y%m%d_%H%M%S).jsonl"
+    cp "$PATTERNS_FILE" "$BACKUP_FILE" 2>/dev/null || true
+
+    # Vider le fichier
+    > "$PATTERNS_FILE"
+
+    echo '{"success":true,"message":"Patterns remis à zéro","backup":"'$BACKUP_FILE'"}'
+else
+    echo '{"success":true,"message":"Fichier déjà vide ou inexistant"}'
+fi

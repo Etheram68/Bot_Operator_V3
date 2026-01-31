@@ -188,16 +188,26 @@ EOF
 generate_logs() {
     local output_file="$API_DIR/logs.txt"
     local temp_file="${output_file}.tmp"
-    
+
     if ! docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
         echo "Container $CONTAINER_NAME not running at $(date)" > "$temp_file"
         mv "$temp_file" "$output_file"
         return
     fi
-    
+
     # Récupérer les logs (100 dernières lignes)
     docker logs --tail 100 "$CONTAINER_NAME" 2>&1 > "$temp_file"
     mv "$temp_file" "$output_file"
+}
+
+# Fonction pour générer les statistiques du bot
+generate_bot_stats() {
+    /usr/local/bin/extract-bot-stats.sh > /dev/null 2>&1
+}
+
+# Fonction pour générer les missions actives
+generate_active_missions() {
+    /usr/local/bin/extract-active-missions.sh > /dev/null 2>&1
 }
 
 # Génération initiale
@@ -206,11 +216,61 @@ generate_stats
 echo "✅ Stats générées: $(ls -la $API_DIR/stats.json 2>/dev/null || echo 'ERREUR')"
 generate_logs
 echo "✅ Logs générés: $(ls -la $API_DIR/logs.txt 2>/dev/null || echo 'ERREUR')"
+generate_bot_stats
+echo "✅ Bot stats générées: $(ls -la $API_DIR/bot-stats.json 2>/dev/null || echo 'ERREUR')"
+generate_active_missions
+echo "✅ Missions actives générées: $(ls -la $API_DIR/active-missions.json 2>/dev/null || echo 'ERREUR')"
+
+# Fonction pour gérer la remise à zéro des patterns
+handle_reset_trigger() {
+    local trigger_file="$API_DIR/reset-trigger"
+    local patterns_file="/usr/share/nginx/html/data/unrecognized_vehicle_patterns.jsonl"
+
+    if [ -f "$trigger_file" ]; then
+        echo "🗑️  Remise à zéro des patterns détectée..."
+
+        # Faire une sauvegarde si le fichier existe
+        if [ -f "$patterns_file" ]; then
+            local backup_file="/usr/share/nginx/html/data/unrecognized_vehicle_patterns_backup_$(date +%Y%m%d_%H%M%S).jsonl"
+            cp "$patterns_file" "$backup_file" 2>/dev/null || true
+            echo "💾 Backup créé: $backup_file"
+        fi
+
+        # Vider le fichier
+        > "$patterns_file"
+
+        # Supprimer le trigger
+        rm -f "$trigger_file"
+
+        echo "✅ Patterns remis à zéro"
+    fi
+}
+
+# Fonction pour gérer le redémarrage du bot
+handle_restart_trigger() {
+    local trigger_file="$API_DIR/restart-trigger"
+
+    if [ -f "$trigger_file" ]; then
+        echo "🔄 Redémarrage du bot détecté..."
+
+        # Exécuter le script de redémarrage
+        /usr/local/bin/restart-bot.sh
+
+        # Supprimer le trigger
+        rm -f "$trigger_file"
+
+        echo "✅ Commande de redémarrage envoyée"
+    fi
+}
 
 # Boucle de mise à jour
 echo "🔄 Démarrage de la boucle de mise à jour..."
 while true; do
     generate_stats
     generate_logs
+    generate_bot_stats
+    generate_active_missions
+    handle_reset_trigger
+    handle_restart_trigger
     sleep "$UPDATE_INTERVAL"
 done

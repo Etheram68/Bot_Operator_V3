@@ -17,7 +17,7 @@ fi
 
 # Vérifier la connectivité réseau
 echo "🌐 Test de connectivité réseau..."
-if ! wget -q --spider --timeout=10 https://www.operateur112.fr; then
+if ! curl -s --max-time 10 --head https://www.operateur112.fr > /dev/null; then
     echo "⚠️  ATTENTION: Impossible de joindre operateur112.fr"
     echo "🔧 Vérifiez la configuration réseau du container"
 fi

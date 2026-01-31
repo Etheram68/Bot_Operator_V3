@@ -47,6 +47,70 @@ python bot_operateur/utils/analyze_patterns.py    # Analyze unrecognized vehicle
 python test_mission_urls.py       # Test mission URL parsing and access
 ```
 
+## Docker Deployment
+
+### Quick Start with Docker
+```bash
+# Build and run with credentials
+docker-compose up --build -d
+
+# Or using docker run directly
+docker run -d \
+  -e USERNAME=your_username \
+  -e PASSWORD=your_password \
+  -v $(pwd)/data:/app/data \
+  bot-operateur:latest python main.py --continuous
+```
+
+### QNAP NAS Deployment
+1. Connect to your QNAP via SSH
+2. Transfer project files to NAS
+3. Create `.env` file with your credentials:
+```bash
+USERNAME=your_operateur112_username
+PASSWORD=your_operateur112_password
+DEFAULT_STRATEGY=smart
+HEADLESS=true
+LOG_LEVEL=INFO
+```
+
+4. Deploy using docker-compose:
+```bash
+# Build and start
+docker-compose up --build -d
+
+# View logs
+docker-compose logs -f bot-operateur
+
+# Stop
+docker-compose down
+```
+
+### Docker Commands
+```bash
+# Build image
+docker build -t bot-operateur:latest .
+
+# Run with custom command
+docker run -it --rm \
+  -e USERNAME=user -e PASSWORD=pass \
+  bot-operateur:latest python main.py --list
+
+# Monitor container
+docker stats bot-operateur-112
+docker logs -f bot-operateur-112
+
+# Access container shell
+docker exec -it bot-operateur-112 /bin/bash
+```
+
+### Persistent Data
+Data is stored in `./data/` directory with subdirectories:
+- `logs/`: Application logs
+- `cache/`: Browser cache and temporary files
+- `config/`: Custom configuration files
+- `bot_data/`: Mission data and analytics
+
 ## Architecture Overview
 
 This is a Python automation bot for the "Opérateur 112" emergency management game, built with:

@@ -1072,116 +1072,322 @@ class VehicleScraper:
         additional_selected = 0
         
         try:
-            # Chargement optimisé : seulement si nécessaire et avec timeout réduit
             logger.info("📡 Chargement ciblé de véhicules supplémentaires...")
+            
+            # ÉTAPE 1: Chargement des véhicules
             await self._load_all_vehicles()
+            await self.page.wait_for_timeout(1000)
+            await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
             
-            # Attendre que les nouveaux véhicules soient chargés (timeout optimisé)
-            await self.page.wait_for_timeout(1000)  # Réduit de 3000ms à 1000ms
-            await self.page.wait_for_load_state('domcontentloaded', timeout=5000)  # Plus rapide que networkidle
-            
-            # Récupérer toutes les lignes (maintenant avec plus de véhicules)
+            # ÉTAPE 2: Récupération sécurisée des lignes de véhicules
             final_table_selector = table_selector or "#vehicle_show_table_all"
-            all_vehicle_rows = await self.page.query_selector_all(f"{final_table_selector} tr[id^='vehicle_element_content_']")
+            selector_complet = f"{final_table_selector} tr[id^='vehicle_element_content_']"
+            
+            logger.debug(f"🔍 Utilisation du sélecteur: {selector_complet}")
+            all_vehicle_rows = await self.page.query_selector_all(selector_complet)
+            
+            if not all_vehicle_rows:
+                logger.warning("❌ Aucune ligne de véhicule trouvée après chargement supplémentaire")
+                return 0
+            
             logger.info(f"🔍 {len(all_vehicle_rows)} véhicules au total disponibles")
             
-            # Sélectionner les véhicules manquants (sans exclusion par ID, la logique est maintenant dans les besoins ajustés)
-            for row in all_vehicle_rows:
+            # ÉTAPE 3: Validation stricte des éléments DOM récupérés
+            valid_vehicle_rows = []
+            for i, row_element in enumerate(all_vehicle_rows):
+                if self._validate_dom_element(row_element, i):
+                    valid_vehicle_rows.append(row_element)
+            
+            logger.debug(f"✅ {len(valid_vehicle_rows)} éléments DOM valides sur {len(all_vehicle_rows)}")
+            
+            if not valid_vehicle_rows:
+                logger.error("❌ Aucun élément DOM valide trouvé")
+                return 0
+            
+            # ÉTAPE 4: Préparation sécurisée du mapping d'alternatives (COPIE ISOLÉE)
+            safe_alternatives = self._create_safe_alternatives_mapping(alternatives_mapping, mission)
+            
+            # ÉTAPE 5: Compteur de besoins (COPIE ISOLÉE pour éviter modification concurrente)
+            working_unsatisfied_needs = unsatisfied_needs.copy()
+            
+            # ÉTAPE 6: Parcours des véhicules avec validation à chaque étape
+            for i, dom_row_element in enumerate(valid_vehicle_rows):
                 try:
-                    # Extraire le type du véhicule
-                    vehicle_caption = await row.get_attribute("vehicle_caption")
-                    if not vehicle_caption:
+                    # Vérification supplémentaire avant traitement
+                    if not self._validate_dom_element(dom_row_element, i):
                         continue
                     
-                    vehicle_type = vehicle_caption.split()[0] if vehicle_caption else None
-                    if not vehicle_type:
+                    # Extraction sécurisée des informations véhicule
+                    vehicle_data = await self._safe_extract_vehicle_data(dom_row_element, i)
+                    if not vehicle_data:
                         continue
                     
-                    # Chercher si ce véhicule peut satisfaire un besoin non satisfait
-                    matching_need = None
-                    # D'abord vérification directe
-                    for need_type, needed_count in unsatisfied_needs.items():
-                        if needed_count > 0:  # Encore besoin de ce type
-                            if vehicle_type == need_type:
-                                matching_need = need_type
-                                break
+                    vehicle_caption, vehicle_type = vehicle_data
+                    logger.debug(f"🚗 Analyse du véhicule {i}: {vehicle_caption} (type: {vehicle_type})")
                     
-                    # Si pas de correspondance directe, chercher dans les alternatives PRIMAIRES en priorité
-                    if not matching_need and alternatives_mapping:
-                        # Adapter le mapping pour les transferts interhospitaliers
-                        working_mapping = alternatives_mapping
-                        is_hospital_transfer = mission and mission.title and "Transfert interhospitalier" in mission.title
-                        if is_hospital_transfer and 'AMBULANCE' in alternatives_mapping:
-                            working_mapping = alternatives_mapping.copy()
-                            ambulance_mapping = working_mapping['AMBULANCE'].copy()
-                            if 'transport_capable' in ambulance_mapping:
-                                ambulance_mapping['primary'] = ambulance_mapping['transport_capable']
-                                ambulance_mapping['secondary'] = []
-                                working_mapping['AMBULANCE'] = ambulance_mapping
+                    # Recherche de correspondance avec besoins SANS utiliser les objets DOM
+                    matching_need_type = self._find_need_match_safe(vehicle_type, working_unsatisfied_needs, safe_alternatives)
+                    
+                    if matching_need_type:
+                        # Tentative de sélection du véhicule
+                        selection_success = await self._attempt_vehicle_selection(dom_row_element, vehicle_caption, matching_need_type)
                         
-                        for need_type, needed_count in unsatisfied_needs.items():
-                            if needed_count > 0:
-                                alternatives = working_mapping.get(need_type, {})
-                                primary_alternatives = alternatives.get('primary', [])
-                                
-                                if vehicle_type in primary_alternatives:
-                                    matching_need = need_type
-                                    break
-                    
-                    # En dernier recours, chercher dans les alternatives SECONDAIRES
-                    if not matching_need and alternatives_mapping:
-                        for need_type, needed_count in unsatisfied_needs.items():
-                            if needed_count > 0:
-                                alternatives = working_mapping.get(need_type, {})
-                                secondary_alternatives = alternatives.get('secondary', [])
-                                
-                                if vehicle_type in secondary_alternatives:
-                                    matching_need = need_type
-                                    break
-                    
-                    if matching_need:
-                        # Vérifier si ce véhicule n'est pas déjà sélectionné
-                        checkbox = await row.query_selector(".vehicle_checkbox")
-                        
-                        if checkbox and not await checkbox.is_checked() and not await checkbox.is_disabled():
-                            # Vérifier si le véhicule tracteur est disponible (pour les remorques)
-                            tractor_available = await self._check_tractor_availability(row)
-                            if not tractor_available:
-                                logger.warning(f"⚠️  {vehicle_caption} ignoré: Véhicule tracteur non disponible")
-                                continue  # Passer au véhicule suivant
-                                
-                            # Sélectionner ce véhicule
-                            await checkbox.check()
+                        if selection_success:
+                            # Mise à jour des compteurs (OBJETS PYTHON UNIQUEMENT)
                             additional_selected += 1
-                            unsatisfied_needs[matching_need] -= 1
+                            working_unsatisfied_needs[matching_need_type] -= 1
+                            selected_counts[matching_need_type] = selected_counts.get(matching_need_type, 0) + 1
                             
-                            # IMPORTANT: Mettre à jour selected_counts pour le comptage final correct
-                            selected_counts[matching_need] = selected_counts.get(matching_need, 0) + 1
+                            logger.info(f"🆕 Véhicule sélectionné: {vehicle_caption} -> {vehicle_type} (pour {matching_need_type})")
                             
-                            logger.info(f"🆕 Véhicule supplémentaire sélectionné: {vehicle_caption} -> Type: {vehicle_type} (pour {matching_need})")
-                            
-                            # Si ce besoin est maintenant satisfait, le retirer
-                            if unsatisfied_needs[matching_need] <= 0:
-                                del unsatisfied_needs[matching_need]
+                            # Nettoyage des besoins satisfaits
+                            if working_unsatisfied_needs[matching_need_type] <= 0:
+                                del working_unsatisfied_needs[matching_need_type]
                     
-                    # Si tous les besoins sont satisfaits, arrêter
-                    if not unsatisfied_needs:
-                        logger.info("🎯 Tous les besoins supplémentaires sont maintenant satisfaits")
+                    # Arrêt si tous les besoins sont satisfaits
+                    if not working_unsatisfied_needs:
+                        logger.info("🎯 Tous les besoins supplémentaires sont satisfaits")
                         break
                         
-                except Exception as e:
-                    logger.warning(f"Erreur lors de la sélection d'un véhicule supplémentaire: {e}")
+                except Exception as vehicle_error:
+                    logger.warning(f"⚠️ Erreur lors du traitement du véhicule {i}: {vehicle_error}")
+                    logger.debug(f"    Type de l'élément problématique: {type(dom_row_element)}")
                     continue
             
-            # Log final des besoins non satisfaits
-            if unsatisfied_needs:
-                logger.warning(f"⚠️ Besoins toujours non satisfaits après chargement complet: {unsatisfied_needs}")
+            # ÉTAPE 7: Rapport final
+            if working_unsatisfied_needs:
+                logger.warning(f"⚠️ Besoins restants après chargement complet: {working_unsatisfied_needs}")
             
+            logger.info(f"📊 Véhicules supplémentaires sélectionnés: {additional_selected}")
             return additional_selected
             
-        except Exception as e:
-            logger.error(f"Erreur lors du chargement de véhicules supplémentaires: {e}")
+        except Exception as global_error:
+            logger.error(f"Erreur globale dans _load_and_select_additional_vehicles: {global_error}")
+            
+            # Debug complet pour identifier le problème
+            logger.debug("🔬 DEBUG COMPLET:")
+            logger.debug(f"  - Type unsatisfied_needs: {type(unsatisfied_needs)} -> {unsatisfied_needs}")
+            logger.debug(f"  - Type selected_counts: {type(selected_counts)} -> {selected_counts}")
+            logger.debug(f"  - Type alternatives_mapping: {type(alternatives_mapping)}")
+            logger.debug(f"  - table_selector: {table_selector}")
+            
+            if 'safe_alternatives' in locals():
+                logger.debug(f"  - Type safe_alternatives: {type(safe_alternatives)}")
+            if 'working_unsatisfied_needs' in locals():
+                logger.debug(f"  - Type working_unsatisfied_needs: {type(working_unsatisfied_needs)}")
+            
+            import traceback
+            logger.debug(f"  - Traceback complet: {traceback.format_exc()}")
+            
             return 0
+            
+            
+    def _validate_dom_element(self, element, index: int) -> bool:
+        """
+        Validation stricte qu'un objet est bien un élément Playwright DOM
+        """
+        try:
+            # Vérifications de base
+            if element is None:
+                logger.debug(f"❌ Élément {index} est None")
+                return False
+            
+            if isinstance(element, dict):
+                logger.warning(f"❌ Élément {index} est un dictionnaire: {element}")
+                return False
+            
+            if isinstance(element, (str, int, float, list, tuple)):
+                logger.warning(f"❌ Élément {index} est un type primitif: {type(element)}")
+                return False
+            
+            # Vérification des méthodes Playwright
+            required_methods = ['get_attribute', 'query_selector', 'is_visible']
+            for method_name in required_methods:
+                if not hasattr(element, method_name):
+                    logger.warning(f"❌ Élément {index} manque la méthode '{method_name}'")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            logger.warning(f"❌ Erreur validation élément {index}: {e}")
+            return False
+    
+    
+    def _create_safe_alternatives_mapping(self, alternatives_mapping: dict, mission) -> dict:
+        """
+        Crée une copie complètement isolée et sécurisée du mapping d'alternatives
+        """
+        try:
+            if not alternatives_mapping or not isinstance(alternatives_mapping, dict):
+                return {}
+            
+            # Copie profonde du mapping
+            safe_mapping = {}
+            for key, value in alternatives_mapping.items():
+                if isinstance(value, dict):
+                    safe_mapping[key] = value.copy()
+                else:
+                    safe_mapping[key] = value
+            
+            # Adaptation pour transferts interhospitaliers
+            is_hospital_transfer = (
+                mission and 
+                hasattr(mission, 'title') and 
+                mission.title and 
+                "Transfert interhospitalier" in mission.title
+            )
+            
+            if is_hospital_transfer and 'AMBULANCE' in safe_mapping:
+                try:
+                    ambulance_data = safe_mapping['AMBULANCE']
+                    if isinstance(ambulance_data, dict) and 'transport_capable' in ambulance_data:
+                        # Créer une nouvelle entrée pour éviter les modifications
+                        new_ambulance_mapping = {
+                            'primary': ambulance_data['transport_capable'].copy() if isinstance(ambulance_data['transport_capable'], list) else ambulance_data['transport_capable'],
+                            'secondary': []
+                        }
+                        safe_mapping['AMBULANCE'] = new_ambulance_mapping
+                        logger.debug(f"🚑 Mapping transfert adapté pour AMBULANCE")
+                except Exception as mapping_error:
+                    logger.warning(f"⚠️ Erreur adaptation mapping AMBULANCE: {mapping_error}")
+            
+            return safe_mapping
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur création safe_alternatives_mapping: {e}")
+            return {}
+    
+    
+    async def _safe_extract_vehicle_data(self, dom_element, index: int) -> Optional[tuple]:
+        """
+        Extraction ultra-sécurisée des données véhicule avec validation à chaque étape
+        """
+        try:
+            # Double vérification avant extraction
+            if not self._validate_dom_element(dom_element, index):
+                return None
+            
+            # Extraction de l'attribut vehicle_caption
+            vehicle_caption = await dom_element.get_attribute("vehicle_caption")
+            if not vehicle_caption or not isinstance(vehicle_caption, str):
+                logger.debug(f"⚠️ Véhicule {index}: caption invalide")
+                return None
+            
+            # Extraction du type de véhicule
+            caption_parts = vehicle_caption.strip().split()
+            if not caption_parts:
+                logger.debug(f"⚠️ Véhicule {index}: caption vide après split")
+                return None
+            
+            vehicle_type = caption_parts[0]
+            if not vehicle_type:
+                logger.debug(f"⚠️ Véhicule {index}: type vide")
+                return None
+            
+            return (vehicle_caption, vehicle_type)
+            
+        except Exception as e:
+            logger.debug(f"⚠️ Erreur extraction véhicule {index}: {e}")
+            return None
+    
+    
+    def _find_need_match_safe(self, vehicle_type: str, unsatisfied_needs: dict, safe_alternatives: dict) -> Optional[str]:
+        """
+        Recherche de correspondance PURE (sans objets DOM) entre type véhicule et besoins
+        """
+        try:
+            # Validation des paramètres d'entrée
+            if not isinstance(vehicle_type, str) or not vehicle_type.strip():
+                return None
+            
+            if not isinstance(unsatisfied_needs, dict):
+                logger.warning(f"⚠️ unsatisfied_needs n'est pas un dict: {type(unsatisfied_needs)}")
+                return None
+            
+            if not isinstance(safe_alternatives, dict):
+                logger.debug(f"⚠️ safe_alternatives n'est pas un dict: {type(safe_alternatives)}")
+                safe_alternatives = {}
+            
+            # 1. Correspondance directe
+            if vehicle_type in unsatisfied_needs and unsatisfied_needs[vehicle_type] > 0:
+                return vehicle_type
+            
+            # 2. Correspondance via alternatives primaires
+            for need_type, needed_count in unsatisfied_needs.items():
+                if needed_count <= 0:
+                    continue
+                
+                alternatives_data = safe_alternatives.get(need_type)
+                if not isinstance(alternatives_data, dict):
+                    continue
+                
+                primary_alternatives = alternatives_data.get('primary', [])
+                if isinstance(primary_alternatives, list) and vehicle_type in primary_alternatives:
+                    return need_type
+            
+            # 3. Correspondance via alternatives secondaires
+            for need_type, needed_count in unsatisfied_needs.items():
+                if needed_count <= 0:
+                    continue
+                
+                alternatives_data = safe_alternatives.get(need_type)
+                if not isinstance(alternatives_data, dict):
+                    continue
+                
+                secondary_alternatives = alternatives_data.get('secondary', [])
+                if isinstance(secondary_alternatives, list) and vehicle_type in secondary_alternatives:
+                    return need_type
+            
+            return None
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Erreur recherche correspondance pour {vehicle_type}: {e}")
+            return None
+    
+    
+    async def _attempt_vehicle_selection(self, dom_element, vehicle_caption: str, need_type: str) -> bool:
+        """
+        Tentative de sélection d'un véhicule avec toutes les vérifications de sécurité
+        """
+        try:
+            # Vérification préalable de l'élément DOM
+            if not self._validate_dom_element(dom_element, "selection"):
+                return False
+            
+            # Recherche de la checkbox
+            checkbox = await dom_element.query_selector(".vehicle_checkbox")
+            if not checkbox:
+                logger.debug(f"⚠️ Checkbox non trouvée pour {vehicle_caption}")
+                return False
+            
+            # Vérification de l'état de la checkbox
+            is_checked = await checkbox.is_checked()
+            is_disabled = await checkbox.is_disabled()
+            
+            if is_checked:
+                logger.debug(f"⚠️ Véhicule {vehicle_caption} déjà sélectionné")
+                return False
+            
+            if is_disabled:
+                logger.debug(f"⚠️ Véhicule {vehicle_caption} désactivé")
+                return False
+            
+            # Vérification de la disponibilité du tracteur
+            tractor_available = await self._check_tractor_availability(dom_element)
+            if not tractor_available:
+                logger.warning(f"⚠️ {vehicle_caption} ignoré: Véhicule tracteur non disponible")
+                return False
+            
+            # Sélection effective
+            await checkbox.check()
+            logger.debug(f"✅ Véhicule {vehicle_caption} sélectionné avec succès")
+            return True
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Erreur sélection {vehicle_caption}: {e}")
+            return False
+            
     
     async def _extract_vehicle_basic_info(self, row, index: int) -> Optional[tuple]:
         """

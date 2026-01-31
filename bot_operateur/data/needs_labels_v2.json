@@ -19,15 +19,6 @@
     "BLS": ["BLS requis", "\\bBLS\\b(?!\\s+ou\\s+CSL)(?!_PROBABILITY)"],
     "VPL": ["VPL requis", "\\bVPL\\b(?!_PROBABILITY)"],
     "BLS_CSL": ["BLS.{0,10}CSL", "BLS\\s+ou\\s+CSL"],
-    "INTENSIVE_CARE": ["Soins intensifs", "réanimation", "intensive care"],
-    "BURN_UNIT": [
-      "Unité grands brûlés",
-      "grands brûlés",
-      "burn unit",
-      "brûlé",
-      "brule"
-    ],
-    "PEDIATRIC": ["Pédiatrie", "pediatrie", "enfant", "enfants"],
     "RESCUE_DIRECTOR": [
       "(?<!Chances qu['’ ]un )Directeur des [Ss]ecours [Mm]édicaux?(?! soit requis)",
       "DSM requis",
@@ -49,6 +40,7 @@
     ],
     "VLHR": [
       "(?<!groupe ou )VLHR requis",
+      "VLHR requis",
       "(?<!ou )VLHR nécessaires?",
       "véhicules? liaisons? hors route"
     ],
@@ -128,6 +120,13 @@
     "CEAR": ["Requis CEAR", "CEAR"],
     "CMIR": ["Requis CMIR", "CMIR"],
     "CEDEV": ["Requis CEDEV", "CEDEV"],
+    "CEREV": ["CEREV requis", "CEREV"],
+    "CEDEPOL": ["Requis CEDEPOL", "CEDEPOL"],
+    "CETRAN": ["Requis CETRAN", "CETRAN"],
+    "CEFSP": ["Requis CEFSP", "CEFSP"],
+    "RMV": ["Requis RMV", "RMV"],
+    "RMP": ["Requis RMP", "RMP"],
+    "CESR": ["Requis CESR", "CESR"],
     "CARS_POLICE": [
       "Voitures? de police requises?",
       "voitures? de police nécessaires?",
@@ -177,6 +176,7 @@
     ],
     "CHOUCAS": [
       "Soutien aérien FAG requis",
+      "\\d+\\s+soutiens? aériens? FAG",
       "CHOUCAS",
       "hélicoptères? gendarmerie"
     ],

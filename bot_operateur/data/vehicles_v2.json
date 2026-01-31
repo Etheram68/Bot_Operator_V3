@@ -18,8 +18,8 @@
         "secondary": ["FS"]
       },
       "FPT_VIM": {
-        "primary": ["FPT", "FPT(SR)", "CCR(SR)", "VIM"],
-        "secondary": ["VPI"]
+        "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
+        "secondary": ["VPI", "VIM"]
       },
       "FPT_CONSTRAINED": {
         "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
@@ -158,6 +158,34 @@
       },
       "CEDEV": {
         "primary": ["CEDEV"],
+        "secondary": []
+      },
+      "CEREV": {
+        "primary": ["CEREV"],
+        "secondary": []
+      },
+      "CEDEPOL": {
+        "primary": ["CEDEPOL"],
+        "secondary": []
+      },
+      "CETRAN": {
+        "primary": ["CETRAN"],
+        "secondary": []
+      },
+      "CEFSP": {
+        "primary": ["CEFSP"],
+        "secondary": []
+      },
+      "CESR": {
+        "primary": ["CESR"],
+        "secondary": []
+      },
+      "RMV": {
+        "primary": ["RMV"],
+        "secondary": []
+      },
+      "RMP": {
+        "primary": ["RMP"],
         "secondary": []
       },
       "VTP(ers)_CONSTRAINED": {

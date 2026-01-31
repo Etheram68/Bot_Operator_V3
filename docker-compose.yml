@@ -6,10 +6,11 @@ services:
     image: bot-operateur:latest
     container_name: bot-operateur-112
     restart: unless-stopped
-    
-    # Configuration réseau
-    network_mode: bridge
-    
+
+    # Charger les variables depuis .env
+    env_file:
+      - .env
+
     # Variables d'environnement (à personnaliser)
     environment:
       # OBLIGATOIRE - Identifiants Opérateur 112
@@ -104,6 +105,7 @@ services:
     volumes:
       - ./data/logs:/usr/share/nginx/html/logs:ro
       - ./bot_operateur/data:/usr/share/nginx/html/data:ro  # Accès aux données du bot (patterns non reconnus)
+      - ./data/monitoring-api:/usr/share/nginx/html/api:rw  # API data persistante
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Accès Docker pour stats
     depends_on:
       - bot-operateur
@@ -111,25 +113,10 @@ services:
       - "com.qnap.application=bot-monitoring"
       - "com.qnap.description=Interface de monitoring pour Bot Opérateur avec API réelle"
 
-# Réseau personnalisé (optionnel)
+# Réseau personnalisé pour isolation
 networks:
   default:
     driver: bridge
     ipam:
       config:
         - subnet: 172.20.0.0/16
-
-# Volumes nommés pour facilité de gestion QNAP
-volumes:
-  bot_logs:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PWD}/data/logs
-  bot_cache:
-    driver: local
-    driver_opts:
-      type: none  
-      o: bind
-      device: ${PWD}/data/cache
