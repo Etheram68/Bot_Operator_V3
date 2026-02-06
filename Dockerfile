@@ -1,5 +1,5 @@
 # Dockerfile robuste pour QNAP avec toutes les optimisations
-FROM python:3.13-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 # Variables d'environnement optimisées
 ENV PYTHONUNBUFFERED=1 \
@@ -8,8 +8,12 @@ ENV PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1
 
-# Installer les dépendances système requises par Playwright
+# Installer les dépendances système requises par Playwright + outils de compilation
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Outils de compilation pour pydantic-core et greenlet
+    build-essential \
+    gcc \
+    # Dépendances Playwright
     libnss3 \
     libnspr4 \
     libatk1.0-0 \
