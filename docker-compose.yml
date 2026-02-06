@@ -6,6 +6,7 @@ services:
     image: bot-operateur:latest
     container_name: bot-operateur-112
     restart: unless-stopped
+    shm_size: '512mb'
 
     # Charger les variables depuis .env
     env_file:

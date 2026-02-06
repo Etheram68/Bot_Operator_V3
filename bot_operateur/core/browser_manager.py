@@ -33,7 +33,19 @@ class BrowserManager:
             # Lancement du navigateur
             self.browser = await self.playwright.chromium.launch(
                 headless=self.settings.headless,
-                slow_mo=self.settings.browser_slow_mo
+                slow_mo=self.settings.browser_slow_mo,
+                args=[
+                    '--disable-dev-shm-usage',         # Évite /dev/shm trop petit en Docker
+                    '--disable-gpu',                    # Pas de GPU en container
+                    '--disable-software-rasterizer',    # Évite les erreurs EGL/SwiftShader
+                    '--no-sandbox',                     # Requis en Docker
+                    '--disable-extensions',
+                    '--disable-background-networking',
+                    '--disable-default-apps',
+                    '--disable-sync',
+                    '--disable-translate',
+                    '--js-flags=--max-old-space-size=256',  # Limite mémoire JS
+                ]
             )
 
             # Configuration du répertoire de cache dans un dossier accessible
@@ -268,3 +280,54 @@ class BrowserManager:
     def is_ready(self) -> bool:
         """Vérifie si le navigateur est prêt"""
         return self.page is not None and not self.page.is_closed()
+
+    def is_connected(self) -> bool:
+        """Vérifie si le navigateur est connecté (process Chromium vivant)"""
+        try:
+            if not self.browser or not self.browser.is_connected():
+                return False
+            if not self.page or self.page.is_closed():
+                return False
+            return True
+        except Exception:
+            return False
+
+    async def restart(self) -> None:
+        """Redémarre le navigateur après un crash"""
+        logger.warning("Redémarrage du navigateur après crash...")
+
+        # Nettoyage forcé des ressources mortes
+        await self._force_cleanup()
+
+        # Redémarrer
+        await self.start()
+        logger.info("Navigateur redémarré avec succès")
+
+    async def _force_cleanup(self) -> None:
+        """Nettoyage forcé quand le browser a crash (pas d'attente sur les resources mortes)"""
+        logger.debug("Nettoyage forcé des ressources mortes...")
+
+        self.page = None
+        self._dom_ops = None
+        self._smart_nav = None
+
+        if self.context:
+            try:
+                await asyncio.wait_for(self.context.close(), timeout=1.0)
+            except Exception:
+                pass
+            self.context = None
+
+        if self.browser:
+            try:
+                await asyncio.wait_for(self.browser.close(), timeout=1.0)
+            except Exception:
+                pass
+            self.browser = None
+
+        if self.playwright:
+            try:
+                await asyncio.wait_for(self.playwright.stop(), timeout=1.0)
+            except Exception:
+                pass
+            self.playwright = None

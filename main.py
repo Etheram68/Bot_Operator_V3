@@ -65,7 +65,7 @@ async def run_auto_mode(bot: OperateurBot, max_missions: int = None):
 
 
 async def run_continuous_mode(bot: OperateurBot, cycles: int = -1, max_missions: int = None, cycle_delay: int = None):
-    """Exécute le mode continu"""
+    """Exécute le mode continu avec recovery automatique du navigateur"""
 
     # Utiliser le délai configuré dans les settings si non spécifié
     if cycle_delay is None:
@@ -76,37 +76,78 @@ async def run_continuous_mode(bot: OperateurBot, cycles: int = -1, max_missions:
         logger.info(f"Limite de missions par cycle: {max_missions}")
     logger.info(f"Délai entre cycles: {cycle_delay}s (configurable via CYCLE_DELAY)")
     logger.info("Appuyez sur Ctrl+C pour arrêter")
-    
-    try:
-        # Créer une tâche pour run_continuous avec le cycle_delay
-        continuous_task = asyncio.create_task(bot.run_continuous(cycles, max_missions, cycle_delay))
-        
-        # Attendre soit la fin du cycle, soit le signal d'arrêt
-        done, pending = await asyncio.wait(
-            [continuous_task, asyncio.create_task(shutdown_event.wait())],
-            return_when=asyncio.FIRST_COMPLETED
-        )
-        
-        # Si le signal d'arrêt a été reçu
-        if shutdown_event.is_set():
-            logger.info("🛑 Arrêt gracieux en cours...")
-            continuous_task.cancel()
-            try:
-                await continuous_task
-            except asyncio.CancelledError:
-                pass
-        
-        # Annuler les tâches restantes
-        for task in pending:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-                
-    except Exception as e:
-        logger.error(f"Erreur dans le mode continu: {e}")
-        raise
+
+    max_recovery_attempts = 5
+    consecutive_failures = 0
+
+    while not shutdown_event.is_set():
+        try:
+            # Créer une tâche pour run_continuous avec le cycle_delay
+            continuous_task = asyncio.create_task(bot.run_continuous(cycles, max_missions, cycle_delay))
+
+            # Attendre soit la fin du cycle, soit le signal d'arrêt
+            done, pending = await asyncio.wait(
+                [continuous_task, asyncio.create_task(shutdown_event.wait())],
+                return_when=asyncio.FIRST_COMPLETED
+            )
+
+            # Si le signal d'arrêt a été reçu
+            if shutdown_event.is_set():
+                logger.info("Arrêt gracieux en cours...")
+                continuous_task.cancel()
+                try:
+                    await continuous_task
+                except asyncio.CancelledError:
+                    pass
+                break
+
+            # Annuler les tâches restantes
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
+            # Si on arrive ici normalement (cycles finis), sortir
+            consecutive_failures = 0
+            break
+
+        except Exception as e:
+            error_msg = str(e)
+            is_browser_crash = any(keyword in error_msg for keyword in [
+                "Connection closed",
+                "pipe closed",
+                "Browser closed",
+                "Target closed",
+                "Session closed",
+                "Protocol error",
+                "Connection refused",
+            ])
+
+            if is_browser_crash:
+                consecutive_failures += 1
+                logger.error(f"Crash navigateur détecté ({consecutive_failures}/{max_recovery_attempts}): {error_msg}")
+
+                if consecutive_failures >= max_recovery_attempts:
+                    logger.error(f"Trop de crashes consécutifs ({consecutive_failures}), arrêt définitif")
+                    raise
+
+                # Attente exponentielle avant recovery
+                wait_time = min(30, 5 * consecutive_failures)
+                logger.info(f"Attente de {wait_time}s avant tentative de recovery...")
+                await asyncio.sleep(wait_time)
+
+                # Tenter la recovery
+                recovery_ok = await bot.recover_browser()
+                if not recovery_ok:
+                    logger.error("Recovery échouée, nouvelle tentative au prochain tour...")
+                    continue
+
+                logger.info("Recovery réussie, reprise des cycles de missions")
+            else:
+                logger.error(f"Erreur non-récupérable dans le mode continu: {e}")
+                raise
 
 
 async def show_status(bot: OperateurBot):

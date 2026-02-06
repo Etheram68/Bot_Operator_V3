@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Environment Setup
+
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -16,6 +17,7 @@ cp .env.example .env
 ```
 
 ### Testing and Development
+
 ```bash
 # Architecture testing
 python test_architecture.py        # Full architecture test
@@ -43,6 +45,7 @@ python bot_operateur/utils/analyze_patterns.py    # Analyze unrecognized vehicle
 ```
 
 ### Mission URL Testing
+
 ```bash
 python test_mission_urls.py       # Test mission URL parsing and access
 ```
@@ -50,6 +53,7 @@ python test_mission_urls.py       # Test mission URL parsing and access
 ## Docker Deployment
 
 ### Quick Start with Docker
+
 ```bash
 # Build and run with credentials
 docker-compose up --build -d
@@ -63,9 +67,11 @@ docker run -d \
 ```
 
 ### QNAP NAS Deployment
+
 1. Connect to your QNAP via SSH
 2. Transfer project files to NAS
 3. Create `.env` file with your credentials:
+
 ```bash
 USERNAME=your_operateur112_username
 PASSWORD=your_operateur112_password
@@ -75,6 +81,7 @@ LOG_LEVEL=INFO
 ```
 
 4. Deploy using docker-compose:
+
 ```bash
 # Build and start
 docker-compose up --build -d
@@ -87,6 +94,7 @@ docker-compose down
 ```
 
 ### Docker Commands
+
 ```bash
 # Build image
 docker build -t bot-operateur:latest .
@@ -105,7 +113,9 @@ docker exec -it bot-operateur-112 /bin/bash
 ```
 
 ### Persistent Data
+
 Data is stored in `./data/` directory with subdirectories:
+
 - `logs/`: Application logs
 - `cache/`: Browser cache and temporary files
 - `config/`: Custom configuration files
@@ -116,42 +126,49 @@ Data is stored in `./data/` directory with subdirectories:
 This is a Python automation bot for the "Opérateur 112" emergency management game, built with:
 
 - **Playwright** for browser automation
-- **Pydantic** for configuration and data models  
+- **Pydantic** for configuration and data models
 - **Loguru** for structured logging
 - **AsyncIO** for concurrent operations
 
 ### Core Components
 
 #### Main Entry Point
+
 - `main.py`: CLI interface with argument parsing and execution modes
 - `bot_operateur/`: Main package containing all bot functionality
 
 #### Core System (`bot_operateur/core/`)
+
 - `bot.py`: Main `OperateurBot` class - coordinates all components
 - `browser_manager.py`: Handles Playwright browser lifecycle and page navigation
 - `mission_manager.py`: Orchestrates mission detection, analysis, and deployment
 
 #### Data Models (`bot_operateur/models/`)
+
 - `mission.py`: Mission data structure and validation
 - `vehicle.py`: Vehicle information and capabilities
-- `patient.py`: Patient data and medical requirements  
+- `patient.py`: Patient data and medical requirements
 - `requirement_parser.py`: Intelligent parsing of mission requirements
 
 #### Web Scrapers (`bot_operateur/scrapers/`)
+
 - `mission_scraper.py`: Extracts missions from game interface
 - `vehicle_scraper.py`: Gathers available vehicle information
 - `patient_scraper.py`: Collects patient data from missions
 
 #### Deployment Strategies (`bot_operateur/strategies/`)
+
 - `smart_strategy.py`: AI-powered vehicle selection with game data integration
 - `balanced_strategy.py`: Safety-focused deployment with margins
 - `minimum_strategy.py`: Cost-optimized minimal deployment
 - `optimal_strategy.py`: Performance-based vehicle selection
 
 #### Configuration (`bot_operateur/config/`)
+
 - `settings.py`: Pydantic-based configuration with environment variable support
 
 #### Utilities (`bot_operateur/utils/`)
+
 - `analyze_patterns.py`: Pattern analysis tool for unrecognized vehicle types
 - `logger.py`: Logging configuration and setup utilities
 - `retry.py`: Retry mechanisms with exponential backoff
@@ -165,6 +182,7 @@ This is a Python automation bot for the "Opérateur 112" emergency management ga
 4. **Settings from Environment**: All configuration via `.env` file with validation
 
 ### Data Flow
+
 1. Browser connects and authenticates via `browser_manager`
 2. `mission_scraper` detects available missions
 3. `mission_manager` analyzes requirements using `requirement_parser`
@@ -173,7 +191,9 @@ This is a Python automation bot for the "Opérateur 112" emergency management ga
 6. Results logged and returned via structured response
 
 ### Smart Strategy Intelligence
+
 The recommended "smart" strategy includes:
+
 - Real vehicle recognition from `needs_labels_v2.json` and `vehicles_v2.json`
 - Automatic fallback alternatives (VSAV → ASSU → Ambulance)
 - Proximity-based selection (first found = closest)
@@ -183,7 +203,9 @@ The recommended "smart" strategy includes:
 - Already-deployed vehicle tracking to avoid over-deployment
 
 ### Configuration Management
+
 Settings loaded from `.env` file with these key variables:
+
 - `USERNAME`/`PASSWORD`: Game credentials (required)
 - `DEFAULT_STRATEGY`: Deployment strategy (smart/balanced/minimum/optimal)
 - `HEADLESS`: Browser display mode
@@ -193,35 +215,42 @@ Settings loaded from `.env` file with these key variables:
 - `PAGE_LOAD_TIMEOUT`/`ELEMENT_WAIT_TIMEOUT`: Browser timing controls
 
 ### Error Handling
+
 - Retry mechanisms with exponential backoff
-- DOM change detection with adaptive waiting  
+- DOM change detection with adaptive waiting
 - Comprehensive logging for debugging
 - Graceful degradation on mission failures
 
 ## Key Implementation Details
 
 ### Requirement Parser Intelligence
+
 The `requirement_parser.py` uses sophisticated text parsing:
+
 - HTML table structure recognition for mission requirements
 - Context-aware quantity extraction (handles "Fourgons d'incendie requis: 2")
 - Personnel-to-vehicle conversion using `vehicle_specs.crew_size`
 - Generic requirement types (CARS_POLICE) that allow proximity-based vehicle selection
 
-### Vehicle Selection Logic  
+### Vehicle Selection Logic
+
 The `vehicle_scraper.py` implements intelligent selection:
+
 - Already-deployed vehicle detection and adjustment from mission tables
 - Multi-alternative satisfaction (one FS vehicle satisfies both VTU and VSR needs)
 - Proximity-based selection (vehicles listed first are closest)
 - Alternative mapping resolution (VTU → FS, AMBULANCE → VSAV/ASSU/SMUR(A))
 
 ### Mission Processing Flow
+
 1. Parse mission text → extract generic requirements (e.g., CARS_POLICE: 15)
 2. Convert personnel needs → vehicles (4 Spécialistes IMP → 1 VIMP)
-3. Check already deployed vehicles → adjust requirements  
+3. Check already deployed vehicles → adjust requirements
 4. Select closest available vehicles using alternatives mapping
 5. Deploy and track selected vehicles
 
 ### Data File Dependencies
+
 - `needs_labels_v2.json`: Regex patterns matching mission text to vehicle types
 - `vehicles_v2.json`: Vehicle alternatives and crew specifications
 - Both files are critical for the smart strategy's operation

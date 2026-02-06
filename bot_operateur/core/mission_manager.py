@@ -3043,6 +3043,11 @@ class MissionManager:
                 cycle_count += 1
                 logger.info(f"--- Cycle {cycle_count} ---")
 
+                # Vérifier la santé du navigateur avant chaque cycle
+                if not self.browser_manager.is_connected():
+                    logger.error("Navigateur déconnecté détecté, propagation pour recovery")
+                    raise RuntimeError("Browser disconnected - needs recovery")
+
                 stats = await self.auto_deploy_missions(max_missions)
 
                 if stats["deployed"] == 0:
@@ -3053,12 +3058,21 @@ class MissionManager:
                 else:
                     # Utiliser le délai configuré entre les cycles
                     if cycles < 0 or cycle_count < cycles:  # Ne pas attendre après le dernier cycle
-                        logger.info(f"⏸️ Pause de {cycle_delay}s avant le prochain cycle...")
+                        logger.info(f"Pause de {cycle_delay}s avant le prochain cycle...")
                         await asyncio.sleep(cycle_delay)
-                
+
         except KeyboardInterrupt:
             logger.info("Interruption utilisateur - arrêt des cycles")
         except Exception as e:
+            error_msg = str(e)
+            # Propager les erreurs de connexion navigateur pour permettre la recovery
+            if any(kw in error_msg for kw in [
+                "Connection closed", "pipe closed", "Browser closed",
+                "Target closed", "Session closed", "Protocol error",
+                "Browser disconnected", "needs recovery"
+            ]):
+                logger.error(f"Erreur navigateur dans le cycle: {e} - propagation pour recovery")
+                raise
             logger.error(f"Erreur dans le cycle de missions: {e}")
     
     def get_active_missions(self) -> List[Mission]:

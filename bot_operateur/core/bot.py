@@ -154,6 +154,31 @@ class OperateurBot:
             cycle_delay = self.settings.cycle_delay
         await self.mission_manager.run_mission_cycle(cycles, max_missions, cycle_delay)
     
+    async def recover_browser(self) -> bool:
+        """Tente de relancer le navigateur après un crash et se reconnecter"""
+        logger.warning("Tentative de recovery du navigateur...")
+
+        try:
+            # Redémarrer le navigateur
+            await self.browser_manager.restart()
+
+            # Se reconnecter au jeu
+            login_success = await self._login()
+            if not login_success:
+                logger.error("Recovery: échec de la reconnexion")
+                return False
+
+            # Réinitialiser le mission_manager avec le nouveau browser
+            self.mission_manager = MissionManager(self.browser_manager, self.settings)
+            await self.mission_manager.initialize()
+
+            logger.info("Recovery du navigateur réussi!")
+            return True
+
+        except Exception as e:
+            logger.error(f"Recovery du navigateur échoué: {e}")
+            return False
+
     def _ensure_running(self) -> None:
         """Vérifie que le bot est en cours d'exécution"""
         if not self.is_running:
