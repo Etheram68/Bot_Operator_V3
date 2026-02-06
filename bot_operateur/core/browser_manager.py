@@ -1,4 +1,6 @@
 import asyncio
+import shutil
+import time
 from typing import Optional
 from pathlib import Path
 from playwright.async_api import Browser, BrowserContext, Page, Playwright, async_playwright
@@ -8,6 +10,11 @@ from ..config.settings import Settings
 from ..utils.retry import RetryHandler
 from ..utils.dom_base import DOMOperationsBase
 from ..utils.smart_navigation import SmartNavigation
+
+# Taille max du cache navigateur en Mo (au-delà, nettoyage automatique)
+CACHE_MAX_SIZE_MB = 100
+# Intervalle minimum entre deux nettoyages (en secondes)
+CACHE_CLEANUP_INTERVAL = 3600  # 1 heure
 
 
 class BrowserManager:
@@ -22,12 +29,16 @@ class BrowserManager:
         self.retry_handler = RetryHandler(settings)
         self._dom_ops: Optional[DOMOperationsBase] = None
         self._smart_nav: Optional[SmartNavigation] = None
+        self._last_cache_cleanup: float = 0
         
     async def start(self) -> None:
         """Démarre le navigateur et initialise une page"""
         logger.info("Démarrage du navigateur...")
         
         try:
+            # Nettoyage du cache si nécessaire avant démarrage
+            self._cleanup_cache_if_needed()
+
             self.playwright = await async_playwright().start()
 
             # Lancement du navigateur
@@ -331,3 +342,47 @@ class BrowserManager:
             except Exception:
                 pass
             self.playwright = None
+
+    def _cleanup_cache_if_needed(self) -> None:
+        """Nettoie le cache navigateur si trop volumineux ou si le délai est écoulé"""
+        now = time.time()
+        if now - self._last_cache_cleanup < CACHE_CLEANUP_INTERVAL:
+            return
+
+        self._last_cache_cleanup = now
+        cache_dir = Path("/tmp/browser_cache")
+
+        try:
+            # Nettoyer les profils Playwright temporaires orphelins
+            tmp_dir = Path("/tmp")
+            for profile_dir in tmp_dir.glob("playwright_chromium*"):
+                try:
+                    # Supprimer les profils de plus d'1 heure
+                    if profile_dir.is_dir() and (now - profile_dir.stat().st_mtime) > 3600:
+                        shutil.rmtree(profile_dir, ignore_errors=True)
+                        logger.debug(f"Profil temporaire supprimé: {profile_dir}")
+                except Exception:
+                    pass
+
+            # Vérifier la taille du cache
+            if not cache_dir.exists():
+                return
+
+            total_size = sum(f.stat().st_size for f in cache_dir.rglob("*") if f.is_file())
+            total_size_mb = total_size / (1024 * 1024)
+
+            if total_size_mb > CACHE_MAX_SIZE_MB:
+                logger.warning(f"Cache navigateur trop volumineux ({total_size_mb:.0f}MB > {CACHE_MAX_SIZE_MB}MB), nettoyage...")
+                # Supprimer tout sauf storage_state.json (les cookies de session)
+                for item in cache_dir.iterdir():
+                    if item.name != "storage_state.json":
+                        if item.is_dir():
+                            shutil.rmtree(item, ignore_errors=True)
+                        else:
+                            item.unlink(missing_ok=True)
+                logger.info("Cache navigateur nettoyé")
+            else:
+                logger.debug(f"Cache navigateur: {total_size_mb:.1f}MB (limite: {CACHE_MAX_SIZE_MB}MB)")
+
+        except Exception as e:
+            logger.warning(f"Erreur lors du nettoyage du cache: {e}")

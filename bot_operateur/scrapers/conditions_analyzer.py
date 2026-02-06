@@ -23,7 +23,7 @@ class ConditionsAnalyzer:
             # Naviguer vers la page de mission pour obtenir l'URL des conditions
             mission_url = f"https://www.operateur112.fr/missions/{mission_id}"
             await self.page.goto(mission_url)
-            await self.page.wait_for_load_state('networkidle')
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
 
             # Récupération du lien "Conditions à remplir"
             help_href = await self.page.get_attribute("#mission_help", "href")
@@ -35,7 +35,7 @@ class ConditionsAnalyzer:
             help_url = f"https://www.operateur112.fr{help_href}"
             logger.debug(f"Analyse des conditions: {help_url}")
             await self.page.goto(help_url)
-            await self.page.wait_for_load_state('networkidle')
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
             
             # Extraction et analyse du contenu
             analysis_data = {

@@ -15,10 +15,17 @@ if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
     exit 1
 fi
 
-# Vérifier la connectivité réseau
+# Vérifier la connectivité réseau (sans curl, avec Python)
 echo "🌐 Test de connectivité réseau..."
-if ! curl -s --max-time 10 --head https://www.operateur112.fr > /dev/null; then
-    echo "⚠️  ATTENTION: Impossible de joindre operateur112.fr"
+if ! python -c "
+import urllib.request, sys
+try:
+    urllib.request.urlopen('https://www.operateur112.fr', timeout=10)
+    print('✅ Connectivité OK')
+except Exception as e:
+    print(f'⚠️  ATTENTION: Impossible de joindre operateur112.fr: {e}')
+    sys.exit(1)
+" 2>/dev/null; then
     echo "🔧 Vérifiez la configuration réseau du container"
 fi
 
@@ -35,13 +42,6 @@ echo "   - Seuil personnel spécialisé: ${PERSONNEL_THRESHOLD:-1}"
 # Le fichier .env sera créé par les variables d'environnement Docker
 # Pas besoin de créer un fichier .env séparé avec les variables d'environnement
 echo "📝 Utilisation directe des variables d'environnement Docker"
-
-# Lancer Xvfb pour environnement headless (si nécessaire)
-if [ "${HEADLESS:-true}" = "true" ] && [ -z "$DISPLAY" ]; then
-    echo "🖥️  Démarrage du serveur X virtuel (Xvfb)"
-    Xvfb :99 -screen 0 1920x1080x24 -ac &
-    export DISPLAY=:99
-fi
 
 # Test rapide du bot
 echo "🧪 Test de démarrage du bot..."

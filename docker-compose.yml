@@ -69,13 +69,13 @@ services:
           memory: 512M
           cpus: '1.0'          # Augmenté de 0.5 à 1.0
     
-    # Healthcheck simple (sans port HTTP)
+    # Healthcheck: vérifie que le bot écrit des logs récemment
     healthcheck:
-      test: ["CMD", "python", "-c", "print('OK')"]
-      interval: 60s
+      test: ["CMD", "python", "/app/healthcheck.py"]
+      interval: 120s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 60s
     
     # Logging optimisé
     logging:

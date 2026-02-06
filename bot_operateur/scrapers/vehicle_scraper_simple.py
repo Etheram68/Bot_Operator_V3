@@ -56,7 +56,7 @@ class SimpleVehicleScraper:
             # Aller d'abord sur la page principale de la mission
             mission_url = f"https://www.operateur112.fr/missions/{mission_id}"
             await self.page.goto(mission_url)
-            await self.page.wait_for_load_state('networkidle')
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
 
             # Récupérer dynamiquement le lien "Conditions à remplir pour cette mission"
             help_button = await self.page.query_selector("#mission_help")
@@ -71,7 +71,7 @@ class SimpleVehicleScraper:
 
             help_url = f"https://www.operateur112.fr{help_href}"
             await self.page.goto(help_url)
-            await self.page.wait_for_load_state('networkidle')
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
             
             # Chercher le lien "Afficher la mission"
             back_to_mission_link = await self.page.query_selector("#back_to_mission")
@@ -86,7 +86,7 @@ class SimpleVehicleScraper:
             
             # Naviguer vers la vraie page de mission
             await self.page.goto(f"https://www.operateur112.fr{mission_url}")
-            await self.page.wait_for_load_state('networkidle')
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
             
             logger.debug(f"Navigation réussie vers la mission {mission_id}")
             return True
@@ -102,8 +102,10 @@ class SimpleVehicleScraper:
             if missing_vehicles_button:
                 logger.debug("Chargement des véhicules manquants...")
                 await missing_vehicles_button.click()
-                await self.page.wait_for_timeout(2000)
-                await self.page.wait_for_load_state('networkidle')
+                try:
+                    await self.page.wait_for_load_state('networkidle', timeout=5000)
+                except Exception:
+                    await self.page.wait_for_load_state('domcontentloaded', timeout=3000)
         except Exception as e:
             logger.debug(f"Erreur lors du chargement des véhicules manquants: {e}")
     
@@ -214,10 +216,13 @@ class SimpleVehicleScraper:
             # Cliquer pour déployer
             logger.info(f"Déploiement de {selected_count} véhicules...")
             await deploy_button.click()
-            
-            # Attendre la confirmation
-            await self.page.wait_for_timeout(2000)
-            
+
+            # Attendre la confirmation de déploiement
+            try:
+                await self.page.wait_for_load_state('networkidle', timeout=5000)
+            except Exception:
+                await self.page.wait_for_load_state('domcontentloaded', timeout=3000)
+
             logger.info("Déploiement effectué avec succès!")
             return True
             

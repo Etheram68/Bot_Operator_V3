@@ -1,19 +1,33 @@
 # Dockerfile robuste pour QNAP avec toutes les optimisations
-FROM python:3.12-slim-bookworm
+FROM python:3.12-slim-bookworm AS builder
 
-# Variables d'environnement optimisées
+# Variables d'environnement optimisées pour le build
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONOPTIMIZE=1 \
     DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1
 
-# Installer les dépendances système requises par Playwright + outils de compilation
+# Installer les outils de compilation + dépendances système
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Outils de compilation pour pydantic-core et greenlet
     build-essential \
     gcc \
-    # Dépendances Playwright
+    && rm -rf /var/lib/apt/lists/*
+
+# Installer les dépendances Python (avec compilation)
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# --- Image finale sans outils de compilation ---
+FROM python:3.12-slim-bookworm
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONOPTIMIZE=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Installer uniquement les dépendances runtime pour Playwright
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 \
     libnspr4 \
     libatk1.0-0 \
@@ -34,22 +48,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwayland-client0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Répertoire de travail
-WORKDIR /app
-
-# Copier requirements et installer
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copier les packages Python depuis le builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Installer les navigateurs Playwright
 RUN playwright install chromium
+
+# Répertoire de travail
+WORKDIR /app
 
 # Copier le code
 COPY . .
 
 # Créer dossiers et permissions
 RUN mkdir -p logs data cache config && \
-    chmod 777 logs data cache config
+    chmod 755 logs data cache config
 
 # Script d'entrée
 RUN chmod +x docker-entrypoint.sh

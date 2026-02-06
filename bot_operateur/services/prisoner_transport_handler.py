@@ -33,7 +33,7 @@ class PrisonerTransportHandler:
         async with ExceptionContext(logger, f"sélection prison mission {mission.id}"):
             try:
                 # Attendre chargement de la page de sélection
-                await self.browser_manager.page.wait_for_load_state('networkidle')
+                await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
                 await asyncio.sleep(1)
                 
                 # Stratégie 1: Prison avec places disponibles

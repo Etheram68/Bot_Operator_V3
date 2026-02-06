@@ -22,7 +22,7 @@ class PatientScraper:
             # S'assurer qu'on est sur la page de la mission
             mission_url = f"/missions/{mission_id}"
             await self.page.goto(mission_url)
-            await self.page.wait_for_load_state('networkidle')
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
             
             # Vérifier s'il y a des patients
             patient_form = await self.page.query_selector("#patient_button_form")

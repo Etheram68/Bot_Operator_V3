@@ -9,10 +9,22 @@ T = TypeVar('T')
 
 class RetryHandler:
     """Gestionnaire de tentatives avec délais exponentiels"""
-    
+
+    # Erreurs de connexion navigateur qui ne valent pas la peine de retry
+    BROWSER_CRASH_KEYWORDS = [
+        "Connection closed", "pipe closed", "Browser closed",
+        "Target closed", "Session closed", "Protocol error",
+    ]
+
     def __init__(self, settings: Settings):
         self.settings = settings
-    
+
+    @staticmethod
+    def _is_browser_crash(error: Exception) -> bool:
+        """Détecte si l'erreur est un crash navigateur (inutile de retry)"""
+        error_msg = str(error)
+        return any(kw in error_msg for kw in RetryHandler.BROWSER_CRASH_KEYWORDS)
+
     async def execute_with_retry(
         self,
         func: Callable[[], T],
@@ -24,21 +36,26 @@ class RetryHandler:
         """Exécute une fonction avec gestion de tentatives"""
         max_retries = max_retries or self.settings.max_retries
         delay = delay or self.settings.retry_delay
-        
+
         last_exception = None
-        
+
         for attempt in range(max_retries + 1):
             try:
                 result = await func() if asyncio.iscoroutinefunction(func) else func()
-                
+
                 if attempt > 0:
                     logger.info(f"{description} réussie après {attempt + 1} tentative(s)")
-                
+
                 return result
-                
+
             except Exception as e:
                 last_exception = e
-                
+
+                # Ne pas retry sur crash navigateur - propager immédiatement
+                if self._is_browser_crash(e):
+                    logger.error(f"{description} échouée (crash navigateur): {e} - pas de retry")
+                    raise
+
                 if attempt < max_retries:
                     current_delay = delay * (2 ** attempt if exponential_backoff else 1)
                     logger.warning(
@@ -50,7 +67,7 @@ class RetryHandler:
                     logger.error(
                         f"{description} échouée définitivement après {max_retries + 1} tentatives: {e}"
                     )
-        
+
         # Relancer la dernière exception si toutes les tentatives échouent
         if last_exception:
             raise last_exception

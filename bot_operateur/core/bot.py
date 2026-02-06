@@ -103,8 +103,11 @@ class OperateurBot:
                 logger.error("Impossible de cliquer sur le bouton de connexion")
                 return False
             
-            # Attendre la redirection
-            await self.browser_manager.page.wait_for_load_state('networkidle')
+            # Attendre la redirection (avec timeout pour éviter un blocage)
+            try:
+                await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
+            except Exception:
+                await self.browser_manager.page.wait_for_load_state('domcontentloaded', timeout=5000)
             
             # Vérifier la connexion
             page_title = await self.browser_manager.get_page_title()

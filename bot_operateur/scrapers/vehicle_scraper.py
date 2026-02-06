@@ -56,7 +56,7 @@ class VehicleScraper:
         try:
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.page.goto(mission_url)
-            await self.page.wait_for_load_state('networkidle')
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
 
             # Vérifier si la mission est terminée avant de chercher le bouton Conditions
             mission_complete_selector = ".mission-success"
@@ -77,7 +77,7 @@ class VehicleScraper:
 
             help_url = f"https://www.operateur112.fr{help_href}"
             await self.page.goto(help_url)
-            await self.page.wait_for_load_state('networkidle')
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
             
             # Chercher le lien "Afficher la mission" 
             back_to_mission_link = await self.page.query_selector("#back_to_mission")
@@ -86,7 +86,7 @@ class VehicleScraper:
                 if mission_url:
                     # Naviguer vers la vraie page de la mission
                     await self.page.goto(f"https://www.operateur112.fr{mission_url}")
-                    await self.page.wait_for_load_state('networkidle')
+                    await self.page.wait_for_load_state('networkidle', timeout=10000)
                 else:
                     logger.warning(f"URL de retour à la mission non trouvée pour {mission.id}")
                     return vehicles
@@ -111,23 +111,69 @@ class VehicleScraper:
     async def _load_all_vehicles(self) -> None:
         """
         Charge tous les véhicules manquants depuis le serveur.
-        
+
         Recherche et clique sur le bouton de chargement des véhicules manquants
         pour récupérer l'ensemble des véhicules disponibles, y compris
         ceux plus éloignés géographiquement.
         """
         try:
-            # Chercher le bouton pour charger les véhicules manquants
-            missing_vehicles_button = await self.page.query_selector(".missing_vehicles_load")
-            
-            if missing_vehicles_button:
-                logger.debug("Chargement des véhicules manquants...")
-                await missing_vehicles_button.click()
-                
-                # Attendre que les véhicules soient chargés
-                await self.page.wait_for_timeout(2000)
-                await self.page.wait_for_load_state('networkidle')
-                
+            # Compter les véhicules avant chargement pour vérifier que ça change
+            rows_before = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+            count_before = len(rows_before) if rows_before else 0
+
+            # Essayer plusieurs sélecteurs pour le bouton de chargement
+            load_button = None
+            selectors = [
+                ".missing_vehicles_load",
+                "#missing_vehicles_load",
+                "a.btn[href*='vehicle']",
+                "a[id*='missing']",
+            ]
+            for selector in selectors:
+                load_button = await self.page.query_selector(selector)
+                if load_button:
+                    logger.info(f"Bouton de chargement trouvé: {selector}")
+                    break
+
+            if load_button:
+                await load_button.click()
+                logger.info("Clic sur le bouton de chargement des véhicules supplémentaires...")
+
+                # Attendre que de nouveaux véhicules apparaissent dans le DOM (AJAX)
+                # networkidle se résout souvent avant la réponse AJAX, donc on attend
+                # que le nombre de lignes augmente réellement
+                max_wait = 10  # secondes max
+                for i in range(max_wait * 2):  # check toutes les 0.5s
+                    await asyncio.sleep(0.5)
+                    rows_after = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+                    count_after = len(rows_after) if rows_after else 0
+                    if count_after > count_before:
+                        logger.info(f"Véhicules chargés: {count_before} -> {count_after} ({count_after - count_before:+d})")
+                        break
+                else:
+                    # Timeout atteint sans changement
+                    rows_after = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+                    count_after = len(rows_after) if rows_after else 0
+                    if count_after > count_before:
+                        logger.info(f"Véhicules chargés: {count_before} -> {count_after} ({count_after - count_before:+d})")
+                    else:
+                        logger.warning(f"Le nombre de véhicules n'a pas changé après {max_wait}s ({count_before})")
+            else:
+                logger.warning("Aucun bouton de chargement de véhicules trouvé - tous les véhicules sont peut-être déjà affichés")
+
+                # Tenter d'exécuter le JavaScript de chargement directement
+                try:
+                    await self.page.evaluate("if(typeof(vehicle_load_all) === 'function') vehicle_load_all()")
+                    for i in range(10):
+                        await asyncio.sleep(0.5)
+                        rows_after = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
+                        count_after = len(rows_after) if rows_after else 0
+                        if count_after > count_before:
+                            logger.info(f"Chargement JS réussi: {count_before} -> {count_after} ({count_after - count_before:+d})")
+                            break
+                except Exception as js_error:
+                    logger.debug(f"Chargement JS non disponible: {js_error}")
+
         except Exception as e:
             logger.warning(f"Erreur lors du chargement des véhicules manquants: {e}")
     
@@ -411,10 +457,13 @@ class VehicleScraper:
             # Cliquer sur le bouton
             await deploy_button.click()
             logger.info("Véhicules déployés avec succès")
-            
-            # Attendre la confirmation ou le changement de page
-            await self.page.wait_for_timeout(2000)
-            
+
+            # Attendre la confirmation de déploiement (changement DOM au lieu de sleep fixe)
+            try:
+                await self.page.wait_for_load_state('networkidle', timeout=5000)
+            except Exception:
+                await self.page.wait_for_load_state('domcontentloaded', timeout=3000)
+
             return True
             
         except Exception as e:
@@ -433,12 +482,14 @@ class VehicleScraper:
     
     async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None, alert_override_types: set = None, constrained_vehicles: set = None, constrained_alternatives: dict = None) -> tuple[int, int]:
         """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives
-        
+
         Returns:
             tuple[int, int]: (nombre de véhicules sélectionnés, nombre de véhicules manquants)
         """
         total_selected = 0
-        
+        # Garde-fou: limite le nombre max de véhicules sélectionnables par appel
+        max_total_vehicles = sum(vehicle_needs.values()) + 10  # marge de 10
+
         try:
             # D'abord, compter les véhicules déjà déployés par type
             deployed_by_type = await self._get_already_deployed_vehicles_by_type()
@@ -571,7 +622,12 @@ class VehicleScraper:
                             
                             full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
                             logger.info(f"✅ Sélectionné: {full_caption} -> Type: {vehicle_type} (pour {need_type})")
-                    
+
+                            # Garde-fou: limite le nombre total de véhicules sélectionnés
+                            if total_selected >= max_total_vehicles:
+                                logger.warning(f"⚠️ Limite de sécurité atteinte: {total_selected} véhicules sélectionnés (max: {max_total_vehicles})")
+                                break
+
                     # Vérifier si tous les besoins ajustés sont satisfaits
                     if all(selected_counts.get(vtype, 0) >= needed 
                            for vtype, needed in adjusted_vehicle_needs.items()):
@@ -590,7 +646,7 @@ class VehicleScraper:
                     unsatisfied_needs[vtype] = needed - selected
             
             # Si des besoins ne sont pas satisfaits, essayer de charger plus de véhicules
-            if unsatisfied_needs and total_selected > 0:  # Seulement si on a déjà trouvé quelque chose
+            if unsatisfied_needs:
                 logger.warning(f"⚠️ Besoins non satisfaits: {unsatisfied_needs}. Tentative de chargement de véhicules supplémentaires...")
                 additional_selected = await self._load_and_select_additional_vehicles(unsatisfied_needs, selected_counts, alternatives_mapping, table_selector, mission)
                 total_selected += additional_selected
@@ -1073,18 +1129,20 @@ class VehicleScraper:
         
         try:
             logger.info("📡 Chargement ciblé de véhicules supplémentaires...")
-            
-            # ÉTAPE 1: Chargement des véhicules
-            await self._load_all_vehicles()
-            await self.page.wait_for_timeout(1000)
-            await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
-            
-            # ÉTAPE 2: Récupération sécurisée des lignes de véhicules
+
+            # Compter les véhicules actuels avant chargement
             final_table_selector = table_selector or "#vehicle_show_table_all"
             selector_complet = f"{final_table_selector} tr[id^='vehicle_element_content_']"
-            
+            rows_before = await self.page.query_selector_all(selector_complet)
+            count_before = len(rows_before) if rows_before else 0
+
+            # ÉTAPE 1: Chargement des véhicules (attend l'arrivée des lignes AJAX)
+            await self._load_all_vehicles()
+
+            # ÉTAPE 2: Récupération sécurisée des lignes de véhicules
             logger.debug(f"🔍 Utilisation du sélecteur: {selector_complet}")
             all_vehicle_rows = await self.page.query_selector_all(selector_complet)
+            logger.info(f"Véhicules après chargement: {count_before} -> {len(all_vehicle_rows)}")
             
             if not all_vehicle_rows:
                 logger.warning("❌ Aucune ligne de véhicule trouvée après chargement supplémentaire")
@@ -1109,7 +1167,9 @@ class VehicleScraper:
             
             # ÉTAPE 5: Compteur de besoins (COPIE ISOLÉE pour éviter modification concurrente)
             working_unsatisfied_needs = unsatisfied_needs.copy()
-            
+            # Garde-fou: limite le nombre max de véhicules sélectionnables
+            max_additional = sum(unsatisfied_needs.values()) + 5
+
             # ÉTAPE 6: Parcours des véhicules avec validation à chaque étape
             for i, dom_row_element in enumerate(valid_vehicle_rows):
                 try:
@@ -1147,6 +1207,11 @@ class VehicleScraper:
                     # Arrêt si tous les besoins sont satisfaits
                     if not working_unsatisfied_needs:
                         logger.info("🎯 Tous les besoins supplémentaires sont satisfaits")
+                        break
+
+                    # Garde-fou: limite le nombre de véhicules supplémentaires
+                    if additional_selected >= max_additional:
+                        logger.warning(f"⚠️ Limite de sécurité atteinte: {additional_selected} véhicules supplémentaires (max: {max_additional})")
                         break
                         
                 except Exception as vehicle_error:

@@ -100,6 +100,13 @@ class MissionManager:
             return missions
 
         except Exception as e:
+            error_msg = str(e)
+            if any(kw in error_msg for kw in [
+                "Connection closed", "pipe closed", "Browser closed",
+                "Target closed", "Session closed", "Protocol error",
+            ]):
+                logger.error(f"Erreur navigateur dans get_all_missions: {e} - propagation")
+                raise
             logger.error(f"Erreur lors de la récupération des missions: {e}")
             return []
     
@@ -118,7 +125,10 @@ class MissionManager:
         try:
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.browser_manager.page.goto(mission_url)
-            await self.browser_manager.page.wait_for_load_state('networkidle')
+            try:
+                await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
+            except Exception:
+                await self.browser_manager.page.wait_for_load_state('domcontentloaded', timeout=5000)
             
             await self._handle_patient_transport_initial(mission)
             
@@ -496,6 +506,13 @@ class MissionManager:
                 return False
                 
         except Exception as e:
+            error_msg = str(e)
+            if any(kw in error_msg for kw in [
+                "Connection closed", "pipe closed", "Browser closed",
+                "Target closed", "Session closed", "Protocol error",
+            ]):
+                logger.error(f"Erreur navigateur dans deploy_optimized: {e} - propagation")
+                raise
             logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
             return False
 
@@ -923,7 +940,7 @@ class MissionManager:
                     # Naviguer directement vers l'URL du transport
                     transport_url = f"https://www.operateur112.fr{href}" if href.startswith('/') else href
                     await self.browser_manager.page.goto(transport_url)
-                    await self.browser_manager.page.wait_for_load_state('networkidle')
+                    await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
 
                     # Traiter selon le type de transport
 
@@ -945,7 +962,7 @@ class MissionManager:
                         if next_vehicle_button:
                             logger.debug("🔄 Passage au prochain véhicule")
                             await next_vehicle_button.click()
-                            await self.browser_manager.page.wait_for_load_state('networkidle')
+                            await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
                         else:
                             logger.debug("Aucun véhicule suivant pour ce transport")
                     else:
@@ -961,7 +978,7 @@ class MissionManager:
                 # S'assurer qu'on est bien sur la page de mission pour la suite
                 mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
                 await self.browser_manager.page.goto(mission_url)
-                await self.browser_manager.page.wait_for_load_state('networkidle')
+                await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
 
                 return True
             else:
@@ -1003,7 +1020,7 @@ class MissionManager:
             
             # Cliquer sur le bouton de sélection
             await hospital_button.click()
-            await self.browser_manager.page.wait_for_load_state('networkidle')
+            await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
             
             return True
             
@@ -1024,7 +1041,7 @@ class MissionManager:
         try:
             
             # Attendre que la page de sélection soit chargée
-            await self.browser_manager.page.wait_for_load_state('networkidle')
+            await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
             
             # Chercher le premier bouton de sélection disponible (à adapter selon l'interface)
             prison_button = await self.browser_manager.page.query_selector('a.btn.btn-success')
@@ -1039,7 +1056,7 @@ class MissionManager:
             
             # Cliquer sur le bouton de sélection
             await prison_button.click()
-            await self.browser_manager.page.wait_for_load_state('networkidle')
+            await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
             
             return True
             
@@ -2862,16 +2879,22 @@ class MissionManager:
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
         """Déploie automatiquement les missions selon la configuration"""
         max_missions = max_missions or self.settings.max_concurrent_missions
-        
+
+        # Nettoyer les missions terminées pour éviter l'accumulation en mémoire
+        before_count = len(self.active_missions)
+        self.clear_completed_missions()
+        if before_count > len(self.active_missions):
+            logger.debug(f"Nettoyage: {before_count - len(self.active_missions)} missions terminées supprimées")
+
         logger.info(f"Déploiement automatique - max {max_missions} missions")
-        
+
         stats = {
             "found": 0,
             "deployed": 0,
             "failed": 0,
             "skipped": 0
         }
-        
+
         try:
             # Récupérer toutes les missions
             missions = await self.get_all_missions()
@@ -2959,8 +2982,16 @@ class MissionManager:
             )
             
         except Exception as e:
+            error_msg = str(e)
+            # Propager les erreurs navigateur pour permettre la recovery
+            if any(kw in error_msg for kw in [
+                "Connection closed", "pipe closed", "Browser closed",
+                "Target closed", "Session closed", "Protocol error",
+            ]):
+                logger.error(f"Erreur navigateur dans auto_deploy: {e} - propagation pour recovery")
+                raise
             logger.error(f"Erreur lors du déploiement automatique: {e}")
-        
+
         return stats
     
     def _filter_eligible_missions(self, missions: List[Mission]) -> List[Mission]:
@@ -3080,8 +3111,15 @@ class MissionManager:
         return self.active_missions.copy()
     
     def clear_completed_missions(self) -> None:
-        """Nettoie les missions terminées de la liste active"""
+        """Nettoie les missions terminées et limite la taille de la liste active"""
         self.active_missions = [
-            m for m in self.active_missions 
+            m for m in self.active_missions
             if m.status == MissionStatus.IN_PROGRESS
         ]
+        # Garde-fou: si la liste grossit malgré tout (statuts jamais mis à jour),
+        # ne garder que les 50 missions les plus récentes
+        max_tracked = 50
+        if len(self.active_missions) > max_tracked:
+            removed = len(self.active_missions) - max_tracked
+            self.active_missions = self.active_missions[-max_tracked:]
+            logger.warning(f"Liste active tronquée: {removed} anciennes missions supprimées (limite: {max_tracked})")
