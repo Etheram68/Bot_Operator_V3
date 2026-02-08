@@ -236,7 +236,7 @@ class PatientTransportHandler:
                         if await button.is_enabled():
                             await button.click()
                             
-                            button_text = await button.inner_text() if hasattr(button, 'inner_text') else "N/A"
+                            button_text = await button.inner_text()
                             logger.debug(f"🏥 Premier hôpital sélectionné: {button_text[:30]}...")
                             await asyncio.sleep(1)
                             return True
@@ -321,42 +321,3 @@ class PatientTransportHandler:
         except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur vérification transports restants: {e}")
             return False
-    
-    async def extract_hospital_transport_links(self, mission: 'Mission') -> List[Dict[str, str]]:
-        """
-        Extrait les liens de transport d'hôpital depuis la page mission.
-        
-        Returns:
-            List de dict avec href, text pour chaque transport
-        """
-        transport_links = []
-        
-        try:
-            # Chercher dans les tableaux de patients pour liens hôpital
-            patient_tables = await self.browser_manager.page.query_selector_all('table')
-            
-            for table in patient_tables:
-                # Chercher les liens de transport dans chaque table
-                links = await table.query_selector_all('a[href*="/hospital_transports/"]')
-                
-                for link in links:
-                    try:
-                        href = await link.get_attribute('href')
-                        text = await link.inner_text()
-                        
-                        if href and text:
-                            transport_links.append({
-                                'href': href,
-                                'text': text.strip(),
-                                'type': 'hospital'
-                            })
-                            
-                    except (PlaywrightError, asyncio.TimeoutError) as e:
-                        logger.warning(f"Erreur extraction lien hôpital: {e}")
-                        continue
-                        
-        except (PlaywrightError, asyncio.TimeoutError) as e:
-            logger.error(f"Erreur extraction liens transport hôpital: {e}")
-        
-        logger.debug(f"🏥 {len(transport_links)} lien(s) transport hôpital trouvé(s)")
-        return transport_links
