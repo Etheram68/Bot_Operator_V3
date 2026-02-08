@@ -12,7 +12,6 @@ from ..strategies.smart_strategy import SmartStrategy
 from ..strategies.smart_strategy_optimized import SmartStrategyOptimized
 from ..core.browser_manager import BrowserManager
 from ..config.settings import Settings
-from ..utils.parallel_operations import ParallelBatch, run_parallel_limited
 
 
 class MissionManager:
