@@ -109,6 +109,15 @@ class VehicleScraper:
         
         return vehicles
     
+    async def _count_vehicle_rows(self) -> int:
+        """Compte les lignes véhicules via JavaScript pour éviter de créer des handles DOM."""
+        try:
+            return await self.page.evaluate(
+                "document.querySelectorAll('#vehicle_show_table_all tr[id^=\"vehicle_element_content_\"]').length"
+            )
+        except PlaywrightError:
+            return 0
+
     async def _load_all_vehicles(self) -> None:
         """
         Charge tous les véhicules manquants depuis le serveur.
@@ -118,9 +127,8 @@ class VehicleScraper:
         ceux plus éloignés géographiquement.
         """
         try:
-            # Compter les véhicules avant chargement pour vérifier que ça change
-            rows_before = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-            count_before = len(rows_before) if rows_before else 0
+            # Compter via JS pour ne pas créer de handles DOM
+            count_before = await self._count_vehicle_rows()
 
             # Essayer plusieurs sélecteurs pour le bouton de chargement
             load_button = None
@@ -141,20 +149,18 @@ class VehicleScraper:
                 logger.info("Clic sur le bouton de chargement des véhicules supplémentaires...")
 
                 # Attendre que de nouveaux véhicules apparaissent dans le DOM (AJAX)
-                # networkidle se résout souvent avant la réponse AJAX, donc on attend
-                # que le nombre de lignes augmente réellement
+                # Utilise evaluate() au lieu de query_selector_all() pour éviter
+                # d'accumuler des handles DOM qui causent un OOM Node.js
                 max_wait = 10  # secondes max
                 for i in range(max_wait * 2):  # check toutes les 0.5s
                     await asyncio.sleep(0.5)
-                    rows_after = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-                    count_after = len(rows_after) if rows_after else 0
+                    count_after = await self._count_vehicle_rows()
                     if count_after > count_before:
                         logger.info(f"Véhicules chargés: {count_before} -> {count_after} ({count_after - count_before:+d})")
                         break
                 else:
                     # Timeout atteint sans changement
-                    rows_after = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-                    count_after = len(rows_after) if rows_after else 0
+                    count_after = await self._count_vehicle_rows()
                     if count_after > count_before:
                         logger.info(f"Véhicules chargés: {count_before} -> {count_after} ({count_after - count_before:+d})")
                     else:
@@ -167,8 +173,7 @@ class VehicleScraper:
                     await self.page.evaluate("if(typeof(vehicle_load_all) === 'function') vehicle_load_all()")
                     for i in range(10):
                         await asyncio.sleep(0.5)
-                        rows_after = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-                        count_after = len(rows_after) if rows_after else 0
+                        count_after = await self._count_vehicle_rows()
                         if count_after > count_before:
                             logger.info(f"Chargement JS réussi: {count_before} -> {count_after} ({count_after - count_before:+d})")
                             break

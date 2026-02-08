@@ -24,7 +24,8 @@ FROM python:3.13-slim-bookworm
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONOPTIMIZE=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    NODE_OPTIONS="--max-old-space-size=512"
 
 # Installer uniquement les dépendances runtime pour Playwright
 RUN apt-get update && apt-get install -y --no-install-recommends \
