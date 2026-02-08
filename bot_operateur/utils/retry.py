@@ -51,9 +51,9 @@ class RetryHandler:
             except Exception as e:
                 last_exception = e
 
-                # Ne pas retry sur crash navigateur - propager immédiatement
-                if self._is_browser_crash(e):
-                    logger.error(f"{description} échouée (crash navigateur): {e} - pas de retry")
+                # Ne pas retry sur crash navigateur ou session expirée - propager immédiatement
+                if self._is_browser_crash(e) or "Session expired" in str(e):
+                    logger.error(f"{description} échouée (non-récupérable): {e} - pas de retry")
                     raise
 
                 if attempt < max_retries:

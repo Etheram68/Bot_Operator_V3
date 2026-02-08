@@ -104,6 +104,7 @@ class MissionManager:
             if any(kw in error_msg for kw in [
                 "Connection closed", "pipe closed", "Browser closed",
                 "Target closed", "Session closed", "Protocol error",
+                "Session expired",
             ]):
                 logger.error(f"Erreur navigateur dans get_all_missions: {e} - propagation")
                 raise
@@ -510,6 +511,7 @@ class MissionManager:
             if any(kw in error_msg for kw in [
                 "Connection closed", "pipe closed", "Browser closed",
                 "Target closed", "Session closed", "Protocol error",
+                "Session expired",
             ]):
                 logger.error(f"Erreur navigateur dans deploy_optimized: {e} - propagation")
                 raise
@@ -2987,6 +2989,7 @@ class MissionManager:
             if any(kw in error_msg for kw in [
                 "Connection closed", "pipe closed", "Browser closed",
                 "Target closed", "Session closed", "Protocol error",
+                "Session expired",
             ]):
                 logger.error(f"Erreur navigateur dans auto_deploy: {e} - propagation pour recovery")
                 raise
@@ -3100,7 +3103,7 @@ class MissionManager:
             if any(kw in error_msg for kw in [
                 "Connection closed", "pipe closed", "Browser closed",
                 "Target closed", "Session closed", "Protocol error",
-                "Browser disconnected", "needs recovery"
+                "Session expired", "Browser disconnected", "needs recovery",
             ]):
                 logger.error(f"Erreur navigateur dans le cycle: {e} - propagation pour recovery")
                 raise

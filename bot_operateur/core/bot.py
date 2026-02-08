@@ -4,7 +4,7 @@ from loguru import logger
 
 from ..config.settings import Settings
 from ..utils.logger import setup_logger
-from .browser_manager import BrowserManager
+from .browser_manager import BrowserManager, SessionExpiredError
 from .mission_manager import MissionManager
 from ..models.mission import Mission
 
@@ -157,6 +157,23 @@ class OperateurBot:
             cycle_delay = self.settings.cycle_delay
         await self.mission_manager.run_mission_cycle(cycles, max_missions, cycle_delay)
     
+    async def refresh_session(self) -> bool:
+        """Re-login sans redémarrer le navigateur (session expirée)"""
+        logger.warning("Session expirée, tentative de reconnexion...")
+
+        try:
+            login_success = await self._login()
+            if not login_success:
+                logger.error("Reconnexion échouée")
+                return False
+
+            logger.info("Reconnexion réussie!")
+            return True
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la reconnexion: {e}")
+            return False
+
     async def recover_browser(self) -> bool:
         """Tente de relancer le navigateur après un crash et se reconnecter"""
         logger.warning("Tentative de recovery du navigateur...")

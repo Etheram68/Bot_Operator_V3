@@ -17,6 +17,11 @@ CACHE_MAX_SIZE_MB = 100
 CACHE_CLEANUP_INTERVAL = 3600  # 1 heure
 
 
+class SessionExpiredError(RuntimeError):
+    """Levée quand le site redirige vers la page de login (session expirée)"""
+    pass
+
+
 class BrowserManager:
     """Gestionnaire du navigateur Playwright avec gestion robuste des erreurs"""
     
@@ -216,6 +221,13 @@ class BrowserManager:
                     raise
 
         await self.retry_handler.execute_with_retry(_navigate, f"Navigation vers {url}")
+
+        # Vérifier si la session a expiré (redirection vers login)
+        if self.page and "sign_in" not in url and "login" not in url:
+            current_url = self.page.url
+            if "sign_in" in current_url or "/users/login" in current_url:
+                logger.warning(f"Session expirée détectée: redirigé vers {current_url} au lieu de {url}")
+                raise SessionExpiredError(f"Session expired - redirected to {current_url}")
 
     async def smart_navigate_to(self, url: str, force: bool = False) -> bool:
         """

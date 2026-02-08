@@ -9,6 +9,7 @@ import signal
 from pathlib import Path
 
 from bot_operateur import OperateurBot, Settings
+from bot_operateur.core.browser_manager import SessionExpiredError
 from bot_operateur.scrapers.mission_scraper import MissionScraper
 from loguru import logger
 
@@ -113,6 +114,25 @@ async def run_continuous_mode(bot: OperateurBot, cycles: int = -1, max_missions:
             consecutive_failures = 0
             break
 
+        except SessionExpiredError:
+            # Session expirée : juste re-login, pas besoin de restart le navigateur
+            logger.warning("Session expirée détectée, tentative de reconnexion...")
+            login_ok = await bot.refresh_session()
+            if login_ok:
+                logger.info("Reconnexion réussie, reprise des cycles")
+                consecutive_failures = 0
+            else:
+                # Si le re-login échoue, tenter un restart complet
+                consecutive_failures += 1
+                logger.warning("Re-login échoué, tentative de recovery complète...")
+                recovery_ok = await bot.recover_browser()
+                if not recovery_ok:
+                    if consecutive_failures >= max_recovery_attempts:
+                        logger.error("Trop d'échecs consécutifs, arrêt définitif")
+                        raise RuntimeError("Recovery failed after session expiry")
+                    continue
+                consecutive_failures = 0
+
         except Exception as e:
             error_msg = str(e)
             is_browser_crash = any(keyword in error_msg for keyword in [
@@ -123,6 +143,7 @@ async def run_continuous_mode(bot: OperateurBot, cycles: int = -1, max_missions:
                 "Session closed",
                 "Protocol error",
                 "Connection refused",
+                "Session expired",
             ])
 
             if is_browser_crash:
