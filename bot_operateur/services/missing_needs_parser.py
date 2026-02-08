@@ -2,9 +2,11 @@
 Service pour parser les besoins manquants depuis les alertes de mission.
 Extrait et analyse les véhicules/ressources manquants.
 """
+import asyncio
 import re
 from typing import Dict, List, Optional, TYPE_CHECKING
 from loguru import logger
+from playwright._impl._errors import Error as PlaywrightError
 
 from ..models.requirement_parser import RequirementParser
 from ..config.constants import REGEX_PATTERNS
@@ -60,7 +62,7 @@ class MissingNeedsParser:
                         if vehicles_en_route == 0:
                             missing_vehicles_needs[vehicle_type] = missing_vehicles_needs.get(vehicle_type, 0) + quantity
                         
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.error(f"Erreur parsing div véhicules manquants: {e}")
                     continue
             
@@ -106,7 +108,7 @@ class MissingNeedsParser:
                     logger.warning(f"Pattern véhicule manquant non reconnu: '{missing_item}'")
                     await self._log_unrecognized_vehicle_pattern(missing_item, mission)
                     
-            except Exception as e:
+            except (ValueError, re.error) as e:
                 logger.warning(f"Erreur parsing '{missing_item}': {e}")
         
         return parsed_vehicles
@@ -139,7 +141,7 @@ class MissingNeedsParser:
                     for personnel_type, quantity in personnel_needs.items():
                         other_needs[personnel_type] = other_needs.get(personnel_type, 0) + quantity
                         
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur extraction autres besoins: {e}")
         
         return other_needs
@@ -181,7 +183,7 @@ class MissingNeedsParser:
                     needs['MIN_PUMP_CAPACITY'] = pump_capacity
                     logger.debug(f"Capacité pompe requise: {pump_capacity}L/min")
                     
-        except Exception as e:
+        except (ValueError, re.error) as e:
             logger.warning(f"Erreur parsing besoins: {e}")
         
         return needs if needs else None
@@ -219,7 +221,7 @@ class MissingNeedsParser:
                 elif any(word in personnel_type.lower() for word in ['police', 'policier']):
                     personnel_needs['POLICE_OFFICER'] = quantity
                     
-        except Exception as e:
+        except (ValueError, re.error) as e:
             logger.warning(f"Erreur parsing personnel: {e}")
         
         return personnel_needs
@@ -352,5 +354,5 @@ class MissingNeedsParser:
             with open(log_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(entry, ensure_ascii=False) + '\n')
                 
-        except Exception as e:
+        except OSError as e:
             logger.warning(f"Impossible d'enregistrer pattern non reconnu: {e}")

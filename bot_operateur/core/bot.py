@@ -1,6 +1,7 @@
 import asyncio
 from typing import Optional, List
 from loguru import logger
+from playwright._impl._errors import Error as PlaywrightError
 
 from ..config.settings import Settings
 from ..utils.logger import setup_logger
@@ -55,7 +56,7 @@ class OperateurBot:
             self.is_running = True
             logger.info("Bot démarré avec succès!")
             
-        except Exception as e:
+        except (PlaywrightError, RuntimeError, OSError) as e:
             logger.error(f"Erreur lors du démarrage: {e}")
             await self.stop()
             raise
@@ -106,7 +107,7 @@ class OperateurBot:
             # Attendre la redirection (avec timeout pour éviter un blocage)
             try:
                 await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-            except Exception:
+            except (PlaywrightError, asyncio.TimeoutError):
                 await self.browser_manager.page.wait_for_load_state('domcontentloaded', timeout=5000)
             
             # Vérifier la connexion
@@ -120,7 +121,7 @@ class OperateurBot:
             logger.info(f"Connexion réussie! Page actuelle: {page_title}")
             return True
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError, RuntimeError) as e:
             logger.error(f"Erreur lors de la connexion: {e}")
             return False
     

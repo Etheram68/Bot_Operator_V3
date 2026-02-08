@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from typing import List, Optional, Dict
 from loguru import logger
+from playwright._impl._errors import Error as PlaywrightError
 
 from ..models.mission import Mission, MissionStatus
 from ..scrapers.mission_scraper import MissionScraper
@@ -63,7 +64,7 @@ class MissionManager:
                 logger.info(f"Configuration des besoins manquants chargée depuis {config_path}")
                 return config
                 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.error(f"Erreur lors du chargement de la configuration des besoins manquants: {e}")
             # Configuration par défaut minimale
             return {
@@ -118,7 +119,7 @@ class MissionManager:
             await self.browser_manager.page.goto(mission_url)
             try:
                 await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-            except Exception:
+            except (PlaywrightError, asyncio.TimeoutError):
                 await self.browser_manager.page.wait_for_load_state('domcontentloaded', timeout=5000)
             
             await self._handle_patient_transport_initial(mission)
@@ -144,7 +145,7 @@ class MissionManager:
                 logger.info(f"Mission {mission.id} ignorée (accomplie ou inaccessible)")
                 return None
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la récupération des détails de {mission.id}: {e}")
             return mission
     
@@ -240,7 +241,7 @@ class MissionManager:
                 logger.error(f"Échec du déploiement pour mission {mission.id}")
                 return False
                 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du déploiement de mission {mission.id}: {e}")
             return False
     
@@ -303,7 +304,7 @@ class MissionManager:
                     vehicle_needs['CARS_POLICE'] = current_police_need + prisoner_count
                     logger.info(f"🚔 {prisoner_count} prisonnier(s) détecté(s) → ajout de {prisoner_count} CARS_POLICE aux besoins")
                     logger.info(f"📋 Besoins enrichis avec prisonniers: {vehicle_needs}")
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.warning(f"⚠️ Erreur lors de l'enrichissement des besoins pour prisonniers: {e}")
 
             # Vérifier les véhicules manquants depuis l'alerte MÊME SI la stratégie ne trouve rien
@@ -372,7 +373,7 @@ class MissionManager:
                             logger.info(f"🔒 Véhicules avec contraintes de capacité: {list(constrained_vehicles)}")
                             logger.info(f"🔄 Alternatives par capacité: {constrained_alternatives}")
                 
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.error(f"Erreur lors de l'analyse des véhicules manquants: {e}")
             
             # Obtenir le mapping des alternatives depuis la stratégie
@@ -551,7 +552,7 @@ class MissionManager:
                 if await self._handle_patient_transport_initial(mission):
                     success_count += 1
                     logger.debug("✅ Transports traités ou aucun transport nécessaire")
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.warning(f"⚠️ Erreur traitement transports: {e}")
 
             # 2. Traiter les alertes véhicules (si il y en a)
@@ -561,7 +562,7 @@ class MissionManager:
                 # (Cela pourrait être étendu selon les besoins spécifiques)
                 success_count += 1  # Pour l'instant, on considère comme traité
                 logger.debug("✅ Alertes véhicules vérifiées")
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.warning(f"⚠️ Erreur traitement alertes: {e}")
 
             # 3. Marquer comme succès d'apprentissage immédiat
@@ -573,7 +574,7 @@ class MissionManager:
                     logger.info("🧠 Pattern appris pour mission terminée")
 
                 success_count += 1
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.warning(f"⚠️ Erreur apprentissage: {e}")
 
             # Marquer la mission comme traitée
@@ -589,7 +590,7 @@ class MissionManager:
                 logger.warning(f"⚠️ Mission FINISHING {mission.id} partiellement traitée ({success_count}/{total_tasks} tâches)")
                 return True  # On considère comme succès car pas d'erreur critique
 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"❌ Erreur lors du traitement mission FINISHING {mission.id}: {e}")
             return False
 
@@ -611,7 +612,7 @@ class MissionManager:
                 if missing_vehicles:
                     detected_needs['missing_vehicles'] = missing_vehicles
                     logger.info(f"🚨 Véhicules manquants détectés: {missing_vehicles}")
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.debug(f"Pas d'alerte véhicules manquants: {e}")
 
             # 2. Vérifier les nouveaux transports/patients
@@ -627,7 +628,7 @@ class MissionManager:
                         detected_needs['new_patients'] = new_patients_count
                         logger.info(f"🚑 Nouveaux patients détectés: +{new_patients_count}")
 
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.debug(f"Erreur vérification nouveaux patients: {e}")
 
             # 3. Vérifier les alertes de transport
@@ -638,12 +639,12 @@ class MissionManager:
                     detected_needs['pending_transports'] = len(transport_buttons)
                     logger.info(f"🚚 Transports en attente détectés: {len(transport_buttons)}")
 
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.debug(f"Erreur vérification transports: {e}")
 
             return detected_needs if detected_needs else None
 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur lors de la détection de nouveaux besoins: {e}")
             return None
 
@@ -713,7 +714,7 @@ class MissionManager:
                 logger.error(f"Échec du déploiement fallback pour mission {mission.id}")
                 return False
 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du traitement fallback pour mission {mission.id}: {e}")
             return False
 
@@ -763,7 +764,7 @@ class MissionManager:
                                         success_count += 1
                                         logger.info("✅ Véhicules manquants déployés")
 
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"⚠️ Erreur traitement véhicules manquants: {e}")
 
             # 2. Traiter les transports en attente
@@ -773,7 +774,7 @@ class MissionManager:
                     if await self._handle_patient_transport_initial(mission):
                         success_count += 1
                         logger.info("✅ Nouveaux transports traités")
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"⚠️ Erreur traitement nouveaux transports: {e}")
 
             # 3. Apprentissage conditionnel
@@ -787,7 +788,7 @@ class MissionManager:
                     logger.info("📋 Mission avec besoins évolués - apprentissage simplifié")
 
                 success_count += 1
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.warning(f"⚠️ Erreur enregistrement apprentissage: {e}")
 
             # Marquer la mission selon le succès
@@ -800,7 +801,7 @@ class MissionManager:
                 logger.warning(f"⚠️ Traitement hybride partiel pour mission {mission.id} ({success_count}/{total_tasks})")
                 return False
 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"❌ Erreur lors du traitement hybride pour mission {mission.id}: {e}")
             return False
 
@@ -812,7 +813,7 @@ class MissionManager:
             self.clear_completed_missions()
             logger.info("✅ Finalisation terminée")
 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur lors de la finalisation: {e}")
 
     async def _handle_patient_transport_initial(self, mission: Mission) -> bool:
@@ -869,7 +870,7 @@ class MissionManager:
                             href = await link.get_attribute('href')
                             text = await link.inner_text()
                             transport_data.append({'href': href, 'text': text, 'type': 'patient'})
-                        except Exception as e:
+                        except (PlaywrightError, asyncio.TimeoutError) as e:
                             logger.error(f"Erreur lors de l'extraction d'un lien de transport: {e}")
                             continue
 
@@ -932,7 +933,7 @@ class MissionManager:
                     else:
                         logger.warning(f"Échec du transport pour {text}")
 
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.error(f"Erreur lors du traitement du transport initial {i+1}: {e}")
                     continue
 
@@ -949,7 +950,7 @@ class MissionManager:
                 logger.debug(f"ℹ️ Aucun transport nécessaire pour mission {mission.title} ({mission.id})")
                 return True  # Succès car pas d'erreur, juste pas de transport nécessaire
                 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors des transports initiaux pour mission {mission.id}: {e}")
             return False
     
@@ -988,7 +989,7 @@ class MissionManager:
             
             return True
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la sélection d'hôpital: {e}")
             return False
     
@@ -1024,7 +1025,7 @@ class MissionManager:
             
             return True
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la sélection de prison: {e}")
             return False
     
@@ -1089,13 +1090,13 @@ class MissionManager:
                             })
                             logger.debug(f"Lien de transport prisonnier trouvé: Véhicule {vehicle_id} → {text}")
                 
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.error(f"Erreur lors de l'extraction d'un lien de transport prisonnier: {e}")
                     continue
             
             return transport_data
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction des liens de transport de prisonniers: {e}")
             return []
     
@@ -1133,7 +1134,7 @@ class MissionManager:
                 logger.debug("Aucun prisonnier détecté dans mission_general_info")
                 return 0
 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction du nombre de prisonniers: {e}")
             return 0
 
@@ -1225,10 +1226,10 @@ class MissionManager:
                                     logger.warning(f"Pattern de véhicule manquant non reconnu: '{missing_item}'")
                                     await self._log_unrecognized_vehicle_pattern(missing_item, mission)
                                     
-                            except Exception as e:
+                            except (PlaywrightError, asyncio.TimeoutError) as e:
                                 logger.warning(f"Erreur lors du parsing avec RequirementParser pour '{missing_item}': {e}")
                     
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.error(f"Erreur lors de l'analyse d'une div de véhicules manquants: {e}")
                     continue
             
@@ -1251,7 +1252,7 @@ class MissionManager:
                         missing_vehicles_needs[constrained_key] = missing_vehicles_needs.get(constrained_key, 0) + quantity
                         logger.info(f"🔒 {primary_vehicle}: {quantity} véhicule(s) avec alternatives: {alternatives}")
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction des véhicules manquants: {e}")
         
         return missing_vehicles_needs
@@ -1301,7 +1302,7 @@ class MissionManager:
                             # Si le pattern n'est pas reconnu, le sauvegarder pour analyse future
                             await self._log_unrecognized_missing_pattern(missing_part, mission)
                         
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.error(f"Erreur lors de l'analyse d'une div de besoins autres: {e}")
                     continue
             
@@ -1324,11 +1325,11 @@ class MissionManager:
                             other_needs[f"personnel_{personnel_type}"] = quantity
                             logger.info(f"Personnel manquant détecté: {quantity}x {personnel_type}")
                         
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.error(f"Erreur lors de l'analyse d'une div de personnel manquant: {e}")
                     continue
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction des besoins non-véhicules: {e}")
         
         return other_needs
@@ -1516,7 +1517,7 @@ class MissionManager:
             if specialized_missing_count > 0:
                 logger.info(f"🔬 Total personnel spécialisé manquant: {specialized_missing_count}")
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du comptage du personnel spécialisé manquant: {e}")
         
         return specialized_missing_count
@@ -1549,7 +1550,7 @@ class MissionManager:
                         # Si c'est un dict (eau, personnel spécialisé), ajouter directement
                         vehicles_info.append(vehicle_info)
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du calcul des véhicules avec fallback: {e}")
         
         return vehicles_info
@@ -1749,7 +1750,7 @@ class MissionManager:
             # Retourner seulement les types de véhicules
             return [v['type'] for v in vehicle_alternatives]
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la génération des alternatives personnel: {e}")
             return []
     
@@ -1800,7 +1801,7 @@ class MissionManager:
             
             return alternatives
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la génération des alternatives personnel spécialisé: {e}")
             return []
     
@@ -1833,7 +1834,7 @@ class MissionManager:
                     additional_vehicles[vehicle_type] = additional_vehicles.get(vehicle_type, 0) + quantity
                     logger.info(f"💧 Pour {need_type} ({needed_quantity}): ajouter {quantity} {vehicle_type}")
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du calcul des véhicules pour besoins: {e}")
         
         return additional_vehicles
@@ -2554,7 +2555,7 @@ class MissionManager:
             
             return total_personnel_capacity
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du calcul du personnel en route pour {personnel_type}: {e}")
             return 0
     
@@ -2717,7 +2718,7 @@ class MissionManager:
             
             return total_water_capacity
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du calcul de la capacité d'eau en route: {e}")
             return 0
     
@@ -2760,10 +2761,10 @@ class MissionManager:
                 f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
             
             logger.info(f"💾 Pattern 'Il nous manque' non reconnu sauvegardé: '{missing_text}'")
-            
-        except Exception as e:
+
+        except OSError as e:
             logger.error(f"Erreur lors de la sauvegarde du pattern non reconnu: {e}")
-    
+
     def _suggest_pattern_category(self, text: str) -> list:
         """
         Suggère des catégories possibles pour un pattern non reconnu basé sur la configuration.
@@ -2836,10 +2837,10 @@ class MissionManager:
                 f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
             
             logger.debug(f"Pattern non reconnu sauvegardé: {missing_item}")
-            
-        except Exception as e:
+
+        except OSError as e:
             logger.error(f"Erreur lors de la sauvegarde du pattern non reconnu: {e}")
-    
+
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
         """Déploie automatiquement les missions selon la configuration"""
         max_missions = max_missions or self.settings.max_concurrent_missions

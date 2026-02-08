@@ -1,5 +1,7 @@
+import asyncio
 from typing import List, Optional
 from playwright.async_api import Page
+from playwright._impl._errors import Error as PlaywrightError
 from loguru import logger
 
 from ..models.patient import Patient, PatientSeverity
@@ -48,7 +50,7 @@ class PatientScraper:
                     patient = await self._extract_patient_from_element(element, str(i))
                     if patient:
                         patients.append(patient)
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
             
             # Si pas de détails mais on a un compte, créer des patients génériques
@@ -61,7 +63,7 @@ class PatientScraper:
                     ))
             
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du scraping des patients: {e}")
         
         return patients
@@ -103,7 +105,7 @@ class PatientScraper:
                 needs=needs
             )
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction du patient: {e}")
             return None
     
@@ -133,7 +135,7 @@ class PatientScraper:
             elif any(word in element_text for word in ["léger", "light"]):
                 return PatientSeverity.LIGHT
                 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors de l'extraction de la gravité: {e}")
         
         # Par défaut
@@ -196,7 +198,7 @@ class PatientScraper:
             if patient_button:
                 text = await patient_button.inner_text()
                 return extract_number_from_text(text)
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors de la récupération du nombre de patients: {e}")
         
         return 0
@@ -227,5 +229,5 @@ class PatientScraper:
         try:
             patient_button = await self.page.query_selector("#patient_button_form")
             return patient_button is not None
-        except Exception:
+        except (PlaywrightError, asyncio.TimeoutError):
             return False

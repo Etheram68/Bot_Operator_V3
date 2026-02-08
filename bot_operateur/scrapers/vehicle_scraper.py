@@ -2,6 +2,7 @@ import re
 import asyncio
 from typing import List, Optional
 from playwright.async_api import Page
+from playwright._impl._errors import Error as PlaywrightError
 from loguru import logger
 
 from ..models.vehicle import Vehicle, VehicleStatus
@@ -103,7 +104,7 @@ class VehicleScraper:
             
             logger.info(f"Trouvé {len(vehicles)} véhicules proches pour la mission {mission.id}")
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la récupération des véhicules: {e}")
         
         return vehicles
@@ -171,10 +172,10 @@ class VehicleScraper:
                         if count_after > count_before:
                             logger.info(f"Chargement JS réussi: {count_before} -> {count_after} ({count_after - count_before:+d})")
                             break
-                except Exception as js_error:
+                except PlaywrightError as js_error:
                     logger.debug(f"Chargement JS non disponible: {js_error}")
 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur lors du chargement des véhicules manquants: {e}")
     
     async def _scrape_vehicles_from_table(self) -> List[Vehicle]:
@@ -198,11 +199,11 @@ class VehicleScraper:
                     vehicle = await self._extract_vehicle_from_row(row)
                     if vehicle:
                         vehicles.append(vehicle)
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"Erreur lors de l'extraction d'un véhicule: {e}")
                     continue
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du scraping du tableau des véhicules: {e}")
         
         return vehicles
@@ -234,11 +235,11 @@ class VehicleScraper:
                     vehicle = await self._extract_vehicle_from_row(row)
                     if vehicle:
                         vehicles.append(vehicle)
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"Erreur lors de l'extraction d'un véhicule proche: {e}")
                     continue
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du scraping des véhicules proches: {e}")
         
         return vehicles
@@ -297,7 +298,7 @@ class VehicleScraper:
             logger.debug(f"Véhicule extrait: {vehicle.caption} -> Type: {vehicle.type}")
             return vehicle
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction du véhicule: {e}")
             return None
     
@@ -324,7 +325,7 @@ class VehicleScraper:
                 if re.match(r'\d{5}\s+[A-Za-zÀ-ÿ\s-]+', text.strip()):
                     return text.strip()
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors de l'extraction de la localisation: {e}")
         
         return None
@@ -361,7 +362,7 @@ class VehicleScraper:
                     if match:
                         return int(match.group(1))
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors de l'extraction du niveau de carburant: {e}")
         
         return 100  # Par défaut
@@ -403,7 +404,7 @@ class VehicleScraper:
                     if key in text:
                         return value
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors de l'extraction de l'état: {e}")
         
         return "excellent"  # Par défaut
@@ -430,7 +431,7 @@ class VehicleScraper:
             logger.info(f"{selected_count}/{len(vehicle_ids)} véhicules sélectionnés")
             return selected_count > 0
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la sélection des véhicules: {e}")
             return False
     
@@ -461,12 +462,12 @@ class VehicleScraper:
             # Attendre la confirmation de déploiement (changement DOM au lieu de sleep fixe)
             try:
                 await self.page.wait_for_load_state('networkidle', timeout=5000)
-            except Exception:
+            except (PlaywrightError, asyncio.TimeoutError):
                 await self.page.wait_for_load_state('domcontentloaded', timeout=3000)
 
             return True
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du déploiement: {e}")
             return False
     
@@ -476,7 +477,7 @@ class VehicleScraper:
             selected_checkboxes = await self.page.query_selector_all(".vehicle_checkbox:checked")
             return len(selected_checkboxes)
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
     
@@ -524,7 +525,7 @@ class VehicleScraper:
 
             try:
                 await self.page.wait_for_selector(table_selector, timeout=10000)
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 # Double vérification si la mission s'est terminée pendant l'attente
                 mission_complete = await self.page.query_selector(mission_complete_selector)
                 if mission_complete:
@@ -634,7 +635,7 @@ class VehicleScraper:
                         logger.info("🎯 Tous les besoins en véhicules sont satisfaits")
                         break
                         
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"Erreur lors de la sélection d'un véhicule: {e}")
                     continue
             
@@ -696,7 +697,7 @@ class VehicleScraper:
             
             return (final_count, total_missing)
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la sélection des véhicules proches: {e}")
             # En cas d'erreur, calculer le manque total des besoins
             total_missing = sum(vehicle_needs.values()) if vehicle_needs else 0
@@ -735,7 +736,7 @@ class VehicleScraper:
                             display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
                             excluded_names.append(display_name)
                             logger.debug(f"🚫 Véhicule déjà en mission: {display_name}")
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission: {e}")
                     continue
             
@@ -758,7 +759,7 @@ class VehicleScraper:
                             display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
                             excluded_names.append(display_name)
                             logger.debug(f"🚫 Véhicule en route: {display_name}")
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.debug(f"Erreur lors de l'extraction d'un véhicule en route: {e}")
                     continue
             
@@ -766,7 +767,7 @@ class VehicleScraper:
                 logger.info(f"Trouvé {len(excluded_vehicle_ids)} véhicules à exclure (déjà déployés/en route)")
                 logger.info(f"📋 Liste des véhicules exclus: {', '.join(excluded_names)}")
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur lors de la récupération des véhicules déployés: {e}")
         
         return excluded_vehicle_ids
@@ -797,7 +798,7 @@ class VehicleScraper:
                             vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
                             if vehicle_type:
                                 deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission (par type): {e}")
                     continue
             
@@ -814,14 +815,14 @@ class VehicleScraper:
                             if vehicle_type:
                                 deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
                                 logger.debug(f"🔢 Véhicule en route: {vehicle_name.strip()} -> Type: {vehicle_type}")
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.debug(f"Erreur lors de l'extraction d'un véhicule en route (par type): {e}")
                     continue
             
             if deployed_by_type:
                 logger.info(f"📊 Véhicules déjà déployés par type: {deployed_by_type}")
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur lors du comptage des véhicules déployés par type: {e}")
         
         return deployed_by_type
@@ -858,7 +859,7 @@ class VehicleScraper:
             driving_rows = await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
             return driving_rows
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur avec les nouveaux sélecteurs, utilisation du fallback: {e}")
             return await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
     
@@ -889,11 +890,11 @@ class VehicleScraper:
                             if vehicle_type:
                                 vehicles_en_route_by_type[vehicle_type] = vehicles_en_route_by_type.get(vehicle_type, 0) + 1
                                 logger.debug(f"🚗 Véhicule en route: {vehicle_name.strip()} -> Type: {vehicle_type}")
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.debug(f"Erreur lors de l'extraction d'un véhicule en route (par type): {e}")
                     continue
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur lors du comptage des véhicules en route par type: {e}")
         
         return vehicles_en_route_by_type
@@ -1214,7 +1215,7 @@ class VehicleScraper:
                         logger.warning(f"⚠️ Limite de sécurité atteinte: {additional_selected} véhicules supplémentaires (max: {max_additional})")
                         break
                         
-                except Exception as vehicle_error:
+                except (PlaywrightError, asyncio.TimeoutError) as vehicle_error:
                     logger.warning(f"⚠️ Erreur lors du traitement du véhicule {i}: {vehicle_error}")
                     logger.debug(f"    Type de l'élément problématique: {type(dom_row_element)}")
                     continue
@@ -1226,7 +1227,7 @@ class VehicleScraper:
             logger.info(f"📊 Véhicules supplémentaires sélectionnés: {additional_selected}")
             return additional_selected
             
-        except Exception as global_error:
+        except (PlaywrightError, asyncio.TimeoutError) as global_error:
             logger.error(f"Erreur globale dans _load_and_select_additional_vehicles: {global_error}")
             
             # Debug complet pour identifier le problème
@@ -1274,7 +1275,7 @@ class VehicleScraper:
             
             return True
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"❌ Erreur validation élément {index}: {e}")
             return False
     
@@ -1314,12 +1315,12 @@ class VehicleScraper:
                         }
                         safe_mapping['AMBULANCE'] = new_ambulance_mapping
                         logger.debug(f"🚑 Mapping transfert adapté pour AMBULANCE")
-                except Exception as mapping_error:
+                except (PlaywrightError, asyncio.TimeoutError) as mapping_error:
                     logger.warning(f"⚠️ Erreur adaptation mapping AMBULANCE: {mapping_error}")
             
             return safe_mapping
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"❌ Erreur création safe_alternatives_mapping: {e}")
             return {}
     
@@ -1352,7 +1353,7 @@ class VehicleScraper:
             
             return (vehicle_caption, vehicle_type)
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"⚠️ Erreur extraction véhicule {index}: {e}")
             return None
     
@@ -1406,7 +1407,7 @@ class VehicleScraper:
             
             return None
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"⚠️ Erreur recherche correspondance pour {vehicle_type}: {e}")
             return None
     
@@ -1449,7 +1450,7 @@ class VehicleScraper:
             logger.debug(f"✅ Véhicule {vehicle_caption} sélectionné avec succès")
             return True
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"⚠️ Erreur sélection {vehicle_caption}: {e}")
             return False
             
@@ -1478,7 +1479,7 @@ class VehicleScraper:
             
             return (row, vehicle_type, vehicle_caption)
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur extraction véhicule {index}: {e}")
             return None
 
@@ -1512,7 +1513,7 @@ class VehicleScraper:
             # Aucun message d'erreur visible, le véhicule est disponible
             return True
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors de la vérification du tracteur: {e}")
             # En cas d'erreur, par sécurité, considérer le véhicule comme disponible
             # pour ne pas bloquer la sélection des véhicules normaux

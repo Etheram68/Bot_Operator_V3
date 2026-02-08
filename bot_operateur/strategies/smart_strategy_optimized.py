@@ -3,8 +3,10 @@ Version optimisée de la Smart Strategy
 Intègre les optimisations de logique métier sans compromettre la fiabilité
 """
 
+import asyncio
 from typing import List, Dict, Optional, Tuple
 from loguru import logger
+from playwright._impl._errors import Error as PlaywrightError
 
 from .base_strategy import BaseStrategy
 from ..models.vehicle import Vehicle
@@ -90,7 +92,7 @@ class SmartStrategyOptimized(BaseStrategy):
                         return {}
             else:
                 logger.warning("⚠️ Vehicle scraper non disponible")
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"⚠️ Erreur ajustement véhicules: {e}")
 
         return base_needs

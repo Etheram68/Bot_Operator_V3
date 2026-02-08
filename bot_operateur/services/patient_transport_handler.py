@@ -5,6 +5,7 @@ Gère les transports sanitaires et hospitaliers.
 import asyncio
 from typing import List, Dict, Optional, TYPE_CHECKING
 from loguru import logger
+from playwright._impl._errors import Error as PlaywrightError
 
 from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS, SELECTORS
 from ..utils.exceptions import ExceptionContext, BotOperateurException
@@ -68,7 +69,7 @@ class PatientTransportHandler:
                         else:
                             logger.warning(f"❌ Échec transport patient: {transport_info['text']}")
                             
-                    except Exception as e:
+                    except (PlaywrightError, asyncio.TimeoutError) as e:
                         logger.error(f"Erreur traitement transport patient {i+1}: {e}")
                         continue
                 
@@ -99,7 +100,7 @@ class PatientTransportHandler:
                     
             return None
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur recherche alerte transport: {e}")
             return None
     
@@ -123,11 +124,11 @@ class PatientTransportHandler:
                             'type': 'patient'
                         })
                         
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"Erreur extraction lien transport: {e}")
                     continue
-                    
-        except Exception as e:
+
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur extraction liens transport: {e}")
         
         return transport_links
@@ -152,7 +153,7 @@ class PatientTransportHandler:
             # Gérer la sélection d'hôpital
             return await self.handle_hospital_selection(mission)
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur traitement transport patient: {e}")
             return False
     
@@ -183,7 +184,7 @@ class PatientTransportHandler:
                 logger.warning("Aucun hôpital disponible pour sélection")
                 return False
                 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur sélection hôpital: {e}")
             return False
     
@@ -204,13 +205,13 @@ class PatientTransportHandler:
                         await asyncio.sleep(1)
                         return True
                         
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"Erreur vérification bouton hôpital: {e}")
                     continue
-            
+
             return False
-            
-        except Exception as e:
+
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur sélection hôpital avec lits libres: {e}")
             return False
     
@@ -240,13 +241,13 @@ class PatientTransportHandler:
                             await asyncio.sleep(1)
                             return True
                             
-                    except Exception as e:
+                    except (PlaywrightError, asyncio.TimeoutError) as e:
                         logger.warning(f"Erreur clic bouton hôpital: {e}")
                         continue
-            
+
             return False
-            
-        except Exception as e:
+
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur sélection premier hôpital: {e}")
             return False
     
@@ -275,15 +276,15 @@ class PatientTransportHandler:
                             await asyncio.sleep(1)
                             return True
                             
-                    except Exception as e:
+                    except (PlaywrightError, asyncio.TimeoutError) as e:
                         logger.warning(f"Erreur confirmation hôpital: {e}")
                         continue
-            
+
             # Si pas de bouton de confirmation, considérer comme réussi
             logger.debug("✅ Sélection hôpital acceptée (pas de confirmation requise)")
             return True
-            
-        except Exception as e:
+
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur confirmation sélection hôpital: {e}")
             return True  # Continuer même en cas d'erreur de confirmation
     
@@ -303,7 +304,7 @@ class PatientTransportHandler:
             else:
                 logger.debug("Pas de bouton 'prochain véhicule' trouvé")
                 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur navigation véhicule suivant: {e}")
     
     async def _has_remaining_patient_transports(self) -> bool:
@@ -317,7 +318,7 @@ class PatientTransportHandler:
             transport_alert = await self._find_patient_transport_alert()
             return transport_alert is not None
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur vérification transports restants: {e}")
             return False
     
@@ -350,11 +351,11 @@ class PatientTransportHandler:
                                 'type': 'hospital'
                             })
                             
-                    except Exception as e:
+                    except (PlaywrightError, asyncio.TimeoutError) as e:
                         logger.warning(f"Erreur extraction lien hôpital: {e}")
                         continue
                         
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur extraction liens transport hôpital: {e}")
         
         logger.debug(f"🏥 {len(transport_links)} lien(s) transport hôpital trouvé(s)")

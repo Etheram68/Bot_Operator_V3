@@ -58,7 +58,7 @@ class SmartNavigation:
 
             return (parsed1.netloc == parsed2.netloc and
                     parsed1.scheme == parsed2.scheme)
-        except Exception:
+        except ValueError:
             return False
 
     async def ensure_on_page(self, expected_url_pattern: str) -> bool:

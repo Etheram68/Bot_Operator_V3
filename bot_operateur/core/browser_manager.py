@@ -1,9 +1,11 @@
 import asyncio
+import json
 import shutil
 import time
 from typing import Optional
 from pathlib import Path
 from playwright.async_api import Browser, BrowserContext, Page, Playwright, async_playwright
+from playwright._impl._errors import Error as PlaywrightError
 from loguru import logger
 
 from ..config.settings import Settings
@@ -101,7 +103,7 @@ class BrowserManager:
                         storage_state = str(storage_file)
                         logger.info("Cache navigateur chargé avec succès")
 
-                except Exception as e:
+                except (json.JSONDecodeError, OSError) as e:
                     logger.warning(f"Cache corrompu, suppression: {e}")
                     storage_file.unlink(missing_ok=True)
 
@@ -124,7 +126,7 @@ class BrowserManager:
             
             logger.info("Navigateur démarré avec succès")
             
-        except Exception as e:
+        except (PlaywrightError, OSError) as e:
             logger.error(f"Erreur lors du démarrage du navigateur: {e}")
             await self.cleanup()
             raise
@@ -155,7 +157,7 @@ class BrowserManager:
                 storage_file = cache_dir / "storage_state.json"
                 await self.context.storage_state(path=str(storage_file))
                 logger.info(f"Cache sauvegardé: {storage_file}")
-            except Exception as e:
+            except (PlaywrightError, OSError) as e:
                 logger.warning(f"Erreur sauvegarde cache: {e}")
 
         # Fermer le contexte
@@ -210,7 +212,7 @@ class BrowserManager:
             except asyncio.CancelledError:
                 logger.debug(f"Navigation vers {url} annulée")
                 raise
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.warning(f"Navigation rapide échouée pour {url}: {e}")
                 # Fallback vers navigation normale si la rapide échoue
                 if fast_navigation:
@@ -258,7 +260,7 @@ class BrowserManager:
                 timeout=(timeout or self.settings.element_wait_timeout) * 1000
             )
             return True
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Sélecteur '{selector}' non trouvé: {e}")
             return False
     
@@ -281,7 +283,7 @@ class BrowserManager:
         
         try:
             return await self.page.title()
-        except Exception as e:
+        except PlaywrightError as e:
             logger.warning(f"Impossible de récupérer le titre: {e}")
             return None
     
@@ -296,7 +298,7 @@ class BrowserManager:
                 logger.debug(f"Screenshot sauvegardé: {path}")
             else:
                 return await self.page.screenshot()
-        except Exception as e:
+        except PlaywrightError as e:
             logger.error(f"Erreur lors de la capture d'écran: {e}")
             return None
     
@@ -396,5 +398,5 @@ class BrowserManager:
             else:
                 logger.debug(f"Cache navigateur: {total_size_mb:.1f}MB (limite: {CACHE_MAX_SIZE_MB}MB)")
 
-        except Exception as e:
+        except OSError as e:
             logger.warning(f"Erreur lors du nettoyage du cache: {e}")

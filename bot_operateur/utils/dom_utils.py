@@ -1,6 +1,7 @@
 import asyncio
 from typing import Optional, List
 from playwright.async_api import Page, ElementHandle
+from playwright._impl._errors import Error as PlaywrightError
 from loguru import logger
 from .dom_base import DOMOperationsBase
 from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS, DEFAULT_NAVIGATION_TIMEOUT_MS
@@ -18,15 +19,15 @@ class DOMUtils:
         try:
             await self.page.wait_for_selector(selector, timeout=timeout, state='attached')
             return True
-        except Exception:
+        except (PlaywrightError, asyncio.TimeoutError):
             return False
-    
+
     async def element_visible(self, selector: str, timeout: int = DEFAULT_ELEMENT_TIMEOUT_MS) -> bool:
         """Vérifie si un élément est visible"""
         try:
             await self.page.wait_for_selector(selector, timeout=timeout, state='visible')
             return True
-        except Exception:
+        except (PlaywrightError, asyncio.TimeoutError):
             return False
     
     async def safe_get_text(self, selector: str, default: str = "") -> str:
@@ -35,7 +36,7 @@ class DOMUtils:
             element = await self.page.query_selector(selector)
             if element:
                 return await element.inner_text()
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors de la récupération du texte '{selector}': {e}")
         
         return default
@@ -47,7 +48,7 @@ class DOMUtils:
             if element:
                 value = await element.get_attribute(attribute)
                 return value or default
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors de la récupération de l'attribut '{attribute}' pour '{selector}': {e}")
         
         return default
@@ -90,7 +91,7 @@ class DOMUtils:
                     except Exception:
                         continue
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors de l'attente des sélecteurs: {e}")
         
         return None
@@ -104,7 +105,7 @@ class DOMUtils:
         try:
             elements = await self.page.query_selector_all(selector)
             return len(elements)
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors du comptage des éléments '{selector}': {e}")
             return 0
     
@@ -115,7 +116,7 @@ class DOMUtils:
             if element:
                 await element.scroll_into_view_if_needed()
                 return True
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors du scroll vers '{selector}': {e}")
         
         return False
@@ -127,7 +128,7 @@ class DOMUtils:
             if element:
                 await element.hover()
                 return True
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Erreur lors du survol de '{selector}': {e}")
         
         return False
@@ -136,7 +137,7 @@ class DOMUtils:
         """Attend que la page soit stable (pas de nouvelles requêtes réseau)"""
         try:
             await self.page.wait_for_load_state('networkidle', timeout=timeout)
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.debug(f"Timeout lors de l'attente de stabilité: {e}")
     
     async def extract_table_data(self, table_selector: str) -> List[List[str]]:
@@ -157,7 +158,7 @@ class DOMUtils:
                 if row_data:
                     data.append(row_data)
                     
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction du tableau '{table_selector}': {e}")
         
         return data

@@ -5,6 +5,7 @@ Base class pour les opérations DOM communes.
 import asyncio
 from typing import Optional
 from playwright.async_api import Page
+from playwright._impl._errors import Error as PlaywrightError
 from loguru import logger
 
 
@@ -48,7 +49,7 @@ class DOMOperationsBase:
         except asyncio.TimeoutError:
             logger.warning(f"Timeout lors du clic sur '{selector}' ({timeout_ms}ms)")
             return False
-        except Exception as e:
+        except PlaywrightError as e:
             logger.error(f"Erreur lors du clic sur '{selector}': {e}")
             return False
     
@@ -86,7 +87,7 @@ class DOMOperationsBase:
         except asyncio.TimeoutError:
             logger.warning(f"Timeout lors du remplissage de '{selector}' ({timeout_ms}ms)")
             return False
-        except Exception as e:
+        except PlaywrightError as e:
             logger.error(f"Erreur lors du remplissage de '{selector}': {e}")
             return False
     
@@ -105,7 +106,7 @@ class DOMOperationsBase:
         except asyncio.TimeoutError:
             logger.warning(f"Timeout pour sélecteur '{selector}' ({timeout_ms}ms)")
             return False
-        except Exception as e:
+        except PlaywrightError as e:
             logger.error(f"Erreur lors de l'attente du sélecteur '{selector}': {e}")
             return False
     
@@ -135,7 +136,7 @@ class DOMOperationsBase:
         except asyncio.TimeoutError:
             logger.warning(f"Timeout lors de la récupération texte de '{selector}' ({timeout_ms}ms)")
             return None
-        except Exception as e:
+        except PlaywrightError as e:
             logger.error(f"Erreur lors de la récupération texte de '{selector}': {e}")
             return None
     
@@ -165,6 +166,6 @@ class DOMOperationsBase:
         except asyncio.TimeoutError:
             logger.warning(f"Timeout lors de la récupération attribut '{attribute}' de '{selector}' ({timeout_ms}ms)")
             return None
-        except Exception as e:
+        except PlaywrightError as e:
             logger.error(f"Erreur lors de la récupération attribut '{attribute}' de '{selector}': {e}")
             return None

@@ -1,7 +1,9 @@
+import asyncio
 import re
 import json
 from typing import List, Dict, Set, Optional, Tuple
 from playwright.async_api import Page
+from playwright._impl._errors import Error as PlaywrightError
 from loguru import logger
 from pathlib import Path
 
@@ -51,7 +53,7 @@ class ConditionsAnalyzer:
             logger.info(f"Analyse complétée pour mission {mission_id}")
             return analysis_data
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'analyse des conditions de la mission {mission_id}: {e}")
             return {}
 
@@ -59,7 +61,7 @@ class ConditionsAnalyzer:
         """Extrait tout le texte de la page des conditions"""
         try:
             return await self.page.inner_text("body")
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction du texte complet: {e}")
             return ""
 
@@ -89,7 +91,7 @@ class ConditionsAnalyzer:
                 if list_requirements:
                     self._merge_requirements(requirements, list_requirements)
                     
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction des exigences structurées: {e}")
         
         return requirements
@@ -139,7 +141,7 @@ class ConditionsAnalyzer:
                             new_patterns.append(pattern_data)
                             self.discovered_patterns.add(normalized_type)
                             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la découverte de nouveaux patterns: {e}")
         
         return new_patterns
@@ -176,7 +178,7 @@ class ConditionsAnalyzer:
                         vehicle_mentions.append(mention)
                         self.discovered_vehicles.add(normalized_name)
                         
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la découverte de véhicules: {e}")
         
         return vehicle_mentions
@@ -233,7 +235,7 @@ class ConditionsAnalyzer:
                 if circumstance in page_text.lower():
                     context['special_circumstances'].append(circumstance)
                     
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction du contexte: {e}")
         
         return context
@@ -417,7 +419,7 @@ class ConditionsAnalyzer:
             logger.info(f"Enrichissement terminé: {len(new_vehicle_requirements)} nouveaux patterns, "
                        f"{len(new_vehicle_specs)} nouveaux véhicules")
                        
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.error(f"Erreur lors de l'enrichissement des fichiers JSON: {e}")
 
     def _load_json_file(self, file_path: str) -> Dict:
@@ -425,7 +427,7 @@ class ConditionsAnalyzer:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.error(f"Erreur lors du chargement de {file_path}: {e}")
             return {}
 

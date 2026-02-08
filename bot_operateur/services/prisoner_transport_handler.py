@@ -5,6 +5,7 @@ Gère les transports carcéraux et la sélection de prisons.
 import asyncio
 from typing import List, Dict, Optional, TYPE_CHECKING
 from loguru import logger
+from playwright._impl._errors import Error as PlaywrightError
 
 from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS
 from ..utils.exceptions import ExceptionContext
@@ -51,7 +52,7 @@ class PrisonerTransportHandler:
                     logger.warning("Aucune prison disponible pour transport")
                     return False
                     
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.error(f"Erreur sélection prison: {e}")
                 return False
     
@@ -72,13 +73,13 @@ class PrisonerTransportHandler:
                         logger.debug(f"🏢 Prison sélectionnée (places libres): {button_text[:40]}...")
                         return True
                         
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"Erreur vérification bouton prison: {e}")
                     continue
             
             return False
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur sélection prison avec capacité: {e}")
             return False
     
@@ -105,13 +106,13 @@ class PrisonerTransportHandler:
                             logger.debug(f"🏢 Première prison sélectionnée: {button_text[:40]}...")
                             return True
                             
-                    except Exception as e:
+                    except (PlaywrightError, asyncio.TimeoutError) as e:
                         logger.warning(f"Erreur clic bouton prison: {e}")
                         continue
             
             return False
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur sélection première prison: {e}")
             return False
     
@@ -122,7 +123,7 @@ class PrisonerTransportHandler:
             await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
             logger.debug("✅ Sélection prison confirmée")
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur confirmation prison: {e}")
     
     async def extract_prisoner_transport_links(self, mission: 'Mission') -> List[Dict[str, str]]:
@@ -161,13 +162,13 @@ class PrisonerTransportHandler:
                         if transport_info:
                             transport_data.append(transport_info)
                             
-                    except Exception as e:
+                    except (PlaywrightError, asyncio.TimeoutError) as e:
                         logger.warning(f"Erreur extraction transport prisonnier: {e}")
                         continue
                 
                 logger.debug(f"🚔 {len(transport_data)} transport(s) prisonnier(s) extrait(s)")
                 
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.error(f"Erreur extraction liens transport prisonniers: {e}")
         
         return transport_data
@@ -200,7 +201,7 @@ class PrisonerTransportHandler:
             
             return True
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur vérification alertes prisonniers: {e}")
             return False
     
@@ -241,7 +242,7 @@ class PrisonerTransportHandler:
                 'vehicle_info': vehicle_info
             }
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur extraction transport prisonnier unique: {e}")
             return None
     
@@ -272,7 +273,7 @@ class PrisonerTransportHandler:
                         name_text = await name_cell.inner_text()
                         vehicle_info['name'] = name_text.strip() if name_text else 'unknown'
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur récupération info véhicule {vehicle_id}: {e}")
         
         return vehicle_info
@@ -305,7 +306,7 @@ class PrisonerTransportHandler:
                 else:
                     logger.warning(f"❌ Échec transport prisonnier: {transport_info.get('text', 'N/A')}")
                     
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.error(f"Erreur traitement transport prisonnier {i+1}: {e}")
                 continue
         
@@ -332,6 +333,6 @@ class PrisonerTransportHandler:
             # Gérer la sélection de prison
             return await self.handle_prison_selection(mission)
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur traitement transport prisonnier: {e}")
             return False

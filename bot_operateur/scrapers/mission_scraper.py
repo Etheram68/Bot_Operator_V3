@@ -1,7 +1,9 @@
 import re
 import json
+import asyncio
 from typing import List, Optional, Dict
 from playwright.async_api import Page
+from playwright._impl._errors import Error as PlaywrightError
 from loguru import logger
 
 from ..models.mission import Mission, MissionType, MissionRequirement, MissionState
@@ -79,11 +81,11 @@ class MissionScraper:
                     mission = await self._extract_mission_from_element(element, mission_type)
                     if mission:
                         missions.append(mission)
-                except Exception as e:
+                except (PlaywrightError, asyncio.TimeoutError) as e:
                     logger.warning(f"Erreur lors de l'extraction d'une mission: {e}")
                     continue
-                    
-        except Exception as e:
+
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du scraping du panneau {panel_selector}: {e}")
         
         return missions
@@ -159,7 +161,7 @@ class MissionScraper:
             logger.debug(f"Mission extraite: {mission.id} - {mission.title} - {credits} crédits - {prisoner_count} prisonniers")
             return mission
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError, json.JSONDecodeError) as e:
             logger.error(f"Erreur lors de l'extraction de la mission: {e}")
             return None
     
@@ -232,7 +234,7 @@ class MissionScraper:
             
             return details
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la récupération des détails de la mission {mission.id} : {e}")
             return None
     
@@ -256,9 +258,9 @@ class MissionScraper:
                         if patient:
                             patients.append(patient)
                             logger.debug(f"Patient {i} extrait avec besoins: {patient.needs}")
-                    except Exception as e:
+                    except (PlaywrightError, asyncio.TimeoutError) as e:
                         logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
-            
+
             else:
                 # Fallback : vérifier s'il y a un formulaire de patients
                 patient_form = await self.page.query_selector("#patient_button_form")
@@ -277,7 +279,7 @@ class MissionScraper:
                             patient = await self.patient_scraper._extract_patient_from_element(element, str(i))
                             if patient:
                                 patients.append(patient)
-                        except Exception as e:
+                        except (PlaywrightError, asyncio.TimeoutError) as e:
                             logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
                     
                     # Si pas de détails mais on a un compte, créer des patients génériques
@@ -294,7 +296,7 @@ class MissionScraper:
             
             logger.info(f"Total de {len(patients)} patients extraits")
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du scraping des patients: {e}")
         
         return patients
@@ -323,7 +325,7 @@ class MissionScraper:
                 patients.append(patient)
             
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du scraping des patients depuis la page d'aide: {e}")
         
         return patients
@@ -444,7 +446,7 @@ class MissionScraper:
             logger.warning("Aucune seconde colonne col-md-4 trouvée avec des besoins")
             return ""
             
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction du texte des colonnes: {e}")
             return ""
     
@@ -478,7 +480,7 @@ class MissionScraper:
 
             logger.debug(f"Trouvé {len(requirements)} exigences sur la page")
 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du scraping des exigences: {e}")
 
         return requirements
@@ -571,7 +573,7 @@ class MissionScraper:
 
             logger.debug(f"Extraction structurée <tr>: {len(requirements)} exigences trouvées")
 
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'extraction structurée <tr>: {e}")
 
         return requirements
@@ -580,7 +582,7 @@ class MissionScraper:
         """Analyse les conditions de réalisation d'une mission pour enrichir les données"""
         try:
             return await self.conditions_analyzer.analyze_mission_conditions(mission_id)
-        except Exception as e:
+        except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de l'analyse des conditions de la mission {mission_id}: {e}")
             return None
     
@@ -608,7 +610,7 @@ class MissionScraper:
                 else:
                     logger.warning(f"Aucune donnée extraite de la mission {mission_id}")
                     
-            except Exception as e:
+            except (PlaywrightError, asyncio.TimeoutError) as e:
                 logger.error(f"Erreur lors de l'analyse de la mission {mission_id}: {e}")
                 continue
         
