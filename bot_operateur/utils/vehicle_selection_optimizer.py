@@ -144,55 +144,6 @@ class VehicleSelectionOptimizer:
 
         return filtered
 
-    def calculate_deployment_efficiency(
-        self,
-        requirements: List[MissionRequirement],
-        selected_vehicles: List[str]
-    ) -> Dict[str, float]:
-        """Calcule l'efficacité du déploiement"""
-
-        total_required = sum(req.quantity for req in requirements if not req.optional)
-        total_selected = len(selected_vehicles)
-
-        if total_required == 0:
-            return {"efficiency": 1.0, "over_deployment": 0.0}
-
-        efficiency = min(total_selected / total_required, 1.0)
-        over_deployment = max(0, (total_selected - total_required) / total_required)
-
-        return {
-            "efficiency": efficiency,
-            "over_deployment": over_deployment,
-            "total_required": total_required,
-            "total_selected": total_selected
-        }
-
-    def suggest_optimizations(
-        self,
-        requirements: List[MissionRequirement],
-        vehicles_by_type: Dict[str, List[Vehicle]]
-    ) -> List[str]:
-        """Suggère des optimisations pour la mission"""
-
-        suggestions = []
-
-        # Vérifier si on peut consolider des véhicules
-        total_light_vehicles = sum(
-            req.quantity for req in requirements
-            if req.vehicle_type in ["VL", "VLHR", "VLCG"]
-        )
-
-        if total_light_vehicles >= 3:
-            suggestions.append("Considérer 1 fourgon au lieu de plusieurs VL")
-
-        # Vérifier la disponibilité des alternatives
-        for req in requirements:
-            available_count = len(vehicles_by_type.get(req.vehicle_type, []))
-            if available_count < req.quantity:
-                suggestions.append(f"Manque {req.quantity - available_count}x {req.vehicle_type}")
-
-        return suggestions
-
     def clear_cache(self) -> None:
         """Vide les caches pour forcer le recalcul"""
         self._vehicle_type_cache.clear()
