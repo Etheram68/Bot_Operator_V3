@@ -13,7 +13,6 @@ from ..strategies.smart_strategy_optimized import SmartStrategyOptimized
 from ..core.browser_manager import BrowserManager
 from ..config.settings import Settings
 from ..utils.parallel_operations import ParallelBatch, run_parallel_limited
-# Removed: smart_requirements_cache (unused learning system)
 
 
 class MissionManager:
@@ -43,18 +42,10 @@ class MissionManager:
             "smart_optimized": SmartStrategyOptimized(),
         }
 
-        # Initialiser le cache d'apprentissage
-# Removed: requirements_cache (unused learning system)
-
-# Removed: smart_learning_validator (unused learning system)
-
         self.active_missions: List[Mission] = []
-        # Removed: _patterns_loaded (unused)
 
     async def initialize(self):
         """Initialisation asynchrone - doit être appelée après la création"""
-# Removed: pattern loading logic (unused learning system)
-
         # Charger la configuration des besoins manquants
         self.missing_needs_config = self._load_missing_needs_config()
     
@@ -226,8 +217,6 @@ class MissionManager:
                         logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits selon la stratégie")
                         mission.status = MissionStatus.IN_PROGRESS
 
-                        # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern même si déjà satisfait
-                        # Removed: successful deployment recording (unused learning system)
                         return True
                     else:
                         # Il y a des besoins mais aucun véhicule disponible pour les satisfaire
@@ -246,10 +235,6 @@ class MissionManager:
                 logger.info(f"Mission {mission.id} déployée avec succès!")
                 mission.status = MissionStatus.IN_PROGRESS
                 mission.deployed_vehicles = selected_vehicle_ids
-
-                # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern de déploiement réussi
-                vehicle_needs_dict = {req.vehicle_type: req.quantity for req in mission.requirements if hasattr(req, 'vehicle_type')}
-                # Removed: successful deployment recording (unused learning system)
 
                 return True
             else:
@@ -440,8 +425,6 @@ class MissionManager:
                         # Tous les besoins sont déjà satisfaits - c'est un succès !
                         logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits")
                         mission.status = MissionStatus.IN_PROGRESS
-                        # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern même si déjà satisfait
-                        # Removed: successful deployment recording (unused learning system)
                         return True
                     elif selected_count == -2:
                         # Mission terminée pendant le processus
@@ -469,9 +452,6 @@ class MissionManager:
                 logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits")
                 mission.status = MissionStatus.IN_PROGRESS
 
-                # 🧠 APPRENTISSAGE AUTOMATIQUE : Enregistrer le pattern même si déjà satisfait
-                # Removed: successful deployment recording (unused learning system)
-
                 return True
             elif selected_count == -2:
                 # Mission terminée pendant le processus de déploiement
@@ -498,9 +478,6 @@ class MissionManager:
             if deployment_success:
                 logger.info(f"✅ Mission {mission.id} déployée avec succès en mode optimisé!")
                 mission.status = MissionStatus.IN_PROGRESS
-
-                # Removed: successful deployment recording (unused learning system)
-
                 return True
             else:
                 logger.error(f"❌ Échec du déploiement pour mission {mission.title} ({mission.id})")
@@ -518,7 +495,6 @@ class MissionManager:
             logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
             return False
 
-    # Removed: _record_successful_deployment method (unused learning system)
     async def _handle_finished_mission(self, mission: Mission, strategy_name: str) -> bool:
         """
         Traitement optimisé et sécurisé pour missions marquées FINISHING
@@ -595,7 +571,6 @@ class MissionManager:
                 # Pour une mission FINISHING, on peut apprendre les patterns existants
                 mission_requirements = mission.get_total_vehicle_requirements()
                 if mission_requirements:
-                    # Removed: successful deployment recording (unused learning system)
                     logger.info("🧠 Pattern appris pour mission terminée")
 
                 success_count += 1
@@ -734,10 +709,6 @@ class MissionManager:
             if deployment_success:
                 logger.info(f"✅ Fallback réussi pour mission {mission.id}")
 
-                # Enregistrer pour l'apprentissage
-                vehicle_needs_dict = {req.vehicle_type: req.quantity for req in mission.requirements if hasattr(req, 'vehicle_type')}
-                # Removed: successful deployment recording (unused learning system)
-
                 return True
             else:
                 logger.error(f"Échec du déploiement fallback pour mission {mission.id}")
@@ -834,10 +805,6 @@ class MissionManager:
             logger.error(f"❌ Erreur lors du traitement hybride pour mission {mission.id}: {e}")
             return False
 
-    # Removed: _process_pending_validations method (unused learning system)
-
-    # Removed: _save_learned_patterns_if_needed method (unused learning system)
-
     async def finalize(self):
         """Finalisation du mission manager"""
         try:
@@ -849,10 +816,6 @@ class MissionManager:
         except Exception as e:
             logger.warning(f"Erreur lors de la finalisation: {e}")
 
-    # Removed: _save_learned_patterns method (unused learning system)
-
-    # Removed: _load_learned_patterns method (unused learning system)
-    
     async def _handle_patient_transport_initial(self, mission: Mission) -> bool:
         """
         Gère automatiquement les demandes de transport (patients/prisonniers) en début de mission.

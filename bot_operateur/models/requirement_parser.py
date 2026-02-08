@@ -23,7 +23,6 @@ class RequirementParser:
     _contextual_parser = None
     _text_cleaner = None
     _pools_initialized = False
-# Removed: _pattern_cache (unused pattern caching)
 
     def __new__(cls, needs_labels_path: str = None, vehicles_mapping_path: str = None, missing_config_path: str = None):
         if cls._instance is None:

@@ -1,20 +1,26 @@
 .DS_Store
 
-
 # local env files
+.env
 .env.local
 .env.*.local
-.env
-*.html
 
 # Log files
 logs/
 *.log
 *.zip
 
-# Editor directories and files
+# Python
 .venv/
+venv/
 __pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Editor directories and files
 .idea
 .vscode
 *.suo
@@ -22,3 +28,11 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
+
+# Data and cache
+data/
+cache/
+*.html
+
+# Docker
+docker-compose.override.yml

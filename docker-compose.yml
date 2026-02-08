@@ -8,56 +8,21 @@ services:
     restart: unless-stopped
     shm_size: '512mb'
 
-    # Charger les variables depuis .env
+    # Variables chargées depuis .env
     env_file:
       - .env
 
-    # Variables d'environnement (à personnaliser)
     environment:
-      # OBLIGATOIRE - Identifiants Opérateur 112
-      - USERNAME=${USERNAME}
-      - PASSWORD=${PASSWORD}
-      
-      # Configuration bot (avec valeurs par défaut)
-      - DEFAULT_STRATEGY=${DEFAULT_STRATEGY:-smart}
-      - HEADLESS=${HEADLESS:-true}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      
-      # Seuils (configurables via .env)
-      - MAX_CONCURRENT_MISSIONS=${MAX_CONCURRENT_MISSIONS:-3}
-      - MIN_CREDITS_THRESHOLD=${MIN_CREDITS_THRESHOLD:-1000}
-      - OPTIMIZATION_THRESHOLD=${OPTIMIZATION_THRESHOLD:-3}
-      - DEPLOYMENT_THRESHOLD=${DEPLOYMENT_THRESHOLD:-5}
-      - PERSONNEL_THRESHOLD=${PERSONNEL_THRESHOLD:-1}
-      
-      # Timeouts (configurables via .env)
-      - PAGE_LOAD_TIMEOUT=${PAGE_LOAD_TIMEOUT:-30}
-      - ELEMENT_WAIT_TIMEOUT=${ELEMENT_WAIT_TIMEOUT:-10}
-      - FAST_TIMEOUT=${FAST_TIMEOUT:-5}
-      - SLOW_TIMEOUT=${SLOW_TIMEOUT:-15}
-      - BROWSER_SLOW_MO=${BROWSER_SLOW_MO:-100}
-      
-      # Retry et cooldown (configurables via .env)
-      - MAX_RETRIES=${MAX_RETRIES:-3}
-      - RETRY_DELAY=${RETRY_DELAY:-2}
-      - MISSION_COOLDOWN=${MISSION_COOLDOWN:-5}
-      
-      # Monitoring (configurable via .env)
-      - ENABLE_PERFORMANCE_LOGS=${ENABLE_PERFORMANCE_LOGS:-false}
-      
-      # Timezone pour logs (configurable via .env)
       - TZ=${TZ:-Europe/Paris}
     
     # Volumes pour persistance données
     volumes:
-      # Code source du bot (pour persistance des modifications)
-      - ./bot_operateur:/app/bot_operateur:rw
-      # Fichiers de données JSON et patterns d'analyse (pour persistance des modifications)
+      # Données JSON persistantes (patterns, véhicules)
       - ./bot_operateur/data:/app/bot_operateur/data:rw
       # Logs persistants
       - ./data/logs:/app/logs:rw
       # Cache navigateur persistant
-      - ./data/cache:/tmp/browser_cache:rw
+      - ./data/cache:/app/cache:rw
     
     # Limits de ressources (augmentées pour meilleures performances)
     deploy:

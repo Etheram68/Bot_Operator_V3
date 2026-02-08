@@ -1,0 +1,26 @@
+[project]
+name = "bot-operateur"
+version = "3.0.0"
+description = "Bot d'automatisation pour Opérateur 112"
+requires-python = ">=3.12"
+dependencies = [
+    "playwright==1.58.0",
+    "pydantic==2.12.5",
+    "loguru==0.7.3",
+    "python-dotenv==1.2.1",
+    "psutil==7.2.2",
+]
+
+[project.scripts]
+bot-operateur = "main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
