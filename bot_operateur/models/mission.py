@@ -89,11 +89,7 @@ class Mission(BaseModel):
         # Seulement si des patients n'ont pas déjà d'exigences AMBULANCE spécifiques
         patients_without_ambulance_need = self.patient_count - patient_needs_count
         if patients_without_ambulance_need > 0:
-            ambulance_needed = max(
-                requirements.get("AMBULANCE", 0),
-                requirements.get("AMBULANCE", 0) + patients_without_ambulance_need
-            )
-            requirements["AMBULANCE"] = ambulance_needed
+            requirements["AMBULANCE"] = requirements.get("AMBULANCE", 0) + patients_without_ambulance_need
                     
         return requirements
 

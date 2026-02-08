@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
 from loguru import logger
 
@@ -461,7 +461,7 @@ class RequirementParser:
         
         return unique_alternatives
 
-    def analyze_mission_complexity(self, requirements: List[MissionRequirement]) -> Dict[str, any]:
+    def analyze_mission_complexity(self, requirements: List[MissionRequirement]) -> Dict[str, Any]:
         """Analyse la complexité d'une mission basée sur ses exigences"""
         if not requirements:
             return {"complexity": "simple", "score": 0, "categories": []}

@@ -186,37 +186,98 @@ class VehicleScraper:
     async def _scrape_closest_vehicles_from_table(self, table_selector: str) -> List[Vehicle]:
         """
         Extrait uniquement les véhicules visibles les plus proches.
-        
-        Récupère seulement les véhicules déjà affichés dans le tableau
-        sans déclencher le chargement des véhicules plus éloignés.
-        Cette approche optimise les performances en priorisant la proximité.
-        
+
+        Utilise page.evaluate() pour extraire toutes les données en une seule
+        exécution JavaScript, évitant des centaines de round-trips DOM.
+
         Args:
             table_selector: Sélecteur CSS du tableau de véhicules à analyser
-            
+
         Returns:
             List[Vehicle]: Liste des véhicules les plus proches disponibles
         """
         vehicles = []
-        
+
         try:
-            # Récupérer les lignes de véhicules visibles (les plus proches sont affichés en premier)
-            vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")
-            
-            logger.debug(f"Récupération de {len(vehicle_rows)} véhicules visibles (les plus proches)")
-            
-            for row in vehicle_rows:
-                try:
-                    vehicle = await self._extract_vehicle_from_row(row)
-                    if vehicle:
-                        vehicles.append(vehicle)
-                except (PlaywrightError, asyncio.TimeoutError) as e:
-                    logger.warning(f"Erreur lors de l'extraction d'un véhicule proche: {e}")
+            # Extraire toutes les données véhicules en un seul appel JS
+            raw_vehicles = await self.page.evaluate("""(tableSelector) => {
+                const rows = document.querySelectorAll(
+                    tableSelector + " tr[id^='vehicle_element_content_']"
+                );
+                return Array.from(rows).map(row => {
+                    const id = row.id.replace('vehicle_element_content_', '');
+                    const caption = row.getAttribute('vehicle_caption') || '';
+                    const checkbox = row.querySelector('.vehicle_checkbox');
+                    const isAvailable = checkbox ? !checkbox.disabled : false;
+
+                    // Fuel level
+                    let fuelLevel = 100;
+                    const fuelBar = row.querySelector('.progress-bar, .fuel-indicator');
+                    if (fuelBar) {
+                        const ariaValue = fuelBar.getAttribute('aria-valuenow');
+                        if (ariaValue) {
+                            fuelLevel = Math.round(parseFloat(ariaValue));
+                        } else {
+                            const style = fuelBar.getAttribute('style') || '';
+                            const match = style.match(/width:\\s*(\\d+)%/);
+                            if (match) fuelLevel = parseInt(match[1]);
+                        }
+                    }
+
+                    // Condition
+                    let condition = 'excellent';
+                    const badges = row.querySelectorAll('.badge, .label');
+                    const conditionMap = {
+                        'excellent': 'excellent', 'bon': 'good',
+                        'moyen': 'average', 'mauvais': 'poor',
+                        'maintenance': 'maintenance', 'réparation': 'repair'
+                    };
+                    for (const badge of badges) {
+                        const text = badge.innerText.toLowerCase().trim();
+                        for (const [key, value] of Object.entries(conditionMap)) {
+                            if (text.includes(key)) { condition = value; break; }
+                        }
+                    }
+
+                    // Location
+                    let location = null;
+                    const cells = row.querySelectorAll('td');
+                    for (const cell of cells) {
+                        const text = cell.innerText.trim();
+                        if (/^\\d{5}\\s+[A-Za-zÀ-ÿ\\s-]+/.test(text)) {
+                            location = text;
+                            break;
+                        }
+                    }
+
+                    return { id, caption, isAvailable, fuelLevel, condition, location };
+                });
+            }""", table_selector)
+
+            logger.debug(f"Récupération de {len(raw_vehicles)} véhicules visibles (les plus proches)")
+
+            for data in raw_vehicles:
+                caption = data.get('caption', '')
+                if not caption:
                     continue
-            
+                parts = caption.split()
+                if not parts:
+                    continue
+
+                vehicle = Vehicle(
+                    id=data['id'],
+                    caption=caption,
+                    type=parts[0],
+                    status=VehicleStatus.AVAILABLE if data['isAvailable'] else VehicleStatus.UNAVAILABLE,
+                    location=data.get('location'),
+                    fuel_level=data.get('fuelLevel', 100),
+                    condition=data.get('condition', 'excellent')
+                )
+                vehicles.append(vehicle)
+
         except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors du scraping des véhicules proches: {e}")
-        
+
         return vehicles
     
     async def _extract_vehicle_from_row(self, row) -> Optional[Vehicle]:

@@ -41,6 +41,9 @@ class Settings(BaseModel):
     mission_cooldown: int = Field(default=5, description="Cooldown entre missions (ultra-optimisé)")
     cycle_delay: int = Field(default=5, description="Délai entre cycles en mode continu (secondes)")
     
+    # Cache navigateur
+    cache_dir: str = Field(default="/tmp/browser_cache", description="Répertoire du cache navigateur")
+
     # Optimisation des déploiements
     vehicle_threshold: int = Field(default=3, description="DEPRECATED: Utiliser optimization_threshold et deployment_threshold")
     optimization_threshold: int = Field(default=3, description="Seuil pour privilégier un gros véhicule vs plusieurs petits")

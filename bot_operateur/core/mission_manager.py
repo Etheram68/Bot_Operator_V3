@@ -42,6 +42,7 @@ class MissionManager:
         }
 
         self.active_missions: List[Mission] = []
+        self._deployment_ready_missions: set = set()
 
     async def initialize(self):
         """Initialisation asynchrone - doit être appelée après la création"""
@@ -280,11 +281,10 @@ class MissionManager:
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             
             # Si on a déjà les détails de mission complets, pas besoin de re-naviguer
-            if not hasattr(mission, '_deployment_ready') or not mission._deployment_ready:
+            if mission.id not in self._deployment_ready_missions:
                 logger.debug(f"Navigation optimisée vers mission {mission.id}")
                 await self.browser_manager.navigate_to(mission_url, wait_for_load=True, fast_navigation=True)
-                # Marquer cette mission comme prête pour le déploiement
-                mission._deployment_ready = True
+                self._deployment_ready_missions.add(mission.id)
             else:
                 logger.debug(f"Réutilisation de la session existante pour mission {mission.id}")
             
