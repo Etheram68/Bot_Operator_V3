@@ -115,7 +115,7 @@ class MissionManager:
         logger.debug(f"Récupération des détails pour mission {mission.id}")
         
         try:
-            mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
+            mission_url = f"{self.settings.game_url}/missions/{mission.id}"
             await self.browser_manager.page.goto(mission_url)
             try:
                 await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
@@ -278,7 +278,7 @@ class MissionManager:
                 return True  # Retourner succès car mission accomplie n'est pas un échec
             
             # Navigation optimisée directe vers la page de déploiement (éviter 3 navigations redondantes)
-            mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
+            mission_url = f"{self.settings.game_url}/missions/{mission.id}"
             
             # Si on a déjà les détails de mission complets, pas besoin de re-naviguer
             if mission.id not in self._deployment_ready_missions:
@@ -307,11 +307,11 @@ class MissionManager:
                 logger.warning(f"⚠️ Erreur lors de l'enrichissement des besoins pour prisonniers: {e}")
 
             # Vérifier les véhicules manquants depuis l'alerte MÊME SI la stratégie ne trouve rien
+            alert_override_types = set()
+            constrained_vehicles = set()
+            constrained_alternatives = {}
             try:
                 missing_vehicles_needs = await self._extract_missing_vehicles_from_alert(mission)
-                
-                # Recouper les véhicules manquants avec les besoins existants
-                alert_override_types = set()
                 if missing_vehicles_needs:
                     logger.info(f"🚨   Besoins manquants (alerte): {missing_vehicles_needs}")
                     for vehicle_type, alert_quantity in missing_vehicles_needs.items():
@@ -355,15 +355,6 @@ class MissionManager:
                         if vehicle_key.endswith('_CONSTRAINED'):
                             real_vehicle_type = vehicle_key.replace('_CONSTRAINED', '')
                             constrained_vehicles.add(real_vehicle_type)
-                            
-                            # Trouver les alternatives pour ce véhicule depuis additional_vehicles_info
-                            if 'additional_vehicles_info' in locals():
-                                for vehicle_info in additional_vehicles_info:
-                                    if vehicle_info['primary'] == real_vehicle_type:
-                                        constrained_alternatives[real_vehicle_type] = vehicle_info['alternatives']
-                                        logger.debug(f"🔒 {real_vehicle_type} alternatives: {vehicle_info['alternatives']}")
-                                        break
-                            
                             logger.debug(f"🔒 Véhicule à contraintes: {real_vehicle_type}")
                     
                     if missing_vehicles_needs:
@@ -439,9 +430,9 @@ class MissionManager:
             
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
             # Passer alert_override_types et constrained_vehicles si définis
-            alert_override_types_to_pass = alert_override_types if 'alert_override_types' in locals() else set()
-            constrained_vehicles_to_pass = constrained_vehicles if 'constrained_vehicles' in locals() else set()
-            constrained_alternatives_to_pass = constrained_alternatives if 'constrained_alternatives' in locals() else {}
+            alert_override_types_to_pass = alert_override_types
+            constrained_vehicles_to_pass = constrained_vehicles
+            constrained_alternatives_to_pass = constrained_alternatives
             selected_count, missing_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission, alert_override_types_to_pass, constrained_vehicles_to_pass, constrained_alternatives_to_pass)
             
             if selected_count == -1:
@@ -511,7 +502,7 @@ class MissionManager:
             logger.info(f"🏁 Traitement sécurisé pour mission FINISHING {mission.id}")
 
             # Navigation vers la mission
-            mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
+            mission_url = f"{self.settings.game_url}/missions/{mission.id}"
             await self.browser_manager.navigate_to(mission_url, fast_navigation=True)
 
             # 🛡️ SÉCURISATION 1: Vérifier si la mission est terminée directement sur la page
@@ -900,7 +891,7 @@ class MissionManager:
                     logger.debug(f"{transport_emoji} Transport initial {i+1}/{len(transport_data)}: {text}")
 
                     # Naviguer directement vers l'URL du transport
-                    transport_url = f"https://www.operateur112.fr{href}" if href.startswith('/') else href
+                    transport_url = f"{self.settings.game_url}{href}" if href.startswith('/') else href
                     await self.browser_manager.page.goto(transport_url)
                     await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
 
@@ -938,7 +929,7 @@ class MissionManager:
                 logger.info(f"🚑 {transports_handled} transport(s) initial(aux) effectué(s) pour mission {mission.title} ({mission.id})")
 
                 # S'assurer qu'on est bien sur la page de mission pour la suite
-                mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
+                mission_url = f"{self.settings.game_url}/missions/{mission.id}"
                 await self.browser_manager.page.goto(mission_url)
                 await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
 

@@ -257,11 +257,11 @@ class MissingNeedsParser:
         
         finder_method = need_to_vehicle_mapping.get(need_type)
         if finder_method:
-            return await finder_method(need_type, needed_quantity)
+            return finder_method(need_type, needed_quantity)
         
         return None
     
-    async def _find_water_vehicle_with_fallback(self, need_type: str, water_needed_l: int) -> Dict:
+    def _find_water_vehicle_with_fallback(self, need_type: str, water_needed_l: int) -> Dict:
         """Trouve un véhicule pour besoins en eau avec alternatives."""
         
         # Ordre de priorité pour les véhicules d'eau
@@ -296,7 +296,7 @@ class MissingNeedsParser:
             'required_capacity': water_needed_l
         }
     
-    async def _find_pump_vehicle_with_fallback(self, need_type: str, pump_capacity: int) -> Dict:
+    def _find_pump_vehicle_with_fallback(self, need_type: str, pump_capacity: int) -> Dict:
         """Trouve un véhicule pour besoins en pompe avec alternatives."""
         
         # Véhicules avec capacité de pompe élevée
@@ -310,7 +310,7 @@ class MissingNeedsParser:
             'required_capacity': pump_capacity
         }
     
-    async def _find_personnel_vehicle_with_fallback(self, need_type: str, needed_quantity: int) -> Dict:
+    def _find_personnel_vehicle_with_fallback(self, need_type: str, needed_quantity: int) -> Dict:
         """Trouve un véhicule pour besoins en personnel avec alternatives."""
         
         personnel_mapping = {

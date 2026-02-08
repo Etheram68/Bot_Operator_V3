@@ -33,7 +33,7 @@ class MissionState(Enum):
 
 class MissionRequirement(BaseModel):
     vehicle_type: str = Field(description="Type de véhicule requis")
-    quantity: int = Field(description="Quantité requise")
+    quantity: int = Field(ge=1, description="Quantité requise")
     optional: bool = Field(default=False, description="Exigence optionnelle")
 
 
@@ -51,7 +51,7 @@ class Mission(BaseModel):
     
     # Patients
     patients: List[Patient] = Field(default_factory=list)
-    patient_count: int = Field(default=0, description="Nombre de patients")
+    patient_count: int = Field(default=0, ge=0, description="Nombre de patients")
     
     # Véhicules
     available_vehicles: List[Vehicle] = Field(default_factory=list)

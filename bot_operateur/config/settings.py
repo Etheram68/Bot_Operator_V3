@@ -16,12 +16,12 @@ class Settings(BaseModel):
     password: str = Field(description="Mot de passe")
     
     # Timeouts optimisés (en secondes)
-    page_load_timeout: int = Field(default=15, description="Timeout de chargement de page (réduit pour performance)")
-    element_wait_timeout: int = Field(default=5, description="Timeout d'attente d'élément standard")
-    fast_timeout: int = Field(default=3, description="Timeout rapide pour éléments qui doivent être présents")
-    slow_timeout: int = Field(default=12, description="Timeout lent pour opérations complexes uniquement")
-    retry_delay: float = Field(default=0.5, description="Délai entre les tentatives (ultra-optimisé)")
-    max_retries: int = Field(default=1, description="Nombre maximum de tentatives (réduit pour vitesse)")
+    page_load_timeout: int = Field(default=15, gt=0, description="Timeout de chargement de page (réduit pour performance)")
+    element_wait_timeout: int = Field(default=5, gt=0, description="Timeout d'attente d'élément standard")
+    fast_timeout: int = Field(default=3, gt=0, description="Timeout rapide pour éléments qui doivent être présents")
+    slow_timeout: int = Field(default=12, gt=0, description="Timeout lent pour opérations complexes uniquement")
+    retry_delay: float = Field(default=0.5, gt=0, description="Délai entre les tentatives (ultra-optimisé)")
+    max_retries: int = Field(default=1, ge=0, description="Nombre maximum de tentatives (réduit pour vitesse)")
     
     # Logging
     log_level: str = Field(default="INFO", description="Niveau de logging")
