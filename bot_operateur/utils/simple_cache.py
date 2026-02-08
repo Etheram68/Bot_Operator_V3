@@ -61,25 +61,6 @@ class SimpleCache:
                 del self._cache[key]
             logger.info(f"🗑️ Cache vidé pour pattern '{pattern}' ({len(keys_to_remove)} entrées)")
 
-    def size(self) -> int:
-        """Retourne le nombre d'entrées en cache"""
-        return len(self._cache)
-
-    def cleanup_expired(self) -> int:
-        """Nettoie les entrées expirées et retourne le nombre supprimé"""
-        current_time = time.time()
-        expired_keys = [
-            key for key, entry in self._cache.items()
-            if current_time > entry['expires_at']
-        ]
-
-        for key in expired_keys:
-            del self._cache[key]
-
-        if expired_keys:
-            logger.debug(f"🧹 Nettoyage cache: {len(expired_keys)} entrées expirées supprimées")
-
-        return len(expired_keys)
 
 
 # Instance globale du cache

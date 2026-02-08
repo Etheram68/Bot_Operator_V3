@@ -110,14 +110,5 @@ def suggest_mapping(pattern: str) -> str:
     
     return "À analyser manuellement"
 
-def create_sample_json_entry(pattern: str, vehicle_type: str):
-    """Crée un exemple d'entrée JSON pour les fichiers de mapping."""
-    
-    return {
-        "pattern": f"r'(\\d+)\\s*{pattern.lower()}[s]?'",
-        "vehicle_type": vehicle_type,
-        "note": f"Pattern ajouté depuis l'analyse automatique: '{pattern}'"
-    }
-
 if __name__ == "__main__":
     analyze_patterns()

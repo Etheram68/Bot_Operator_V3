@@ -42,38 +42,6 @@ class ConfigurationError(BotOperateurException):
     pass
 
 
-def handle_playwright_exceptions(func):
-    """
-    Décorateur pour standardiser la gestion des exceptions Playwright.
-    
-    Convertit les exceptions Playwright communes en exceptions personnalisées
-    plus explicites.
-    """
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except PlaywrightTimeoutError as e:
-            # Extraire le sélecteur du message d'erreur si possible
-            selector = "inconnu"
-            if "selector" in str(e).lower():
-                # Tentative d'extraction basique du sélecteur
-                import re
-                match = re.search(r'"([^"]*)"', str(e))
-                if match:
-                    selector = match.group(1)
-            raise ElementNotFoundError(selector)
-        except asyncio.TimeoutError:
-            raise ElementNotFoundError("timeout générique")
-        except Exception as e:
-            # Re-lever les exceptions personnalisées
-            if isinstance(e, BotOperateurException):
-                raise
-            # Convertir les autres exceptions
-            raise BotOperateurException(f"Erreur inattendue: {str(e)}") from e
-    
-    return wrapper
-
-
 def log_exception_context(logger, operation: str, exception: Exception, 
                          selector: Optional[str] = None, 
                          additional_context: Optional[dict] = None):

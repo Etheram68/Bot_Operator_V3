@@ -8,7 +8,6 @@ from playwright._impl._errors import Error as PlaywrightError
 from ..models.mission import Mission, MissionStatus
 from ..scrapers.mission_scraper import MissionScraper
 from ..scrapers.vehicle_scraper import VehicleScraper
-from ..strategies.base_strategy import BaseStrategy
 from ..strategies.smart_strategy import SmartStrategy
 from ..strategies.smart_strategy_optimized import SmartStrategyOptimized
 from ..core.browser_manager import BrowserManager
@@ -394,8 +393,6 @@ class MissionManager:
                 logger.info("🚑 Mission de transport de patient détectée - utilisation des ambulances privées")
                 # Remplacer le mapping AMBULANCE par AMBULANCE_TRANSPORT
                 if "AMBULANCE" in alternatives_mapping:
-                    # Sauvegarder le mapping original et le remplacer
-                    original_ambulance_mapping = alternatives_mapping["AMBULANCE"]
                     if "AMBULANCE_TRANSPORT" in alternatives_mapping:
                         alternatives_mapping["AMBULANCE"] = alternatives_mapping["AMBULANCE_TRANSPORT"]
                         logger.debug(f"Mapping AMBULANCE remplacé par AMBULANCE_TRANSPORT: {alternatives_mapping['AMBULANCE']}")

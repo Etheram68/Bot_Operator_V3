@@ -175,27 +175,6 @@ class SmartStrategyOptimized(BaseStrategy):
             "CARS_POLICE": ["VL-POLICE"],
         }
 
-    def get_strategy_stats(self) -> Dict:
-        """Retourne les statistiques de performance de la stratégie"""
-
-        optimizer_stats = self.vehicle_optimizer.get_cache_stats()
-
-        return {
-            "strategy_name": self.name,
-            "vehicle_optimizer": optimizer_stats,
-            "total_optimizations": "smart_logic + vehicle_selection + caching"
-        }
-
-    def set_vehicle_scraper(self, vehicle_scraper):
-        """
-        Injecte le vehicle_scraper pour permettre la vérification des véhicules déployés.
-
-        Args:
-            vehicle_scraper: Instance de VehicleScraper du mission_manager
-        """
-        self._vehicle_scraper = vehicle_scraper
-        logger.debug("✅ Vehicle scraper injecté dans smart_optimized")
-
     def _add_support_vehicles_by_complexity(self, mission: Mission, current_selection: List[Vehicle], vehicles_by_type: Dict[str, List[Vehicle]], complexity: Dict) -> List[Vehicle]:
         """Ajoute des véhicules de support selon la complexité."""
         support_vehicles = []
@@ -289,7 +268,3 @@ class SmartStrategyOptimized(BaseStrategy):
         logger.info(f"⏱️ can_handle_mission OK after {processing_time:.2f}s for {len(mission.requirements)} requirements")
         return True
 
-    def clear_caches(self) -> None:
-        """Vide tous les caches pour forcer le recalcul"""
-        self.vehicle_optimizer.clear_cache()
-        logger.info("🗑️ Caches de stratégie vidés")

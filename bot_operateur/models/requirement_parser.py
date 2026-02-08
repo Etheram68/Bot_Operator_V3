@@ -171,20 +171,6 @@ class RequirementParser:
 
         return optimized
 
-    def reload_patterns(self, needs_labels_path: str = None):
-        """Recharge les patterns depuis le fichier JSON (utile pour les mises à jour à chaud)"""
-        logger.info("🔄 Rechargement des patterns de véhicules...")
-
-        # Recharger les données depuis le fichier
-        self.needs_labels = self._load_needs_labels(needs_labels_path)
-
-        # Vider le cache des patterns compilés
-        self._compiled_patterns_cache = None
-
-        # Recompiler les patterns
-        _ = self.compiled_patterns
-
-        logger.success(f"✅ Patterns rechargés avec succès - {len(self.compiled_patterns)} types disponibles")
 
     @classmethod
     def clear_singleton(cls):

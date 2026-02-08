@@ -4,6 +4,7 @@ Extrait et analyse les véhicules/ressources manquants.
 """
 import asyncio
 import re
+import time
 from typing import Dict, List, Optional, TYPE_CHECKING
 from loguru import logger
 from playwright._impl._errors import Error as PlaywrightError
@@ -347,7 +348,7 @@ class MissingNeedsParser:
                 "pattern": pattern,
                 "mission_id": mission.id,
                 "mission_type": mission.type.value if mission.type else "unknown",
-                "timestamp": str(logger._core.min_level)  # Simple timestamp
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
             }
             
             # Ajouter au fichier JSONL

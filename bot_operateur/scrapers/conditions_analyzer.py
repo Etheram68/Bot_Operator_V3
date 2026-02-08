@@ -1,11 +1,10 @@
 import asyncio
 import re
 import json
-from typing import List, Dict, Set, Optional, Tuple
+from typing import List, Dict, Optional
 from playwright.async_api import Page
 from playwright._impl._errors import Error as PlaywrightError
 from loguru import logger
-from pathlib import Path
 
 from ..utils.dom_utils import DOMUtils
 
@@ -16,8 +15,6 @@ class ConditionsAnalyzer:
     def __init__(self, page: Page):
         self.page = page
         self.dom_utils = DOMUtils(page)
-        self.discovered_patterns = set()
-        self.discovered_vehicles = set()
         
     async def analyze_mission_conditions(self, mission_id: str) -> Dict:
         """Analyse les conditions de réalisation d'une mission et extrait de nouveaux patterns"""
@@ -139,7 +136,6 @@ class ConditionsAnalyzer:
                                 'context': self._extract_context_around_match(page_text, match)
                             }
                             new_patterns.append(pattern_data)
-                            self.discovered_patterns.add(normalized_type)
                             
         except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la découverte de nouveaux patterns: {e}")
@@ -176,7 +172,6 @@ class ConditionsAnalyzer:
                             'frequency': page_text.lower().count(normalized_name.lower())
                         }
                         vehicle_mentions.append(mention)
-                        self.discovered_vehicles.add(normalized_name)
                         
         except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.error(f"Erreur lors de la découverte de véhicules: {e}")

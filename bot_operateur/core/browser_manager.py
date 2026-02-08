@@ -80,7 +80,6 @@ class BrowserManager:
             if storage_file.exists():
                 try:
                     import json
-                    from datetime import datetime
 
                     with open(storage_file, 'r') as f:
                         storage_data = json.load(f)

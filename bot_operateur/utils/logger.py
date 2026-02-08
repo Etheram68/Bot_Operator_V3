@@ -48,10 +48,3 @@ def setup_logger(settings: Settings) -> None:
     logger.info(f"Logger configuré - Niveau: {log_config['level']}")
     if settings.log_file:
         logger.info(f"Logs sauvegardés dans: {settings.log_file}")
-
-
-def get_logger(name: str = None):
-    """Retourne un logger avec un nom spécifique"""
-    if name:
-        return logger.bind(name=name)
-    return logger

@@ -7,7 +7,6 @@ from typing import List, Dict, Optional, TYPE_CHECKING
 from loguru import logger
 from playwright._impl._errors import Error as PlaywrightError
 
-from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS
 from ..utils.exceptions import ExceptionContext
 
 if TYPE_CHECKING:

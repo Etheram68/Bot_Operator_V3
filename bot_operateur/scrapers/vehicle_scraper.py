@@ -183,36 +183,6 @@ class VehicleScraper:
         except (PlaywrightError, asyncio.TimeoutError) as e:
             logger.warning(f"Erreur lors du chargement des véhicules manquants: {e}")
     
-    async def _scrape_vehicles_from_table(self) -> List[Vehicle]:
-        """
-        Extrait tous les véhicules depuis le tableau principal.
-        
-        Analyse toutes les lignes du tableau des véhicules disponibles
-        et extrait leurs informations complètes.
-        
-        Returns:
-            List[Vehicle]: Liste complète des véhicules extraits du tableau
-        """
-        vehicles = []
-        
-        try:
-            # Récupérer toutes les lignes de véhicules
-            vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-            
-            for row in vehicle_rows:
-                try:
-                    vehicle = await self._extract_vehicle_from_row(row)
-                    if vehicle:
-                        vehicles.append(vehicle)
-                except (PlaywrightError, asyncio.TimeoutError) as e:
-                    logger.warning(f"Erreur lors de l'extraction d'un véhicule: {e}")
-                    continue
-            
-        except (PlaywrightError, asyncio.TimeoutError) as e:
-            logger.error(f"Erreur lors du scraping du tableau des véhicules: {e}")
-        
-        return vehicles
-    
     async def _scrape_closest_vehicles_from_table(self, table_selector: str) -> List[Vehicle]:
         """
         Extrait uniquement les véhicules visibles les plus proches.

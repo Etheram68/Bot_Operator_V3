@@ -11,7 +11,7 @@ from ..models.patient import Patient, PatientSeverity
 from ..models.requirement_parser import RequirementParser
 from ..utils.dom_utils import DOMUtils
 from ..utils.text_utils import extract_number_from_text
-from ..utils.exceptions import ExceptionContext, MissionParsingError, handle_playwright_exceptions
+from ..utils.exceptions import ExceptionContext, MissionParsingError
 from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS, SELECTORS
 from ..utils.simple_cache import cache_result
 from .conditions_analyzer import ConditionsAnalyzer
@@ -165,13 +165,6 @@ class MissionScraper:
             logger.error(f"Erreur lors de l'extraction de la mission: {e}")
             return None
     
-    def _extract_location_from_title(self, title: str) -> Optional[str]:
-        """Extrait la localisation du titre de la mission (méthode legacy)"""
-        # Pattern pour extraire le code postal et la ville
-        pattern = r'(\d{5}\s+[A-Za-zÀ-ÿ\s-]+)$'
-        match = re.search(pattern, title)
-        return match.group(1) if match else None
-    
     def _extract_location_from_search_attribute(self, search_attribute: str, caption: str) -> Optional[str]:
         """Extrait la localisation en soustrayant le caption du search_attribute"""
         if not search_attribute or not caption:
@@ -300,94 +293,6 @@ class MissionScraper:
             logger.error(f"Erreur lors du scraping des patients: {e}")
         
         return patients
-    
-    async def _scrape_patients_from_help_page(self) -> List[Patient]:
-        """Scrape les informations des patients depuis la page d'aide/conditions"""
-        patients = []
-        
-        try:
-            # Chercher des informations sur les patients dans le texte de la page
-            page_text = await self.page.inner_text("body")
-            
-            # Extraire le nombre de patients depuis le texte
-            patient_count = self._extract_patient_count_from_text(page_text)
-            
-            # Chercher des indications spéciales pour les patients
-            special_needs = self._extract_patient_special_needs_from_text(page_text)
-            
-            # Créer des patients selon les informations trouvées
-            for i in range(patient_count):
-                patient = Patient(
-                    id=str(i),
-                    severity=PatientSeverity.MODERATE,  # Par défaut
-                    needs=special_needs if special_needs else ["AMBULANCE"]
-                )
-                patients.append(patient)
-            
-            
-        except (PlaywrightError, asyncio.TimeoutError) as e:
-            logger.error(f"Erreur lors du scraping des patients depuis la page d'aide: {e}")
-        
-        return patients
-    
-    def _extract_patient_count_from_text(self, text: str) -> int:
-        """Extrait le nombre de patients depuis le texte de la page"""
-        # Patterns pour trouver le nombre de patients
-        patterns = [
-            r'(\d+)\s+patients?',
-            r'(\d+)\s+blessés?',
-            r'(\d+)\s+victimes?',
-            r'(\d+)\s+personnes?\s+(?:blessées?|impliquées?)',
-            r'Patients?\s*:\s*(\d+)',
-            r'Victimes?\s*:\s*(\d+)',
-        ]
-        
-        for pattern in patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                return int(match.group(1))
-        
-        # Si aucun pattern ne correspond, regarder s'il y a mention d'ambulances
-        ambulance_matches = re.findall(r'(\d+)\s+ambulances?', text, re.IGNORECASE)
-        if ambulance_matches:
-            # Le nombre d'ambulances peut indiquer le nombre de patients
-            return int(ambulance_matches[0])
-        
-        return 0
-    
-    def _extract_patient_special_needs_from_text(self, text: str) -> List[str]:
-        """Extrait les besoins spéciaux des patients depuis le texte"""
-        needs = []
-        text_lower = text.lower()
-        
-        # Mapping des mots-clés vers les besoins
-        need_keywords = {
-            'hélicoptère': "HELICOPTER",
-            'helicoptere': "HELICOPTER",
-            'dragon': "HELICOPTER",
-            'samu': "HELICOPTER",
-            'réanimation': "INTENSIVE_CARE",
-            'soins intensifs': "INTENSIVE_CARE",
-            'brûlé': "BURN_UNIT",
-            'brule': "BURN_UNIT",
-            'grands brûlés': "BURN_UNIT",
-            'pédiatrie': "PEDIATRIC",
-            'pediatrie': "PEDIATRIC",
-            'enfant': "PEDIATRIC",
-            'directeur des secours': "RESCUE_DIRECTOR",
-        }
-        
-        for keyword, need in need_keywords.items():
-            if keyword in text_lower and need not in needs:
-                needs.append(need)
-        
-        # Toujours inclure ambulance de base si aucun besoin spécial
-        if not needs:
-            needs.append("AMBULANCE")
-        elif "AMBULANCE" not in needs:
-            needs.insert(0, "AMBULANCE")  # Ambulance en premier
-        
-        return needs
     
     async def _extract_requirements_text_from_columns(self) -> str:
         """Extrait le texte des besoins uniquement depuis la seconde colonne col-md-4"""
