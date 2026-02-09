@@ -309,6 +309,10 @@
       "FORTRESS_200": {
         "primary": ["Fortress"],
         "secondary": []
+      },
+      "SA_330_PUMA": {
+        "primary": ["SA-330"],
+        "secondary": []
       }
     },
 

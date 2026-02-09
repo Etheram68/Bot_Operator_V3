@@ -178,8 +178,12 @@
       "\\d+\\s+Sherpa\\s+Light\\s+APC"
     ],
     "FORTRESS_200": [
-      "(?i)(?<=fortress\\s)200\\s*(requis)?",
-      "(?i)(?:([0-9]+)\\s+)?fortress\\s+200(?!\\s*[0-9])"
+      "(?<=fortress\\s)200\\s*(requis)?",
+      "([0-9]+\\s+)?fortress\\s+200(?!\\s*[0-9])"
+    ],
+    "SA_330_PUMA": [
+      "Requis SA 330 PUMA",
+      "([0-9]+\\s+)?SA\\s+330\\s+PUMA"
     ],
     "CHOUCAS": [
       "Soutien aérien FAG requis",
@@ -188,10 +192,11 @@
       "hélicoptères? gendarmerie"
     ],
     "DRAGON": [
-      "(?i)\\bDRAGON\\b",
-      "(?i)\\bh[ée]licopt[èe]res\\b(?!.*(?:n[ée]cessaires?|requis))",
-      "(?i)soutien\\s+a[ée]rien(?!\\s*FAG)"
-    ],
+      "\\bDRAGON\\b",
+      "\\bh[ée]licopt[èe]res\\b(?!.*(?:n[ée]cessaires?|requis))",
+      "soutien\\s+a[ée]rien(?!\\s*FAG)"
+    ]
+    ,
     "HELICOPTER": [
       "Hélicoptères?(?!.*bombardiers).*(nécessaires?|requis)",
       "helicoptere"
