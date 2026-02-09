@@ -169,16 +169,28 @@
       "\\d+\\s+équipes?\\s+d['’ ]intervention\\s+rapides?",
       "équipes?\\s+d['’ ]intervention\\s+rapides?"
     ],
-    "DRAGON": [
-      "\\bDRAGON\\b",
-      "\\bhélicoptères\\b(?!.*nécessaires?|.*requis)",
-      "soutien aérien(?! FAG)"
+    "VDN": [
+      "\\bVDN\\b\\s*(requis)?",
+      "\\d+\\s+VDN"
+    ],
+    "SHERPA_LIGHT_APC": [
+      "\\bSherpa\\s+Light\\s+APC\\b\\s*(requis)?",
+      "\\d+\\s+Sherpa\\s+Light\\s+APC"
+    ],
+    "FORTRESS_200": [
+      "(?i)(?<=fortress\\s)200\\s*(requis)?",
+      "(?i)(?:([0-9]+)\\s+)?fortress\\s+200(?!\\s*[0-9])"
     ],
     "CHOUCAS": [
       "Soutien aérien FAG requis",
       "\\d+\\s+soutiens? aériens? FAG",
       "CHOUCAS",
       "hélicoptères? gendarmerie"
+    ],
+    "DRAGON": [
+      "(?i)\\bDRAGON\\b",
+      "(?i)\\bh[ée]licopt[èe]res\\b(?!.*(?:n[ée]cessaires?|requis))",
+      "(?i)soutien\\s+a[ée]rien(?!\\s*FAG)"
     ],
     "HELICOPTER": [
       "Hélicoptères?(?!.*bombardiers).*(nécessaires?|requis)",
@@ -188,16 +200,16 @@
       "Grands avions bombardiers d['’ ]eau nécessaire",
       "\\d+\\s+Gros avion bombardier d['’ ]eau"
     ],
+    "HBE": [
+      "Hélicoptères bombardiers d['’ ]eau nécessaire",
+      "\\d+\\s+Hélicoptères bombardiers d['’ ]eau"
+    ],
     "PELICAN": [
       "Pélican nécessaire",
       "\\d+\\s+bombardier d['’ ]eau",
       "\\d+\\s+avions?\\s+bombardiers?\\s+d['’ ]eau",
       "avions?\\s+bombardiers?\\s+d['’ ]eau",
       "bombardiers?\\s+d['’ ]eau"
-    ],
-    "HBE": [
-      "Hélicoptères bombardiers d['’ ]eau nécessaire",
-      "\\d+\\s+Hélicoptères bombardiers d['’ ]eau"
     ],
     "FPT_BEA": ["Fourgons d['’ ]incendie ou moyens elévateur aérien"],
     "FPT_VIM": [

@@ -297,6 +297,18 @@
       "VB_CONSTRAINED": {
         "primary": ["VB"],
         "secondary": []
+      },
+      "VDN": {
+        "primary": ["VDN"],
+        "secondary": []
+      },
+      "SHERPA_LIGHT_APC": {
+        "primary": ["Sherpa"],
+        "secondary": []
+      },
+      "FORTRESS_200": {
+        "primary": ["Fortress"],
+        "secondary": []
       }
     },
 
