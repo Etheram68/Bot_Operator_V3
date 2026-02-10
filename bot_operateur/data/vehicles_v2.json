@@ -180,6 +180,10 @@
         "primary": ["CESR"],
         "secondary": []
       },
+      "CESD": {
+        "primary": ["CESD"],
+        "secondary": []
+      },
       "RMV": {
         "primary": ["RMV"],
         "secondary": []
@@ -236,7 +240,7 @@
         "secondary": []
       },
       "MOTOPOMPES": {
-        "primary": ["FDGP", "RLC"],
+        "primary": ["FDGP", "RLC", "MAI", "UPM"],
         "secondary": ["CEEP"]
       },
       "CAMION_DEVIDOIRS": {

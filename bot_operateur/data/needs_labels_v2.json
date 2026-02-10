@@ -124,6 +124,10 @@
     "CEDEPOL": ["Requis CEDEPOL", "CEDEPOL"],
     "CETRAN": ["Requis CETRAN", "CETRAN"],
     "CEFSP": ["Requis CEFSP", "CEFSP"],
+    "CESD": [
+      "Cellule de Sauvetage et déblaiement requis",
+      "Cellule de sauvetage et déblaiement"
+    ],
     "RMV": ["Requis RMV", "RMV"],
     "RMP": ["Requis RMP", "RMP"],
     "CESR": ["Requis CESR", "CESR"],
@@ -169,10 +173,7 @@
       "\\d+\\s+équipes?\\s+d['’ ]intervention\\s+rapides?",
       "équipes?\\s+d['’ ]intervention\\s+rapides?"
     ],
-    "VDN": [
-      "\\bVDN\\b\\s*(requis)?",
-      "\\d+\\s+VDN"
-    ],
+    "VDN": ["\\bVDN\\b\\s*(requis)?", "\\d+\\s+VDN"],
     "SHERPA_LIGHT_APC": [
       "\\bSherpa\\s+Light\\s+APC\\b\\s*(requis)?",
       "\\d+\\s+Sherpa\\s+Light\\s+APC"
@@ -181,10 +182,7 @@
       "(?<=fortress\\s)200\\s*(requis)?",
       "([0-9]+\\s+)?fortress\\s+200(?!\\s*[0-9])"
     ],
-    "SA_330_PUMA": [
-      "Requis SA 330 PUMA",
-      "([0-9]+\\s+)?SA\\s+330\\s+PUMA"
-    ],
+    "SA_330_PUMA": ["Requis SA 330 PUMA", "([0-9]+\\s+)?SA\\s+330\\s+PUMA"],
     "CHOUCAS": [
       "Soutien aérien FAG requis",
       "\\d+\\s+soutiens? aériens? FAG",
@@ -195,8 +193,7 @@
       "\\bDRAGON\\b",
       "\\bh[ée]licopt[èe]res\\b(?!.*(?:n[ée]cessaires?|requis))",
       "soutien\\s+a[ée]rien(?!\\s*FAG)"
-    ]
-    ,
+    ],
     "HELICOPTER": [
       "Hélicoptères?(?!.*bombardiers).*(nécessaires?|requis)",
       "helicoptere"
