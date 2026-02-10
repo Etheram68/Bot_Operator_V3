@@ -1,132 +1,177 @@
 {
-  "_schema_version": "2.0",
+  "_schema_version": "2.1",
   "_description": "Mapping des labels de besoins en véhicules depuis les missions vers les types internes",
-  "_last_updated": "2025-09-17",
+  "_last_updated": "2026-02-10",
   "_organization": "Fichier organisé par catégories: Médical, Commandement, Incendie, Police, Aérien, Combinaisons, Ressources, Probabilités",
   "vehicle_requirements": {
     "AMBULANCE": [
       "Ambulances? requises?",
       "ambulances? nécessaires?",
       "(?<!s )Ambulance(?!s)",
-      "ambulances"
+      "ambulances",
+      "\\d+\\s+[Aa]mbulances?"
     ],
-    "AMBULANCE_TRANSPORT": ["Transport médical requis", "transport sanitaire"],
+    "AMBULANCE_TRANSPORT": [
+      "Transport médical requis",
+      "transport sanitaire",
+      "\\d+\\s+[Tt]ransports? médicaux?"
+    ],
     "VAR": [
       "Assistance respiratoire requise",
-      "\\bVAR\\b(?!_PROBABILITY)",
-      "assistance ventilatoire"
+      "\\bVAR\\b",
+      "assistance ventilatoire",
+      "\\d+\\s+VAR"
     ],
-    "BLS": ["BLS requis", "\\bBLS\\b(?!\\s+ou\\s+CSL)(?!_PROBABILITY)"],
-    "VPL": ["VPL requis", "\\bVPL\\b(?!_PROBABILITY)"],
+    "BLS": ["BLS requis", "\\bBLS\\b(?!\\s+ou\\s+CSL)", "\\d+\\s+BLS"],
+    "VPL": ["VPL requis", "\\bVPL\\b", "\\d+\\s+VPL"],
     "BLS_CSL": ["BLS.{0,10}CSL", "BLS\\s+ou\\s+CSL"],
     "RESCUE_DIRECTOR": [
       "(?<!Chances qu['’ ]un )Directeur des [Ss]ecours [Mm]édicaux?(?! soit requis)",
       "DSM requis",
       "directeur secours",
-      "chef intervention"
+      "chef intervention",
+      "\\d+\\s+[Dd]irecteurs? des [Ss]ecours"
     ],
-    "PCDSM": ["PC DSM nécessaires?", "poste de commandement.{0,20}DSM"],
+    "PCDSM": [
+      "PC DSM nécessaires?",
+      "poste de commandement.{0,20}DSM",
+      "\\d+\\s+PC DSM"
+    ],
     "CHEF_DE_GROUPE": [
       "Chefs? de groupes?(?! ou VLHR)\\s*\\s*.*?\\s*requis",
       "Chefs? de groupes? ou VLHR requis",
-      "Chef de groupe"
+      "Chef de groupe",
+      "\\d+\\s+[Cc]hefs? de groupes?"
     ],
     "VPC": [
       "Véhicules?\\s+postes?\\s+de\\s+commandements?\\s*(requis)?",
       "\\bVPC\\s+(requis|n[éeÉE]cessaires?)\\b",
       "postes?\\s+de\\s+commandements?\\s+(requis|nécessaires?)",
       "postes? de commandements?",
-      "véhicules? postes?"
+      "véhicules? postes?",
+      "\\d+\\s+VPC"
     ],
     "VLHR": [
       "(?<!groupe ou )VLHR requis",
       "VLHR requis",
       "(?<!ou )VLHR nécessaires?",
-      "véhicules? liaisons? hors route"
+      "véhicules? liaisons? hors route",
+      "\\d+\\s+VLHR"
     ],
     "FPT": [
       "\\b[Ff]ourgons?\\s+d['’ ]incendies?\\s*(requis)?\\b",
       "\\b[Ff]ourgons?\\s+d['’ ]incendie\\s*(requis)?\\b",
       "\\b\\d+[^\\n]*[Ff]ourgons?\\s+d['’ ]incendies?\\b",
-      "\\bFPT\\s*(requis)?\\b"
+      "\\bFPT\\s*(requis)?\\b",
+      "\\d+\\s+[Ff]ourgons?\\s+d['’ ]incendies?"
     ],
-    "CCF": ["CCF\\s*(requis)?", "camions?[\\s-]*citernes?[\\s-]*feux"],
+    "CCF": [
+      "CCF\\s*(requis)?",
+      "camions?[\\s-]*citernes?[\\s-]*feux",
+      "\\d+\\s+CCF"
+    ],
     "CITERNE": [
       "Camions?-citernes? requis",
       "citernes? nécessaires?",
       "véhicules? citernes?",
-      "(?<!Chances qu['’ ]un )camion-citerne(?! soit requis)"
+      "(?<!Chances qu['’ ]un )camion-citerne(?! soit requis)",
+      "\\d+\\s+[Cc]amions?-citernes?"
     ],
     "BEA": [
       "Moyens? [ÉEé]lévateurs? [Aa]ériens? requis",
       "BEA requis",
       "échelle aérienne",
       "[éeÉE]chelles? a[éeÉE]riennes?",
-      "moyens [éeÉE]l[éeÉE]vateurs"
+      "moyens [éeÉE]l[éeÉE]vateurs",
+      "\\d+\\s+BEA"
     ],
     "MAH": [
       "Moyen d['’ ]Accès en Hauteur requis",
-      "Moyens? d['’][Aa]ccès en [Hh]auteur",
-      "\\bMAH\\b(?!_PROBABILITY)",
-      "accès en hauteur"
+      "Moyens? d['][Aa]ccès en [Hh]auteur",
+      "\\bMAH\\b",
+      "accès en hauteur",
+      "\\d+\\s+MAH"
     ],
     "VIMP": [
       "Spécialistes\\s+IMP\\s*(requis)?",
       "VIMP",
-      "intervention\\s+milieu\\s+périlleux"
+      "intervention\\s+milieu\\s+périlleux",
+      "\\d+\\s+VIMP",
+      "\\d+\\s+[Ss]pécialistes?\\s+IMP"
     ],
-    "VGRIMP": ["VGRIMP", "groupe\\s+d'intervention.{0,20}milieu\\s+périlleux"],
+    "VGRIMP": [
+      "VGRIMP",
+      "groupe\\s+d'intervention.{0,20}milieu\\s+périlleux",
+      "\\d+\\s+VGRIMP"
+    ],
     "VIRT": [
       "Véhicules?\\s+risques?\\s+technologiques?\\s+requis",
-      "\\bVIRT\\b(?!_PROBABILITY)"
+      "\\bVIRT\\b",
+      "\\d+\\s+VIRT"
     ],
-    "VTU": ["VTU\\s*(requis)?", "véhicules?\\s+tout\\s+usage"],
+    "VTU": ["VTU\\s*(requis)?", "véhicules?\\s+tout\\s+usage", "\\d+\\s+VTU"],
     "VSR": [
       "Véhicules?\\s+de\\s+secours\\s+routiers?\\s*(requis)?",
       "\\bVSR\\b",
-      "secours\\s+routiers?\\s+(requis|nécessaires?)"
+      "secours\\s+routiers?\\s+(requis|nécessaires?)",
+      "\\d+\\s+VSR"
     ],
     "FMOGP": [
       "FMOGP nécessaires?",
       "fourgons? moyens généraux",
-      "\\bFMOGP\\b(?!_PROBABILITY)"
+      "\\bFMOGP\\b",
+      "\\d+\\s+FMOGP"
     ],
-    "MOTOPOMPES": ["Motopompes nécessaires?", "motopompes?"],
-    "CAMION_DEVIDOIRS": ["Camions? dévidoirs nécessaires?", "dévidoirs?"],
-    "VIM": ["VIM requis", "VIM"],
-    "VSA": ["VSA requis", "VSA"],
-    "VIRP": ["VIRP requis", "VIRP"],
-    "VLCM": ["VLCM requis", "VLCM"],
+    "MOTOPOMPES": [
+      "Motopompes nécessaires?",
+      "motopompes?",
+      "\\d+\\s+[Mm]otopompes?"
+    ],
+    "CAMION_DEVIDOIRS": [
+      "Camions? dévidoirs nécessaires?",
+      "dévidoirs?",
+      "\\d+\\s+[Cc]amions? dévidoirs"
+    ],
+    "VIM": ["VIM requis", "VIM", "\\d+\\s+VIM"],
+    "VSA": ["VSA requis", "VSA", "\\d+\\s+VSA"],
+    "VIRP": ["VIRP requis", "VIRP", "\\d+\\s+VIRP"],
+    "VLCM": ["VLCM requis", "VLCM", "\\d+\\s+VLCM"],
     "BP": [
       "Barres?-ponts? nécessaires?",
       "ReBP",
       "remorques? barres? pont",
-      "\\bBarres?-ponts?\\b(?!_PROBABILITY)",
+      "\\bBarres?-ponts?\\b",
       "\\d+[ \\t]+Barres?-ponts?",
       "\\d+[ \\t]+Barre-pont"
     ],
     "ELE": [
       "ELE nécessaires?",
       "éclairages? mobiles?",
-      "\\bELE\\b(?!_PROBABILITY)",
-      "[éeÉE]clairages? mobiles?"
+      "\\bELE\\b",
+      "[éeÉE]clairages? mobiles?",
+      "\\d+\\s+ELE"
     ],
-    "RLC": ["RLC", "Requis RLC"],
-    "CEEP": ["Cellule épuisement nécessaire", "Cellule épuisement"],
-    "CEEM": ["Requis CEEM", "CEEM"],
-    "CEPC": ["Requis CEPC", "CEPC"],
-    "CMIC": ["Requis CMIC", "CMIC"],
-    "CENOVI": ["Requis CENOVI", "CENOVI"],
-    "CEAR": ["Requis CEAR", "CEAR"],
-    "CMIR": ["Requis CMIR", "CMIR"],
-    "CEDEV": ["Requis CEDEV", "CEDEV"],
-    "CEREV": ["CEREV requis", "CEREV"],
-    "CEDEPOL": ["Requis CEDEPOL", "CEDEPOL"],
-    "CETRAN": ["Requis CETRAN", "CETRAN"],
-    "CEFSP": ["Requis CEFSP", "CEFSP"],
+    "RLC": ["RLC", "Requis RLC", "\\d+\\s+RLC"],
+    "CEEP": [
+      "Cellule épuisement nécessaire",
+      "Cellule épuisement",
+      "\\d+\\s+[Cc]ellules? épuisement"
+    ],
+    "CEEM": ["Requis CEEM", "CEEM", "\\d+\\s+CEEM"],
+    "CEPC": ["Requis CEPC", "CEPC", "\\d+\\s+CEPC"],
+    "CMIC": ["Requis CMIC", "CMIC", "\\d+\\s+CMIC"],
+    "CENOVI": ["Requis CENOVI", "CENOVI", "\\d+\\s+CENOVI"],
+    "CEAR": ["Requis CEAR", "CEAR", "\\d+\\s+CEAR"],
+    "CMIR": ["Requis CMIR", "CMIR", "\\d+\\s+CMIR"],
+    "CEDEV": ["Requis CEDEV", "CEDEV", "\\d+\\s+CEDEV"],
+    "CEREV": ["CEREV requis", "CEREV", "\\d+\\s+CEREV"],
+    "CEDEPOL": ["Requis CEDEPOL", "CEDEPOL", "\\d+\\s+CEDEPOL"],
+    "CETRAN": ["Requis CETRAN", "CETRAN", "\\d+\\s+CETRAN"],
+    "CEFSP": ["Requis CEFSP", "CEFSP", "\\d+\\s+CEFSP"],
     "CESD": [
       "Cellule de Sauvetage et déblaiement requis",
-      "Cellule de sauvetage et déblaiement"
+      "Cellule de sauvetage et déblaiement",
+      "\\d+\\s+[Cc]ellules? de [Ss]auvetage"
     ],
     "VDIP": [
       "Unités? de mesure de la? décontamination requises?",
@@ -146,9 +191,9 @@
       "\\bMaGec\\b",
       "\\d+\\s+MaGec"
     ],
-    "RMV": ["Requis RMV", "RMV"],
-    "RMP": ["Requis RMP", "RMP"],
-    "CESR": ["Requis CESR", "CESR"],
+    "RMV": ["Requis RMV", "RMV", "\\d+\\s+RMV"],
+    "RMP": ["Requis RMP", "RMP", "\\d+\\s+RMP"],
+    "CESR": ["Requis CESR", "CESR", "\\d+\\s+CESR"],
     "CARS_POLICE": [
       "Voitures? de police requises?",
       "voitures? de police nécessaires?",
@@ -167,20 +212,21 @@
       "\\d+[ \\t]+unités?[ \\t]+cynophiles?",
       "\\d+[ \\t]+unité[ \\t]+cynophile"
     ],
-    "VR_CRS": ["VR nécessaires?", "\\bVR\\b(?!_PROBABILITY)"],
-    "VCT": ["VCT nécessaires?", "\\bVCT\\b(?!_PROBABILITY)"],
-    "RAM": ["RAM nécessaires?", "\\bRAM\\b(?!_PROBABILITY)"],
-    "VAT": ["VAT nécessaires?", "\\bVAT\\b(?!_PROBABILITY)"],
+    "VR_CRS": ["VR nécessaires?", "\\bVR\\b", "\\d+\\s+VR"],
+    "VCT": ["VCT nécessaires?", "\\bVCT\\b", "\\d+\\s+VCT"],
+    "RAM": ["RAM nécessaires?", "\\bRAM\\b", "\\d+\\s+RAM"],
+    "VAT": ["VAT nécessaires?", "\\bVAT\\b", "\\d+\\s+VAT"],
     "VTP_CRS": [
       "VTP nécessaires?",
       "véhicules? transports? personnel",
-      "\\bVTP\\b(?!_PROBABILITY)"
+      "\\bVTP\\b",
+      "\\d+\\s+VTP"
     ],
     "VB": [
       "Requis v[éeÉE]hicule banalis[éeÉE]",
       "\\d+\\s+v[éeÉE]hicule banalis[éeÉE]"
     ],
-    "OPJ": ["OPJ"],
+    "OPJ": ["OPJ", "\\d+\\s+OPJ"],
     "VIC": [
       "Requis v[éeÉE]hicule d['’ ]identification criminelle",
       "v[éeÉE]hicule d['’ ]identification criminelle",
@@ -201,20 +247,56 @@
       "([0-9]+\\s+)?fortress\\s+200(?!\\s*[0-9])"
     ],
     "SA_330_PUMA": ["Requis SA 330 PUMA", "([0-9]+\\s+)?SA\\s+330\\s+PUMA"],
+    "VTT": [
+      "VTT\\s+4\\s*[Xx×]\\s*4\\s*(requis|obligatoires?)?",
+      "\\bVTT\\b\\s*(requis|obligatoires?)?",
+      "\\d+\\s+VTT"
+    ],
+    "MOTONEIGE": [
+      "Motoneiges?\\s+(obligatoires?|requises?)",
+      "\\bMotoneiges?\\b",
+      "\\d+\\s+[Mm]otoneiges?"
+    ],
+    "QUAD": [
+      "QUAD\\s*(requis|obligatoires?)?",
+      "\\bQUAD\\b",
+      "\\d+\\s+QUAD"
+    ],
+    "DRONE": [
+      "Drones?\\s*(requis|obligatoires?)?",
+      "\\bDrones?\\b",
+      "\\d+\\s+[Dd]rones?"
+    ],
+    "EQUIPE_CYNOPHILE": [
+      "[ÉEé]quipes?\\s+cynophiles?\\s+(obligatoires?|requises?)",
+      "\\d+\\s+[ÉEé]quipes?\\s+cynophiles?"
+    ],
+    "CHOUCAS_EC145": [
+      "Choucas\\s+EC145\\s*(requis|obligatoires?)?",
+      "\\bChoucas[- ]EC145\\b",
+      "\\d+\\s+Choucas[- ]?EC145"
+    ],
+    "CHOUCAS_PGHM": [
+      "CHOUCAS PGHM requis",
+      "\\bCHOUCAS[- ]PGHM\\b",
+      "\\d+\\s+CHOUCAS[- ]PGHM"
+    ],
     "CHOUCAS": [
       "Soutien aérien FAG requis",
       "\\d+\\s+soutiens? aériens? FAG",
-      "CHOUCAS",
+      "CHOUCAS(?![- ](?:PGHM|EC145))",
       "hélicoptères? gendarmerie"
     ],
     "DRAGON": [
       "\\bDRAGON\\b",
       "\\bh[ée]licopt[èe]res\\b(?!.*(?:n[ée]cessaires?|requis))",
-      "soutien\\s+a[ée]rien(?!\\s*FAG)"
+      "soutien\\s+a[ée]rien(?!\\s*FAG)",
+      "\\d+\\s+DRAGON"
     ],
     "HELICOPTER": [
       "Hélicoptères?(?!.*bombardiers).*(nécessaires?|requis)",
-      "helicoptere"
+      "helicoptere",
+      "\\d+\\s+[Hh]élicoptères?"
     ],
     "DASH": [
       "Grands avions bombardiers d['’ ]eau nécessaire",
@@ -282,6 +364,8 @@
     ]
   },
   "resource_indicators": {
+    "GODET_PORTEUR_EAU": "Godets porteur d'eau requis",
+    "ASCENSEUR_SECOURS_MONTAGNE": "Ascenseurs de secours en montagne obligatoires",
     "WATER_REQUIRED": "Eau nécessaire",
     "MIN_PUMP_CAPACITY": "Min. Capacité de la pompe",
     "CITERNE_PROBABILITY": "Chances qu'un camion-citerne soit requis",

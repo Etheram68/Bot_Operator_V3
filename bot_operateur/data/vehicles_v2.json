@@ -396,6 +396,34 @@
       "CHOUCAS": {
         "primary": ["Choucas"],
         "secondary": []
+      },
+      "CHOUCAS_PGHM": {
+        "primary": ["Choucas-PGHM"],
+        "secondary": []
+      },
+      "CHOUCAS_EC145": {
+        "primary": ["Choucas-EC145"],
+        "secondary": []
+      },
+      "VTT": {
+        "primary": ["VTT"],
+        "secondary": []
+      },
+      "MOTONEIGE": {
+        "primary": ["Motoneige"],
+        "secondary": []
+      },
+      "QUAD": {
+        "primary": ["QUAD"],
+        "secondary": []
+      },
+      "DRONE": {
+        "primary": ["Drone"],
+        "secondary": []
+      },
+      "EQUIPE_CYNOPHILE": {
+        "primary": ["(PGHM)"],
+        "secondary": []
       }
     },
 

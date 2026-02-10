@@ -17,7 +17,25 @@ if TYPE_CHECKING:
 
 class MissingNeedsParser:
     """Parser pour analyser les besoins manquants dans les missions."""
-    
+
+    # Patterns pour l'eau manquante
+    WATER_PATTERNS = [
+        r"Il manque (\d+) litres? d[']eau",
+        r"(\d+) litres? d[']eau (?:manquants?|nécessaires?)"
+    ]
+
+    # Patterns pour capacité de pompe
+    PUMP_PATTERNS = [
+        r"Capacité de pompe insuffisante:?\s*(\d+)\s*L/min",
+        r"(\d+)\s*L/min\s*(?:requis|nécessaire)"
+    ]
+
+    # Pattern pour spécialistes IMP
+    PERSONNEL_IMP_PATTERN = r"Il manque (\d+) Spécialistes?\s+IMP"
+
+    # Pattern générique pour personnel
+    PERSONNEL_GENERIC_PATTERN = r"Il manque (\d+)\s+([A-Za-zÀ-ÿ\s]+?)(?:\s|$)"
+
     def __init__(self, vehicle_scraper: 'VehicleScraper'):
         self.vehicle_scraper = vehicle_scraper
         self.requirement_parser = RequirementParser()
@@ -76,39 +94,71 @@ class MissingNeedsParser:
         
         return missing_vehicles_needs
     
+    def _parse_alert_item_directly(self, alert_item: str) -> Optional[Dict[str, int]]:
+        """
+        Parse directement un item d'alerte au format "N NomVéhicule".
+
+        Args:
+            alert_item: Texte comme "1 Fourgon d'incendie" ou "2 MaGec"
+
+        Returns:
+            Dict {vehicle_type: quantity} ou None si non reconnu
+        """
+        match = re.match(r'^(\d+)\s+(.+)$', alert_item.strip())
+        if not match:
+            return None
+
+        quantity = int(match.group(1))
+        vehicle_text = match.group(2).strip()
+
+        # Utiliser le requirement_parser pour identifier le type
+        parsed = self.requirement_parser.parse_mission_text(f"{vehicle_text} requis")
+
+        if parsed:
+            return {parsed[0].vehicle_type: quantity}
+
+        return None
+
     async def _parse_missing_vehicles_text(self, div_text: str, mission: 'Mission') -> Dict[str, int]:
         """Parse le texte des véhicules manquants."""
         parsed_vehicles = {}
-        
+
         if "Véhicules manquants:" not in div_text:
             return parsed_vehicles
-        
+
         # Extraire la partie après "Véhicules manquants:"
         missing_part = div_text.split("Véhicules manquants:")[1].strip()
-        
+
         # Diviser par les virgules
         missing_items = [item.strip() for item in missing_part.split(',')]
-        
+
         for missing_item in missing_items:
             try:
-                # Simuler un texte de mission pour utiliser le parser existant
+                # Essayer d'abord le parsing direct (format "N NomVéhicule")
+                direct_result = self._parse_alert_item_directly(missing_item)
+                if direct_result:
+                    for vehicle_type, quantity in direct_result.items():
+                        parsed_vehicles[vehicle_type] = parsed_vehicles.get(vehicle_type, 0) + quantity
+                    continue
+
+                # Fallback: simuler un texte de mission
                 simulated_text = f"Exigences de véhicules et du personnel {missing_item} requis"
                 parsed_requirements = self.requirement_parser.parse_mission_text(simulated_text)
-                
+
                 found_match = False
                 for requirement in parsed_requirements:
                     if requirement.quantity > 0:
                         parsed_vehicles[requirement.vehicle_type] = requirement.quantity
                         found_match = True
                         break
-                
+
                 if not found_match:
                     logger.warning(f"Pattern véhicule manquant non reconnu: '{missing_item}'")
                     await self._log_unrecognized_vehicle_pattern(missing_item, mission)
-                    
+
             except Exception as e:
                 logger.warning(f"Erreur parsing '{missing_item}': {e}")
-        
+
         return parsed_vehicles
     
     async def extract_other_missing_needs_from_alert(self, mission: 'Mission', page) -> Dict[str, int]:
@@ -155,26 +205,14 @@ class MissingNeedsParser:
         needs = {}
         
         try:
-            # Pattern pour l'eau manquante
-            water_patterns = [
-                r"Il manque (\d+) litres? d[''']eau",
-                r"(\d+) litres? d[''']eau (?:manquants?|nécessaires?)"
-            ]
-            
-            for pattern in water_patterns:
+            for pattern in self.WATER_PATTERNS:
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     water_needed = int(match.group(1))
                     needs['WATER_REQUIRED'] = water_needed
                     logger.debug(f"Eau requise détectée: {water_needed}L")
                     
-            # Pattern pour capacité de pompe
-            pump_patterns = [
-                r"Capacité de pompe insuffisante:?\s*(\d+)\s*L/min",
-                r"(\d+)\s*L/min\s*(?:requis|nécessaire)"
-            ]
-            
-            for pattern in pump_patterns:
+            for pattern in self.PUMP_PATTERNS:
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     pump_capacity = int(match.group(1))
@@ -197,17 +235,13 @@ class MissingNeedsParser:
         personnel_needs = {}
         
         try:
-            # Pattern pour spécialistes IMP
-            imp_pattern = r"Il manque (\d+) Spécialistes?\s+IMP"
-            match = re.search(imp_pattern, text, re.IGNORECASE)
+            match = re.search(self.PERSONNEL_IMP_PATTERN, text, re.IGNORECASE)
             if match:
                 imp_needed = int(match.group(1))
                 personnel_needs['SPECIALIST_IMP'] = imp_needed
                 logger.debug(f"Spécialistes IMP requis: {imp_needed}")
             
-            # Pattern générique pour personnel
-            personnel_pattern = r"Il manque (\d+)\s+([A-Za-zÀ-ÿ\s]+?)(?:\s|$)"
-            matches = re.finditer(personnel_pattern, text, re.IGNORECASE)
+            matches = re.finditer(self.PERSONNEL_GENERIC_PATTERN, text, re.IGNORECASE)
             
             for match in matches:
                 quantity = int(match.group(1))

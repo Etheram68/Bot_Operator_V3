@@ -82,109 +82,6 @@ class ContextualParser:
         
         return matches
     
-    def _extract_quantity_from_match_and_context(self, text: str, match: re.Match) -> int:
-        """Extrait la quantité d'un match en analysant le contexte de ligne."""
-
-        # 🔥 Méthode optimisée pour format HTML tabulaire
-        # D'abord extraire la ligne complète contenant le match
-        lines = text.split('\n')
-        match_pos = match.start()
-        line_start = 0
-        current_line = ""
-
-        for line in lines:
-            line_end = line_start + len(line)
-            if line_start <= match_pos <= line_end:
-                current_line = line.strip()
-                break
-            line_start = line_end + 1
-
-        if not current_line:
-            return 1
-
-        # Pour HTML tabulaire: chercher le nombre dans la cellule <td>
-        table_cell_pattern = r'<td[^>]*>\s*(\d+)\s*</td>'
-        table_match = re.search(table_cell_pattern, current_line)
-        if table_match:
-            try:
-                return int(table_match.group(1))
-            except (ValueError, IndexError):
-                pass
-
-        # Fallback: chercher le nombre qui suit directement le pattern dans la même ligne
-        match_in_line = match.start() - line_start
-        if match_in_line >= 0:
-            text_after_match_in_line = current_line[match_in_line + len(match.group()):]
-            immediate_number = re.search(r'^\s*(\d+)', text_after_match_in_line)
-            if immediate_number:
-                try:
-                    return int(immediate_number.group(1))
-                except (ValueError, IndexError):
-                    pass
-
-        # Patterns spécifiques pour les formats tabulaires (dans la ligne courante déjà extraite)
-        tabular_patterns = [
-            r'(?:requis|nécessaires?)\s+(\d+)',    # "requis 1" ou "nécessaires 2"
-            r'(\d+)\s+(?:requis|nécessaires?)',    # "1 requis" ou "2 nécessaires"
-            r'^\s*[^0-9]+?\s+(\d+)\s*$',           # Ligne avec texte puis nombre à la fin
-        ]
-
-        for pattern in tabular_patterns:
-            matches = re.findall(pattern, current_line, re.IGNORECASE)
-            if matches:
-                try:
-                    return int(matches[0])
-                except (ValueError, IndexError):
-                    continue
-
-        # NOUVEAU: Gestion spéciale pour structure HTML tabulaire
-        # Quand le match est sur une ligne et la quantité sur la ligne suivante
-        lines = text.split('\n')
-        match_line_idx = None
-
-        # Trouver l'index de la ligne contenant le match
-        pos = match.start()
-        line_start = 0
-        for i, line in enumerate(lines):
-            line_end = line_start + len(line)
-            if line_start <= pos <= line_end:
-                match_line_idx = i
-                break
-            line_start = line_end + 1
-
-        if match_line_idx is not None and match_line_idx + 1 < len(lines):
-            next_line = lines[match_line_idx + 1].strip()
-            # Si la ligne suivante ne contient qu'un nombre (typique des tables HTML)
-            if re.match(r'^\d+$', next_line):
-                try:
-                    quantity = int(next_line)
-                    # Vérification de cohérence : quantités raisonnables pour des véhicules
-                    if 1 <= quantity <= 50:
-                        return quantity
-                except (ValueError, IndexError):
-                    pass
-
-        # Fallback amélioré : chercher un nombre proche des mots-clés pertinents
-        # Éviter de prendre n'importe quel nombre (comme dans "Eau nécessaire 1500")
-        keyword_proximity_patterns = [
-            r'\b(?:fourgon|véhicule|ambulance|camion)s?\b.*?(\d+)',      # Nombre après un type de véhicule
-            r'(\d+).*?\b(?:fourgon|véhicule|ambulance|camion)s?\b',      # Nombre avant un type de véhicule
-        ]
-
-        for pattern in keyword_proximity_patterns:
-            matches = re.findall(pattern, current_line, re.IGNORECASE)
-            if matches:
-                try:
-                    # Prendre le plus petit nombre (plus probable d'être une quantité de véhicule)
-                    numbers = [int(m) for m in matches]
-                    reasonable_numbers = [n for n in numbers if 1 <= n <= 20]  # Filtre de bon sens
-                    if reasonable_numbers:
-                        return min(reasonable_numbers)
-                except (ValueError, IndexError):
-                    continue
-
-        return 1  # Valeur par défaut
-
     def _extract_quantity_optimized(self, text: str, match: re.Match, lines: List[str], line_starts: List[int]) -> int:
         """Version optimisée d'extraction de quantité avec lignes pré-calculées."""
         # Trouver la ligne du match plus efficacement
@@ -199,16 +96,7 @@ class ContextualParser:
         if not current_line:
             return 1
 
-        # Pour HTML tabulaire: chercher le nombre dans la cellule <td>
-        table_cell_pattern = r'<td[^>]*>\s*(\d+)\s*</td>'
-        table_match = re.search(table_cell_pattern, current_line)
-        if table_match:
-            try:
-                return int(table_match.group(1))
-            except (ValueError, IndexError):
-                pass
-
-        # Fallback: chercher le nombre qui suit directement le pattern dans la même ligne
+        # Chercher le nombre qui suit directement le pattern dans la même ligne
         match_in_line = match_pos - line_starts[line_idx]
         if match_in_line >= 0 and match_in_line < len(current_line):
             text_after_match_in_line = current_line[match_in_line + len(match.group()):]
@@ -243,7 +131,7 @@ class ContextualParser:
                 try:
                     quantity = int(next_line)
                     # Vérification de cohérence : quantités raisonnables pour des véhicules
-                    if 1 <= quantity <= 50:
+                    if 1 <= quantity <= 100:
                         return quantity
                 except (ValueError, IndexError):
                     pass

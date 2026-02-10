@@ -198,12 +198,16 @@ class RequirementParser:
         """Optimise les patterns regex pour de meilleures performances"""
         optimized = pattern
 
-        # Ne pas optimiser les patterns avec lookbehind/lookahead complexes
-        if '?<!' in pattern or '?!' in pattern or '?=' in pattern or '?<=' in pattern:
-            return optimized
+        # Ne pas optimiser les patterns avec lookbehind/lookahead complexes (>20 chars)
+        import re as _re
+        lookaround_pattern = r'\(\?(?:<!|!|<=|=)([^)]*)\)'
+        for m in _re.finditer(lookaround_pattern, pattern):
+            if len(m.group(1)) > 20:
+                return optimized
 
         # Remplacer (requis|nécessaires?) par (?:requis|nécessaires?) pour éviter les captures inutiles
-        optimized = re.sub(r'\(([^)]+)\)(?!\?)', r'(?:\1)', optimized)
+        # Ne pas toucher les groupes spéciaux (?:...), (?!...), (?<!...), (?=...), (?<=...), (?P<...>...)
+        optimized = re.sub(r'\((?!\?)([^)]+)\)', r'(?:\1)', optimized)
 
         # IMPORTANT: Empêcher les patterns de matcher à travers les lignes AVANT les autres optimisations
         # Remplacer tous les types d'espaces par des espaces horizontaux seulement
@@ -237,12 +241,9 @@ class RequirementParser:
 
         optimized = safe_replace_spaces(optimized)
 
-        # Optimiser les répétitions pour être plus efficaces
-        optimized = optimized.replace('.*', '.*?')  # Non-greedy matching
-        optimized = optimized.replace('.+', '.+?')  # Non-greedy matching
-
-        # Optimiser les classes de caractères communes
-        optimized = optimized.replace('[\\s\\S]', '.')  # Plus efficace
+        # Optimiser les répétitions pour être plus efficaces (sans toucher .{0,N})
+        optimized = re.sub(r'(?<!\?)\.\*(?!\?|{)', '.*?', optimized)  # Non-greedy .* only
+        optimized = re.sub(r'(?<!\?)\.\+(?!\?|{)', '.+?', optimized)  # Non-greedy .+ only
 
         # Ajouter des anchors de mot quand approprié pour éviter les faux positifs
         if not optimized.startswith('^') and not optimized.startswith('\\b') and not optimized.startswith('(?'):
