@@ -128,6 +128,24 @@
       "Cellule de Sauvetage et déblaiement requis",
       "Cellule de sauvetage et déblaiement"
     ],
+    "VDIP": [
+      "Unités? de mesure de la? décontamination requises?",
+      "Unités? de mesure de décontamination requises?",
+      "Unité de mesure de la décontamination",
+      "\\d+\\s+Unité de mesure de la décontamination"
+    ],
+    "CEDM": [
+      "Cellules? de décontamination de personnes? requises?",
+      "Cellule de décontamination de personne",
+      "Cellules? de décontamination requises?",
+      "\\d+\\s+Cellule de décontamination de personne"
+    ],
+    "MAGEC": [
+      "MaGec nécessaires?",
+      "MaGec requis",
+      "\\bMaGec\\b",
+      "\\d+\\s+MaGec"
+    ],
     "RMV": ["Requis RMV", "RMV"],
     "RMP": ["Requis RMP", "RMP"],
     "CESR": ["Requis CESR", "CESR"],

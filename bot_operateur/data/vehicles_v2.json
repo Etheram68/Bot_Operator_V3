@@ -184,6 +184,18 @@
         "primary": ["CESD"],
         "secondary": []
       },
+      "VDIP": {
+        "primary": ["VDIP"],
+        "secondary": []
+      },
+      "CEDM": {
+        "primary": ["CEDM"],
+        "secondary": []
+      },
+      "MAGEC": {
+        "primary": ["MaGec"],
+        "secondary": []
+      },
       "RMV": {
         "primary": ["RMV"],
         "secondary": []
