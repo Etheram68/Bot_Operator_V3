@@ -102,17 +102,18 @@ class RequirementParser:
         return data
     
     def _load_missing_config(self, path: str = None) -> Dict:
-        """Charge le fichier de configuration des besoins manquants"""
+        """Charge le fichier de configuration des besoins manquants (avec cache)"""
+        from ..utils.cache_manager import get_cached_json
+
         if path is None:
             path = Path(__file__).parent.parent / "data" / "missing_needs_config.json"
-        
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data
-        except Exception as e:
-            logger.error(f"Erreur lors du chargement de {path}: {e}")
+
+        data = get_cached_json(str(path))
+        if data is None:
+            logger.error(f"Erreur lors du chargement de {path}")
             return {}
+
+        return data
     
     def _compile_patterns(self) -> Dict[str, List[re.Pattern]]:
         """Compile toutes les regex pour optimiser les performances avec factory optimisée"""

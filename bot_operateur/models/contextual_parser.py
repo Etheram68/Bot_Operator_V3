@@ -12,7 +12,20 @@ from loguru import logger
 
 class ContextualParser:
     """Parser qui extrait les matches avec leur contexte ligne par ligne."""
-    
+
+    # Patterns pré-compilés pour _extract_quantity_optimized
+    _RE_IMMEDIATE_NUMBER = re.compile(r'^\s*(\d+)')
+    _RE_ONLY_NUMBER = re.compile(r'^\d+$')
+    _RE_TABULAR_PATTERNS = [
+        re.compile(r'(?:requis|nécessaires?)\s+(\d+)', re.IGNORECASE),
+        re.compile(r'(\d+)\s+(?:requis|nécessaires?)', re.IGNORECASE),
+        re.compile(r'^\s*[^0-9]+?\s+(\d+)\s*$'),
+    ]
+    _RE_KEYWORD_PROXIMITY = [
+        re.compile(r'\b(?:fourgon|véhicule|ambulance|camion)s?\b.*?(\d+)', re.IGNORECASE),
+        re.compile(r'(\d+).*?\b(?:fourgon|véhicule|ambulance|camion)s?\b', re.IGNORECASE),
+    ]
+
     def find_matches_with_context(self, text: str, patterns: List[Pattern]) -> List[Tuple[int, bool, str]]:
         """
         Trouve les correspondances avec leur contexte pour un type de besoin.
@@ -100,22 +113,15 @@ class ContextualParser:
         match_in_line = match_pos - line_starts[line_idx]
         if match_in_line >= 0 and match_in_line < len(current_line):
             text_after_match_in_line = current_line[match_in_line + len(match.group()):]
-            immediate_number = re.search(r'^\s*(\d+)', text_after_match_in_line)
+            immediate_number = self._RE_IMMEDIATE_NUMBER.search(text_after_match_in_line)
             if immediate_number:
                 try:
                     return int(immediate_number.group(1))
                 except (ValueError, IndexError):
                     pass
 
-        # Patterns spécifiques pour les formats tabulaires
-        tabular_patterns = [
-            r'(?:requis|nécessaires?)\s+(\d+)',    # "requis 1" ou "nécessaires 2"
-            r'(\d+)\s+(?:requis|nécessaires?)',    # "1 requis" ou "2 nécessaires"
-            r'^\s*[^0-9]+?\s+(\d+)\s*$',           # Ligne avec texte puis nombre à la fin
-        ]
-
-        for pattern in tabular_patterns:
-            matches = re.findall(pattern, current_line, re.IGNORECASE)
+        for pattern in self._RE_TABULAR_PATTERNS:
+            matches = pattern.findall(current_line)
             if matches:
                 try:
                     return int(matches[0])
@@ -127,7 +133,7 @@ class ContextualParser:
         if line_idx + 1 < len(lines):
             next_line = lines[line_idx + 1].strip()
             # Si la ligne suivante ne contient qu'un nombre (typique des tables HTML)
-            if re.match(r'^\d+$', next_line):
+            if self._RE_ONLY_NUMBER.match(next_line):
                 try:
                     quantity = int(next_line)
                     # Vérification de cohérence : quantités raisonnables pour des véhicules
@@ -136,15 +142,8 @@ class ContextualParser:
                 except (ValueError, IndexError):
                     pass
 
-        # Fallback amélioré : chercher un nombre proche des mots-clés pertinents
-        # Éviter de prendre n'importe quel nombre (comme dans "Eau nécessaire 1500")
-        keyword_proximity_patterns = [
-            r'\b(?:fourgon|véhicule|ambulance|camion)s?\b.*?(\d+)',      # Nombre après un type de véhicule
-            r'(\d+).*?\b(?:fourgon|véhicule|ambulance|camion)s?\b',      # Nombre avant un type de véhicule
-        ]
-
-        for pattern in keyword_proximity_patterns:
-            matches = re.findall(pattern, current_line, re.IGNORECASE)
+        for pattern in self._RE_KEYWORD_PROXIMITY:
+            matches = pattern.findall(current_line)
             if matches:
                 try:
                     # Prendre le plus petit nombre (plus probable d'être une quantité de véhicule)

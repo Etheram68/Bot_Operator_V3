@@ -149,8 +149,6 @@ class PatientTransportHandler:
             transport_url = f"https://www.operateur112.fr{href}" if href.startswith('/') else href
             await self.browser_manager.navigate_to(transport_url, wait_for_load=True)
             
-            # Attendre le chargement complet
-            await asyncio.sleep(1)
             await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
             
             # Gérer la sélection d'hôpital
@@ -169,10 +167,7 @@ class PatientTransportHandler:
         """
         try:
             logger.debug("🏥 Sélection automatique d'hôpital")
-            
-            # Attendre que la page soit complètement chargée
-            await asyncio.sleep(2)
-            
+
             # Stratégie 1: Chercher un hôpital avec lits libres
             hospital_selected = await self._select_hospital_with_free_beds()
             
@@ -206,7 +201,6 @@ class PatientTransportHandler:
                         if any(indicator in button_text.lower() for indicator in ['lit libre', 'disponible', 'libre']):
                             await button.click()
                             logger.debug(f"🏥 Hôpital sélectionné (lits libres): {button_text[:30]}...")
-                            await asyncio.sleep(1)
                             return True
 
                     except Exception as e:
@@ -245,7 +239,6 @@ class PatientTransportHandler:
 
                                 button_text = await button.inner_text() if hasattr(button, 'inner_text') else "N/A"
                                 logger.debug(f"🏥 Premier hôpital sélectionné: {button_text[:30]}...")
-                                await asyncio.sleep(1)
                                 return True
 
                         except Exception as e:
@@ -264,9 +257,6 @@ class PatientTransportHandler:
     async def _confirm_hospital_selection(self) -> bool:
         """Confirme la sélection d'hôpital."""
         try:
-            # Attendre un court instant pour le traitement
-            await asyncio.sleep(2)
-            
             # Chercher confirmation ou redirection
             confirm_selectors = [
                 'button[type="submit"]',
@@ -283,7 +273,6 @@ class PatientTransportHandler:
                         if await confirm_button.is_enabled():
                             await confirm_button.click()
                             logger.debug("✅ Sélection hôpital confirmée")
-                            await asyncio.sleep(1)
                             return True
                             
                     except Exception as e:
@@ -309,7 +298,6 @@ class PatientTransportHandler:
             if next_vehicle_button:
                 logger.debug("🔄 Passage au prochain véhicule")
                 await next_vehicle_button.click()
-                await asyncio.sleep(2)
                 await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
             else:
                 logger.debug("Pas de bouton 'prochain véhicule' trouvé")
@@ -322,8 +310,8 @@ class PatientTransportHandler:
         try:
             # Retourner à la page mission pour vérifier
             await self.browser_manager.page.go_back()
-            await asyncio.sleep(1)
-            
+            await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
+
             # Chercher s'il reste des alertes de transport
             transport_alert = await self._find_patient_transport_alert()
             return transport_alert is not None

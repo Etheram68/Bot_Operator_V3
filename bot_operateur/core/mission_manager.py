@@ -58,13 +58,17 @@ class MissionManager:
             Dict: Configuration chargée ou configuration par défaut en cas d'erreur
         """
         try:
+            from ..utils.cache_manager import get_cached_json
+
             config_path = Path(__file__).parent.parent / "data" / "missing_needs_config.json"
-            
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
+            config = get_cached_json(str(config_path))
+
+            if config is not None:
                 logger.info(f"Configuration des besoins manquants chargée depuis {config_path}")
                 return config
-                
+
+            raise ValueError("Cache returned None")
+
         except Exception as e:
             logger.error(f"Erreur lors du chargement de la configuration des besoins manquants: {e}")
             # Configuration par défaut minimale
@@ -849,7 +853,14 @@ class MissionManager:
             prisoner_transport_data = await self._extract_prisoner_transport_links(mission)
 
             # Ensuite, chercher les transports sanitaires classiques
-            transport_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger:not(.alert-missing-vehicles)')
+            # Attendre brièvement que les alertes AJAX soient chargées
+            try:
+                transport_alert = await self.browser_manager.page.wait_for_selector(
+                    'div.alert.alert-danger:not(.alert-missing-vehicles)',
+                    timeout=3000, state='attached'
+                )
+            except Exception:
+                transport_alert = None
 
             transport_data = []
 
@@ -1045,7 +1056,13 @@ class MissionManager:
         """
         try:
             # Vérifier qu'il y a l'alerte de prisonniers à transporter
-            missing_vehicles_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger.alert-missing-vehicles')
+            try:
+                missing_vehicles_alert = await self.browser_manager.page.wait_for_selector(
+                    'div.alert.alert-danger.alert-missing-vehicles',
+                    timeout=3000, state='attached'
+                )
+            except Exception:
+                missing_vehicles_alert = None
 
             if not missing_vehicles_alert:
                 return []
@@ -2938,7 +2955,7 @@ class MissionManager:
                     
                     # Cooldown très court entre retry (optimisé)
                     if i < retry_limit - 1:
-                        await asyncio.sleep(1)  # Réduit de 30s à 1s
+                        await asyncio.sleep(self.settings.retry_delay)
             
             # Compter les missions ignorées
             stats["skipped"] = len(eligible_missions) - stats["deployed"] - stats["failed"]

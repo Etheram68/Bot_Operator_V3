@@ -34,8 +34,7 @@ class PrisonerTransportHandler:
             try:
                 # Attendre chargement de la page de sélection
                 await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-                await asyncio.sleep(1)
-                
+
                 # Stratégie 1: Prison avec places disponibles
                 prison_selected = await self._select_prison_with_capacity()
                 
@@ -118,7 +117,6 @@ class PrisonerTransportHandler:
     async def _confirm_prison_selection(self):
         """Confirme la sélection de prison."""
         try:
-            await asyncio.sleep(1)
             await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
             logger.debug("✅ Sélection prison confirmée")
             
@@ -325,8 +323,6 @@ class PrisonerTransportHandler:
             transport_url = f"https://www.operateur112.fr{href}" if href.startswith('/') else href
             await self.browser_manager.navigate_to(transport_url, wait_for_load=True)
             
-            # Attendre chargement
-            await asyncio.sleep(1)
             await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
             
             # Gérer la sélection de prison

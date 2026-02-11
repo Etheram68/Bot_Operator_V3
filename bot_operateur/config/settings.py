@@ -29,7 +29,7 @@ class Settings(BaseModel):
     
     # Navigation
     headless: bool = Field(default=True, description="Mode headless du navigateur")
-    browser_slow_mo: int = Field(default=100, description="Ralentissement du navigateur (ms)")
+    browser_slow_mo: int = Field(default=0, description="Ralentissement du navigateur (ms), 0 en production")
     
     # Stratégies
     default_strategy: str = Field(default="smart_optimized", description="Stratégie par défaut")
