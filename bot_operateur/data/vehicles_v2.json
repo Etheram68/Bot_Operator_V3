@@ -239,6 +239,10 @@
       "MAH": {
         "primary": ["MAH"],
         "secondary": []
+      },
+      "UFR": {
+        "primary": ["UFR"],
+        "secondary": []
       }
     },
 
@@ -422,7 +426,11 @@
         "secondary": []
       },
       "EQUIPE_CYNOPHILE": {
-        "primary": ["(PGHM)"],
+        "primary": ["PGHM-Équipes"],
+        "secondary": []
+      },
+      "EQUIPE_CYNOPHILE_SC": {
+        "primary": ["VEC"],
         "secondary": []
       }
     },

@@ -191,7 +191,7 @@ class MissionScraper:
             # On va d'abord sur la page de mission principale
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.page.goto(mission_url)
-            await self.page.wait_for_load_state('networkidle', timeout=10000)
+            await self.page.wait_for_load_state('domcontentloaded', timeout=15000)
 
             # Vérifier si la mission est déjà accomplie
             mission_completed = await self.page.query_selector(".alert-info.mission-success")
@@ -214,7 +214,7 @@ class MissionScraper:
 
             logger.debug(f"Navigation vers les conditions: {help_url}")
             await self.page.goto(help_url)
-            await self.page.wait_for_load_state('networkidle', timeout=10000)
+            await self.page.wait_for_load_state('domcontentloaded', timeout=15000)
             
             # Récupérer le titre complet seulement si absent ou vide dans l'objet Mission
             title_complete = mission.title

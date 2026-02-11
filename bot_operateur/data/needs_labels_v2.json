@@ -185,6 +185,14 @@
       "Cellules? de décontamination requises?",
       "\\d+\\s+Cellule de décontamination de personne"
     ],
+    "UFR": [
+      "Unités? d['' ]appui requises? en cas de feux de forêt",
+      "Unités? de soutien aux feux de forêt",
+      "\\bUFR\\b\\s*(requis|nécessaires?)?",
+      "\\d+\\s+UFR",
+      "\\d+\\s+[Uu]nités? de soutien aux feux de forêt",
+      "\\d+\\s+[Uu]nités? d['' ]appui.{0,20}feux de forêt"
+    ],
     "MAGEC": [
       "MaGec nécessaires?",
       "MaGec requis",
@@ -268,8 +276,12 @@
       "\\d+\\s+[Dd]rones?"
     ],
     "EQUIPE_CYNOPHILE": [
-      "[ÉEé]quipes?\\s+cynophiles?\\s+(obligatoires?|requises?)",
-      "\\d+\\s+[ÉEé]quipes?\\s+cynophiles?"
+      "(?![ÉEé]quipes?\\s+cynophiles?\\s+[(]sc[)])[ÉEé]quipes?\\s+cynophiles?\\s+(?:obligatoires?|requises?)",
+      "\\d+\\s+[ÉEé]quipes?\\s+cynophiles?(?!\\s*[(]sc[)])"
+    ],
+    "EQUIPE_CYNOPHILE_SC": [
+      "[ÉEé]quipes?\\s+cynophiles?\\s+[(]sc[)]\\s*(?:requis|requises?|nécessaires?)?",
+      "\\d+\\s+[ÉEé]quipes?\\s+cynophiles?\\s+[(]sc[)]"
     ],
     "CHOUCAS_EC145": [
       "Choucas\\s+EC145\\s*(requis|obligatoires?)?",
