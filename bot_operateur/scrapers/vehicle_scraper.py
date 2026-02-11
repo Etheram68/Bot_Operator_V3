@@ -192,16 +192,20 @@ class VehicleScraper:
         try:
             # Récupérer toutes les lignes de véhicules
             vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-            
-            for row in vehicle_rows:
-                try:
-                    vehicle = await self._extract_vehicle_from_row(row)
-                    if vehicle:
-                        vehicles.append(vehicle)
-                except Exception as e:
-                    logger.warning(f"Erreur lors de l'extraction d'un véhicule: {e}")
-                    continue
-            
+
+            try:
+                for row in vehicle_rows:
+                    try:
+                        vehicle = await self._extract_vehicle_from_row(row)
+                        if vehicle:
+                            vehicles.append(vehicle)
+                    except Exception as e:
+                        logger.warning(f"Erreur lors de l'extraction d'un véhicule: {e}")
+                        continue
+            finally:
+                for row in vehicle_rows:
+                    await row.dispose()
+
         except Exception as e:
             logger.error(f"Erreur lors du scraping du tableau des véhicules: {e}")
         
@@ -226,18 +230,22 @@ class VehicleScraper:
         try:
             # Récupérer les lignes de véhicules visibles (les plus proches sont affichés en premier)
             vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")
-            
+
             logger.debug(f"Récupération de {len(vehicle_rows)} véhicules visibles (les plus proches)")
-            
-            for row in vehicle_rows:
-                try:
-                    vehicle = await self._extract_vehicle_from_row(row)
-                    if vehicle:
-                        vehicles.append(vehicle)
-                except Exception as e:
-                    logger.warning(f"Erreur lors de l'extraction d'un véhicule proche: {e}")
-                    continue
-            
+
+            try:
+                for row in vehicle_rows:
+                    try:
+                        vehicle = await self._extract_vehicle_from_row(row)
+                        if vehicle:
+                            vehicles.append(vehicle)
+                    except Exception as e:
+                        logger.warning(f"Erreur lors de l'extraction d'un véhicule proche: {e}")
+                        continue
+            finally:
+                for row in vehicle_rows:
+                    await row.dispose()
+
         except Exception as e:
             logger.error(f"Erreur lors du scraping des véhicules proches: {e}")
         
@@ -317,13 +325,17 @@ class VehicleScraper:
         try:
             # Chercher dans les cellules de la ligne
             cells = await row.query_selector_all("td")
-            
-            for cell in cells:
-                text = await cell.inner_text()
-                # Pattern pour reconnaître une localisation (code postal + ville)
-                if re.match(r'\d{5}\s+[A-Za-zÀ-ÿ\s-]+', text.strip()):
-                    return text.strip()
-            
+
+            try:
+                for cell in cells:
+                    text = await cell.inner_text()
+                    # Pattern pour reconnaître une localisation (code postal + ville)
+                    if re.match(r'\d{5}\s+[A-Za-zÀ-ÿ\s-]+', text.strip()):
+                        return text.strip()
+            finally:
+                for cell in cells:
+                    await cell.dispose()
+
         except Exception as e:
             logger.debug(f"Erreur lors de l'extraction de la localisation: {e}")
         
@@ -347,20 +359,24 @@ class VehicleScraper:
         try:
             # Chercher des indicateurs de niveau de carburant
             fuel_indicators = await row.query_selector_all(".progress-bar, .fuel-indicator")
-            
-            for indicator in fuel_indicators:
-                # Chercher un attribut de style ou aria-valuenow
-                value = await indicator.get_attribute("aria-valuenow")
-                if value:
-                    return int(float(value))
-                
-                # Chercher dans le style
-                style = await indicator.get_attribute("style")
-                if style and "width:" in style:
-                    match = re.search(r'width:\s*(\d+)%', style)
-                    if match:
-                        return int(match.group(1))
-            
+
+            try:
+                for indicator in fuel_indicators:
+                    # Chercher un attribut de style ou aria-valuenow
+                    value = await indicator.get_attribute("aria-valuenow")
+                    if value:
+                        return int(float(value))
+
+                    # Chercher dans le style
+                    style = await indicator.get_attribute("style")
+                    if style and "width:" in style:
+                        match = re.search(r'width:\s*(\d+)%', style)
+                        if match:
+                            return int(match.group(1))
+            finally:
+                for indicator in fuel_indicators:
+                    await indicator.dispose()
+
         except Exception as e:
             logger.debug(f"Erreur lors de l'extraction du niveau de carburant: {e}")
         
@@ -384,25 +400,29 @@ class VehicleScraper:
         try:
             # Chercher des badges ou indicateurs d'état
             badges = await row.query_selector_all(".badge, .label")
-            
-            for badge in badges:
-                text = await badge.inner_text()
-                text = text.lower().strip()
-                
-                # Mapping des états possibles
-                condition_mapping = {
-                    "excellent": "excellent",
-                    "bon": "good",
-                    "moyen": "average", 
-                    "mauvais": "poor",
-                    "maintenance": "maintenance",
-                    "réparation": "repair"
-                }
-                
-                for key, value in condition_mapping.items():
-                    if key in text:
-                        return value
-            
+
+            try:
+                for badge in badges:
+                    text = await badge.inner_text()
+                    text = text.lower().strip()
+
+                    # Mapping des états possibles
+                    condition_mapping = {
+                        "excellent": "excellent",
+                        "bon": "good",
+                        "moyen": "average",
+                        "mauvais": "poor",
+                        "maintenance": "maintenance",
+                        "réparation": "repair"
+                    }
+
+                    for key, value in condition_mapping.items():
+                        if key in text:
+                            return value
+            finally:
+                for badge in badges:
+                    await badge.dispose()
+
         except Exception as e:
             logger.debug(f"Erreur lors de l'extraction de l'état: {e}")
         
@@ -718,50 +738,52 @@ class VehicleScraper:
         try:
             # Véhicules déjà présents sur la mission (mission_vehicle_at_mission)
             at_mission_rows = await self.page.query_selector_all("#mission_vehicle_at_mission tbody tr")
-            for row in at_mission_rows:
-                try:
-                    # Chercher le lien du véhicule dans la ligne
-                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                    if vehicle_link:
-                        href = await vehicle_link.get_attribute("href")
-                        vehicle_name = await vehicle_link.inner_text()
-                        
-                        # Extraire l'ID depuis l'URL: /vehicles/2786001 -> 2786001
-                        vehicle_id = href.split("/")[-1] if href and "/" in href else None
-                        
-                        if vehicle_id:
-                            excluded_vehicle_ids.append(vehicle_id)
-                            # Afficher le nom s'il est disponible, sinon l'ID
-                            display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
-                            excluded_names.append(display_name)
-                            logger.debug(f"🚫 Véhicule déjà en mission: {display_name}")
-                except Exception as e:
-                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission: {e}")
-                    continue
-            
+            try:
+                for row in at_mission_rows:
+                    try:
+                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                        if vehicle_link:
+                            href = await vehicle_link.get_attribute("href")
+                            vehicle_name = await vehicle_link.inner_text()
+
+                            vehicle_id = href.split("/")[-1] if href and "/" in href else None
+
+                            if vehicle_id:
+                                excluded_vehicle_ids.append(vehicle_id)
+                                display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
+                                excluded_names.append(display_name)
+                                logger.debug(f"🚫 Véhicule déjà en mission: {display_name}")
+                    except Exception as e:
+                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission: {e}")
+                        continue
+            finally:
+                for row in at_mission_rows:
+                    await row.dispose()
+
             # Véhicules en route vers la mission (h2_vehicle_driving)
             driving_rows = await self._get_driving_vehicle_rows()
-            for row in driving_rows:
-                try:
-                    # Chercher le lien du véhicule dans la ligne
-                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                    if vehicle_link:
-                        href = await vehicle_link.get_attribute("href")
-                        vehicle_name = await vehicle_link.inner_text()
-                        
-                        # Extraire l'ID depuis l'URL: /vehicles/2786001 -> 2786001
-                        vehicle_id = href.split("/")[-1] if href and "/" in href else None
-                        
-                        if vehicle_id:
-                            excluded_vehicle_ids.append(vehicle_id)
-                            # Afficher le nom s'il est disponible, sinon l'ID
-                            display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
-                            excluded_names.append(display_name)
-                            logger.debug(f"🚫 Véhicule en route: {display_name}")
-                except Exception as e:
-                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en route: {e}")
-                    continue
-            
+            try:
+                for row in driving_rows:
+                    try:
+                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                        if vehicle_link:
+                            href = await vehicle_link.get_attribute("href")
+                            vehicle_name = await vehicle_link.inner_text()
+
+                            vehicle_id = href.split("/")[-1] if href and "/" in href else None
+
+                            if vehicle_id:
+                                excluded_vehicle_ids.append(vehicle_id)
+                                display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
+                                excluded_names.append(display_name)
+                                logger.debug(f"🚫 Véhicule en route: {display_name}")
+                    except Exception as e:
+                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en route: {e}")
+                        continue
+            finally:
+                for row in driving_rows:
+                    await row.dispose()
+
             if excluded_vehicle_ids:
                 logger.info(f"Trouvé {len(excluded_vehicle_ids)} véhicules à exclure (déjà déployés/en route)")
                 logger.info(f"📋 Liste des véhicules exclus: {', '.join(excluded_names)}")
@@ -787,37 +809,43 @@ class VehicleScraper:
         try:
             # Véhicules déjà présents sur la mission (mission_vehicle_at_mission)
             at_mission_rows = await self.page.query_selector_all("#mission_vehicle_at_mission tbody tr")
-            for row in at_mission_rows:
-                try:
-                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                    if vehicle_link:
-                        vehicle_name = await vehicle_link.inner_text()
-                        if vehicle_name:
-                            # Extraire le type : "VCT 1 Mulhouse" -> "VCT"
-                            vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
-                            if vehicle_type:
-                                deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
-                except Exception as e:
-                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission (par type): {e}")
-                    continue
-            
+            try:
+                for row in at_mission_rows:
+                    try:
+                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                        if vehicle_link:
+                            vehicle_name = await vehicle_link.inner_text()
+                            if vehicle_name:
+                                vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
+                                if vehicle_type:
+                                    deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
+                    except Exception as e:
+                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission (par type): {e}")
+                        continue
+            finally:
+                for row in at_mission_rows:
+                    await row.dispose()
+
             # Véhicules en route vers la mission (h2_vehicle_driving)
             driving_rows = await self._get_driving_vehicle_rows()
-            for row in driving_rows:
-                try:
-                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                    if vehicle_link:
-                        vehicle_name = await vehicle_link.inner_text()
-                        if vehicle_name:
-                            # Extraire le type : "VCT 1 Mulhouse" -> "VCT"
-                            vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
-                            if vehicle_type:
-                                deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
-                                logger.debug(f"🔢 Véhicule en route: {vehicle_name.strip()} -> Type: {vehicle_type}")
-                except Exception as e:
-                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en route (par type): {e}")
-                    continue
-            
+            try:
+                for row in driving_rows:
+                    try:
+                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
+                        if vehicle_link:
+                            vehicle_name = await vehicle_link.inner_text()
+                            if vehicle_name:
+                                vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
+                                if vehicle_type:
+                                    deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
+                                    logger.debug(f"🔢 Véhicule en route: {vehicle_name.strip()} -> Type: {vehicle_type}")
+                    except Exception as e:
+                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en route (par type): {e}")
+                        continue
+            finally:
+                for row in driving_rows:
+                    await row.dispose()
+
             if deployed_by_type:
                 logger.info(f"📊 Véhicules déjà déployés par type: {deployed_by_type}")
             

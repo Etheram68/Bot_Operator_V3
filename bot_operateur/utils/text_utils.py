@@ -19,10 +19,3 @@ def extract_number_from_text(text: str, default: int = 0) -> int:
         
     match = re.search(r'\d+', text)
     return int(match.group()) if match else default
-
-
-def normalize_text(text: str) -> str:
-    """Normalise un texte en supprimant les espaces en trop et les caractères spéciaux"""
-    if not text:
-        return ""
-    return re.sub(r'\s+', ' ', text.strip())

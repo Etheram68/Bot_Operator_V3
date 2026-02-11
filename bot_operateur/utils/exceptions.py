@@ -12,12 +12,6 @@ class BotOperateurException(Exception):
     pass
 
 
-class BrowserNotInitializedException(BotOperateurException):
-    """Exception levée quand le navigateur n'est pas initialisé."""
-    def __init__(self, operation: str):
-        super().__init__(f"Le navigateur n'est pas initialisé pour l'opération: {operation}")
-
-
 class ElementNotFoundError(BotOperateurException):
     """Exception levée quand un élément DOM n'est pas trouvé."""
     def __init__(self, selector: str, timeout: Optional[int] = None):
@@ -29,49 +23,6 @@ class MissionParsingError(BotOperateurException):
     """Exception levée lors d'erreurs de parsing de mission."""
     def __init__(self, mission_id: str, detail: str):
         super().__init__(f"Erreur parsing mission {mission_id}: {detail}")
-
-
-class VehicleSelectionError(BotOperateurException):
-    """Exception levée lors d'erreurs de sélection de véhicules."""
-    def __init__(self, vehicle_type: str, detail: str):
-        super().__init__(f"Erreur sélection véhicule {vehicle_type}: {detail}")
-
-
-class ConfigurationError(BotOperateurException):
-    """Exception levée lors d'erreurs de configuration."""
-    pass
-
-
-def handle_playwright_exceptions(func):
-    """
-    Décorateur pour standardiser la gestion des exceptions Playwright.
-    
-    Convertit les exceptions Playwright communes en exceptions personnalisées
-    plus explicites.
-    """
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except PlaywrightTimeoutError as e:
-            # Extraire le sélecteur du message d'erreur si possible
-            selector = "inconnu"
-            if "selector" in str(e).lower():
-                # Tentative d'extraction basique du sélecteur
-                import re
-                match = re.search(r'"([^"]*)"', str(e))
-                if match:
-                    selector = match.group(1)
-            raise ElementNotFoundError(selector)
-        except asyncio.TimeoutError:
-            raise ElementNotFoundError("timeout générique")
-        except Exception as e:
-            # Re-lever les exceptions personnalisées
-            if isinstance(e, BotOperateurException):
-                raise
-            # Convertir les autres exceptions
-            raise BotOperateurException(f"Erreur inattendue: {str(e)}") from e
-    
-    return wrapper
 
 
 def log_exception_context(logger, operation: str, exception: Exception, 
@@ -129,30 +80,13 @@ class ExceptionContext:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             log_exception_context(
-                self.logger, 
-                self.operation, 
-                exc_val, 
+                self.logger,
+                self.operation,
+                exc_val,
                 self.selector
             )
-            
+
             if self.suppress_exceptions:
                 return True  # Supprime l'exception
-                
+
         return False  # Laisse l'exception se propager
-        
-    def __enter__(self):
-        return self
-        
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is not None:
-            log_exception_context(
-                self.logger, 
-                self.operation, 
-                exc_val, 
-                self.selector
-            )
-            
-            if self.suppress_exceptions:
-                return True
-                
-        return False

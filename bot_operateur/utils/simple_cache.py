@@ -134,25 +134,3 @@ def get_cache() -> SimpleCache:
 def clear_cache(pattern: str = None) -> None:
     """Vide le cache global"""
     _global_cache.clear(pattern)
-
-
-def cache_stats() -> Dict[str, Any]:
-    """Retourne les statistiques du cache"""
-    cache = _global_cache
-    current_time = time.time()
-
-    valid_entries = 0
-    expired_entries = 0
-
-    for entry in cache._cache.values():
-        if current_time > entry['expires_at']:
-            expired_entries += 1
-        else:
-            valid_entries += 1
-
-    return {
-        'total_entries': len(cache._cache),
-        'valid_entries': valid_entries,
-        'expired_entries': expired_entries,
-        'cache_size_kb': len(str(cache._cache)) / 1024
-    }

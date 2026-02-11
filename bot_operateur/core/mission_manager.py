@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from pathlib import Path
 from typing import List, Optional, Dict
 from loguru import logger
@@ -12,7 +13,6 @@ from ..strategies.smart_strategy import SmartStrategy
 from ..strategies.smart_strategy_optimized import SmartStrategyOptimized
 from ..core.browser_manager import BrowserManager
 from ..config.settings import Settings
-from ..utils.parallel_operations import ParallelBatch, run_parallel_limited
 
 
 class MissionManager:
@@ -43,6 +43,7 @@ class MissionManager:
         }
 
         self.active_missions: List[Mission] = []
+        self._mission_timestamps: Dict[str, float] = {}  # mission_id -> timestamp d'ajout
 
     async def initialize(self):
         """Initialisation asynchrone - doit être appelée après la création"""
@@ -2890,6 +2891,7 @@ class MissionManager:
                     stats["deployed"] += 1
                     deployed_count += 1
                     self.active_missions.append(mission)
+                    self._mission_timestamps[mission.id] = time.monotonic()
                 else:
                     stats["failed"] += 1
                     failed_missions.append(mission)
@@ -3077,15 +3079,32 @@ class MissionManager:
         return self.active_missions.copy()
     
     def clear_completed_missions(self) -> None:
-        """Nettoie les missions terminées et limite la taille de la liste active"""
+        """Nettoie les missions terminées, anciennes, et limite la taille de la liste active"""
+        now = time.monotonic()
+        max_age_seconds = 1800  # 30 minutes max en mémoire
+        max_tracked = 30
+
+        before_count = len(self.active_missions)
+
+        # Filtrer : garder uniquement les missions IN_PROGRESS et pas trop anciennes
         self.active_missions = [
             m for m in self.active_missions
             if m.status == MissionStatus.IN_PROGRESS
+            and (now - self._mission_timestamps.get(m.id, now)) < max_age_seconds
         ]
-        # Garde-fou: si la liste grossit malgré tout (statuts jamais mis à jour),
-        # ne garder que les 50 missions les plus récentes
-        max_tracked = 50
+
+        # Garde-fou : tronquer si la liste dépasse la limite
         if len(self.active_missions) > max_tracked:
             removed = len(self.active_missions) - max_tracked
             self.active_missions = self.active_missions[-max_tracked:]
             logger.warning(f"Liste active tronquée: {removed} anciennes missions supprimées (limite: {max_tracked})")
+
+        # Nettoyer les timestamps orphelins
+        active_ids = {m.id for m in self.active_missions}
+        self._mission_timestamps = {
+            mid: ts for mid, ts in self._mission_timestamps.items() if mid in active_ids
+        }
+
+        cleaned = before_count - len(self.active_missions)
+        if cleaned > 0:
+            logger.debug(f"Nettoyage mémoire: {cleaned} missions supprimées de la liste active")

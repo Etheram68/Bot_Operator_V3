@@ -9,7 +9,7 @@ from ..models.patient import Patient, PatientSeverity
 from ..models.requirement_parser import RequirementParser
 from ..utils.dom_utils import DOMUtils
 from ..utils.text_utils import extract_number_from_text
-from ..utils.exceptions import ExceptionContext, MissionParsingError, handle_playwright_exceptions
+from ..utils.exceptions import ExceptionContext, MissionParsingError
 from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS, SELECTORS
 from ..utils.simple_cache import cache_result
 from .conditions_analyzer import ConditionsAnalyzer
@@ -73,16 +73,20 @@ class MissionScraper:
             
             # Récupérer tous les éléments de mission
             mission_elements = await self.page.query_selector_all(f"{panel_selector} .panel-heading")
-            
-            for element in mission_elements:
-                try:
-                    mission = await self._extract_mission_from_element(element, mission_type)
-                    if mission:
-                        missions.append(mission)
-                except Exception as e:
-                    logger.warning(f"Erreur lors de l'extraction d'une mission: {e}")
-                    continue
-                    
+
+            try:
+                for element in mission_elements:
+                    try:
+                        mission = await self._extract_mission_from_element(element, mission_type)
+                        if mission:
+                            missions.append(mission)
+                    except Exception as e:
+                        logger.warning(f"Erreur lors de l'extraction d'une mission: {e}")
+                        continue
+            finally:
+                for element in mission_elements:
+                    await element.dispose()
+
         except Exception as e:
             logger.error(f"Erreur lors du scraping du panneau {panel_selector}: {e}")
         
@@ -103,62 +107,65 @@ class MissionScraper:
             if not parent_element:
                 logger.warning(f"Pas d'élément parent avec data-sortable-by trouvé pour mission {mission_id}")
                 return None
-            
-            # Extraire tous les attributs nécessaires
-            sortable_data_raw = await parent_element.get_attribute("data-sortable-by")
-            search_attribute = await parent_element.get_attribute("search_attribute")
-            mission_type_id = await parent_element.get_attribute("mission_type_id")
-            additive_overlays = await parent_element.get_attribute("data-additive-overlays")
-            mission_state_filter = await parent_element.get_attribute("data-mission-state-filter")
-            
-            if not sortable_data_raw:
-                logger.warning(f"Pas de data-sortable-by trouvé pour mission {mission_id}")
-                return None
-            
-            # Décoder le JSON (échappé HTML)
-            sortable_data_raw = sortable_data_raw.replace("&quot;", '"')
-            sortable_data = json.loads(sortable_data_raw)
-            
-            title = sortable_data.get("caption", "")
-            credits = sortable_data.get("average_credits", 0)
-            prisoners_count_range = sortable_data.get("prisoners_count", [0, 0])
-            
-            prisoner_count = max(prisoners_count_range) if prisoners_count_range else 0
-            location = self._extract_location_from_search_attribute(search_attribute, title)
-            deploy_url = f"/missions/{mission_id}"
-            
-            help_url = None
-            if mission_type_id:
-                if additive_overlays and additive_overlays.strip():
-                    help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?additive_overlays={additive_overlays}&mission_id={mission_id}"
-                    logger.debug(f"🔗 URL avec additive_overlays '{additive_overlays}': {help_url}")
-                else:
-                    help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?mission_id={mission_id}"
 
-            # Convertir l'état de la mission
-            state = MissionState.UNKNOWN
-            if mission_state_filter:
-                try:
-                    state = MissionState(mission_state_filter)
-                    logger.debug(f"🎯 État mission {mission_id}: {state.value}")
-                except ValueError:
-                    logger.warning(f"⚠️ État mission inconnu pour {mission_id}: '{mission_state_filter}'")
-                    state = MissionState.UNKNOWN
+            try:
+                # Extraire tous les attributs nécessaires
+                sortable_data_raw = await parent_element.get_attribute("data-sortable-by")
+                search_attribute = await parent_element.get_attribute("search_attribute")
+                mission_type_id = await parent_element.get_attribute("mission_type_id")
+                additive_overlays = await parent_element.get_attribute("data-additive-overlays")
+                mission_state_filter = await parent_element.get_attribute("data-mission-state-filter")
 
-            mission = Mission(
-                id=mission_id,
-                title=title,
-                type=mission_type,
-                state=state,
-                location=location,
-                deploy_url=deploy_url,
-                help_url=help_url,
-                credits=credits,
-                max_prisoners=prisoner_count
-            )
-            logger.debug(f"Mission extraite: {mission.id} - {mission.title} - {credits} crédits - {prisoner_count} prisonniers")
-            return mission
-            
+                if not sortable_data_raw:
+                    logger.warning(f"Pas de data-sortable-by trouvé pour mission {mission_id}")
+                    return None
+
+                # Décoder le JSON (échappé HTML)
+                sortable_data_raw = sortable_data_raw.replace("&quot;", '"')
+                sortable_data = json.loads(sortable_data_raw)
+
+                title = sortable_data.get("caption", "")
+                credits = sortable_data.get("average_credits", 0)
+                prisoners_count_range = sortable_data.get("prisoners_count", [0, 0])
+
+                prisoner_count = max(prisoners_count_range) if prisoners_count_range else 0
+                location = self._extract_location_from_search_attribute(search_attribute, title)
+                deploy_url = f"/missions/{mission_id}"
+
+                help_url = None
+                if mission_type_id:
+                    if additive_overlays and additive_overlays.strip():
+                        help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?additive_overlays={additive_overlays}&mission_id={mission_id}"
+                        logger.debug(f"🔗 URL avec additive_overlays '{additive_overlays}': {help_url}")
+                    else:
+                        help_url = f"https://www.operateur112.fr/einsaetze/{mission_type_id}?mission_id={mission_id}"
+
+                # Convertir l'état de la mission
+                state = MissionState.UNKNOWN
+                if mission_state_filter:
+                    try:
+                        state = MissionState(mission_state_filter)
+                        logger.debug(f"🎯 État mission {mission_id}: {state.value}")
+                    except ValueError:
+                        logger.warning(f"⚠️ État mission inconnu pour {mission_id}: '{mission_state_filter}'")
+                        state = MissionState.UNKNOWN
+
+                mission = Mission(
+                    id=mission_id,
+                    title=title,
+                    type=mission_type,
+                    state=state,
+                    location=location,
+                    deploy_url=deploy_url,
+                    help_url=help_url,
+                    credits=credits,
+                    max_prisoners=prisoner_count
+                )
+                logger.debug(f"Mission extraite: {mission.id} - {mission.title} - {credits} crédits - {prisoner_count} prisonniers")
+                return mission
+            finally:
+                await parent_element.dispose()
+
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction de la mission: {e}")
             return None
@@ -249,15 +256,19 @@ class MissionScraper:
                 # Récupérer les détails des patients depuis la vue complète
                 patient_elements = await patient_full_view.query_selector_all(".mission_patient")
                 logger.debug(f"Trouvé {len(patient_elements)} éléments de patients")
-                
-                for i, element in enumerate(patient_elements):
-                    try:
-                        patient = await self.patient_scraper._extract_patient_from_element(element, str(i))
-                        if patient:
-                            patients.append(patient)
-                            logger.debug(f"Patient {i} extrait avec besoins: {patient.needs}")
-                    except Exception as e:
-                        logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
+
+                try:
+                    for i, element in enumerate(patient_elements):
+                        try:
+                            patient = await self.patient_scraper._extract_patient_from_element(element, str(i))
+                            if patient:
+                                patients.append(patient)
+                                logger.debug(f"Patient {i} extrait avec besoins: {patient.needs}")
+                        except Exception as e:
+                            logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
+                finally:
+                    for el in patient_elements:
+                        await el.dispose()
             
             else:
                 # Fallback : vérifier s'il y a un formulaire de patients
@@ -271,14 +282,18 @@ class MissionScraper:
                     
                     # Récupérer les détails des patients depuis n'importe où sur la page
                     patient_elements = await self.page.query_selector_all(".mission_patient")
-                    
-                    for i, element in enumerate(patient_elements):
-                        try:
-                            patient = await self.patient_scraper._extract_patient_from_element(element, str(i))
-                            if patient:
-                                patients.append(patient)
-                        except Exception as e:
-                            logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
+
+                    try:
+                        for i, element in enumerate(patient_elements):
+                            try:
+                                patient = await self.patient_scraper._extract_patient_from_element(element, str(i))
+                                if patient:
+                                    patients.append(patient)
+                            except Exception as e:
+                                logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
+                    finally:
+                        for el in patient_elements:
+                            await el.dispose()
                     
                     # Si pas de détails mais on a un compte, créer des patients génériques
                     if not patients and patient_count > 0:
@@ -392,55 +407,65 @@ class MissionScraper:
         try:
             # Trouver toutes les div avec class="row" qui viennent après un <h1>
             rows = await self.page.query_selector_all("h1 ~ .row")
-            
-            for row in rows:
-                # Dans chaque row, chercher les colonnes col-md-4
-                columns = await row.query_selector_all(".col-md-4")
-                
-                if len(columns) >= 2:
-                    # Prendre la seconde colonne (index 1)
-                    second_column = columns[1]
-                    text = await second_column.inner_text()
-                    
-                    
-                    # Vérifier si cette colonne contient des informations de besoins
-                    # (éviter les colonnes vides ou avec juste des données de base)
-                    if text and (
-                        "requis" in text.lower() or 
-                        "nécessaire" in text.lower() or 
-                        "besoin" in text.lower() or
-                        len(text.strip()) > 20  # Au moins un peu de contenu
-                    ):
-                        return text
-            
+
+            try:
+                for row in rows:
+                    # Dans chaque row, chercher les colonnes col-md-4
+                    columns = await row.query_selector_all(".col-md-4")
+
+                    try:
+                        if len(columns) >= 2:
+                            # Prendre la seconde colonne (index 1)
+                            second_column = columns[1]
+                            text = await second_column.inner_text()
+
+                            # Vérifier si cette colonne contient des informations de besoins
+                            if text and (
+                                "requis" in text.lower() or
+                                "nécessaire" in text.lower() or
+                                "besoin" in text.lower() or
+                                len(text.strip()) > 20
+                            ):
+                                return text
+                    finally:
+                        for col in columns:
+                            await col.dispose()
+            finally:
+                for row in rows:
+                    await row.dispose()
+
             # Fallback: chercher directement les div col-md-4 après h1 sans passer par row
             h1_elements = await self.page.query_selector_all("h1")
-            for h1 in h1_elements:
-                # Trouver les col-md-4 qui suivent ce h1
-                following_columns = await self.page.evaluate(
-                    """(h1) => {
-                        const columns = [];
-                        let element = h1.nextElementSibling;
-                        while (element) {
-                            if (element.classList.contains('col-md-4')) {
-                                columns.push(element);
-                            } else if (element.classList.contains('row')) {
-                                const rowColumns = element.querySelectorAll('.col-md-4');
-                                columns.push(...Array.from(rowColumns));
+            try:
+                for h1 in h1_elements:
+                    # Trouver les col-md-4 qui suivent ce h1
+                    following_columns = await self.page.evaluate(
+                        """(h1) => {
+                            const columns = [];
+                            let element = h1.nextElementSibling;
+                            while (element) {
+                                if (element.classList.contains('col-md-4')) {
+                                    columns.push(element);
+                                } else if (element.classList.contains('row')) {
+                                    const rowColumns = element.querySelectorAll('.col-md-4');
+                                    columns.push(...Array.from(rowColumns));
+                                }
+                                element = element.nextElementSibling;
+                                if (columns.length >= 2) break;
                             }
-                            element = element.nextElementSibling;
-                            if (columns.length >= 2) break;
-                        }
-                        return columns.map(col => col.textContent);
-                    }""", 
-                    h1
-                )
-                
-                if len(following_columns) >= 2:
-                    requirements_text = following_columns[1]
-                    if requirements_text and requirements_text.strip():
-                        return requirements_text
-            
+                            return columns.map(col => col.textContent);
+                        }""",
+                        h1
+                    )
+
+                    if len(following_columns) >= 2:
+                        requirements_text = following_columns[1]
+                        if requirements_text and requirements_text.strip():
+                            return requirements_text
+            finally:
+                for h1 in h1_elements:
+                    await h1.dispose()
+
             logger.warning("Aucune seconde colonne col-md-4 trouvée avec des besoins")
             return ""
             
@@ -470,11 +495,15 @@ class MissionScraper:
             if not requirements:
                 requirement_elements = await self.page.query_selector_all("ul li, .mission-requirement, .alert")
 
-                for element in requirement_elements:
-                    text = await element.inner_text()
-                    requirement = self._parse_requirement_text(text)
-                    if requirement:
-                        requirements.append(requirement)
+                try:
+                    for element in requirement_elements:
+                        text = await element.inner_text()
+                        requirement = self._parse_requirement_text(text)
+                        if requirement:
+                            requirements.append(requirement)
+                finally:
+                    for el in requirement_elements:
+                        await el.dispose()
 
             logger.debug(f"Trouvé {len(requirements)} exigences sur la page")
 
@@ -510,64 +539,76 @@ class MissionScraper:
             target_table = None
             tables = await self.page.query_selector_all("table")
 
-            for table in tables:
-                headers = await table.query_selector_all("th")
-                for header in headers:
-                    header_text = await header.inner_text()
-                    if "Exigences" in header_text and "véhicules" in header_text:
-                        target_table = table
-                        logger.debug(f"Table des exigences trouvée: '{header_text}'")
+            try:
+                for table in tables:
+                    headers = await table.query_selector_all("th")
+                    try:
+                        for header in headers:
+                            header_text = await header.inner_text()
+                            if "Exigences" in header_text and "véhicules" in header_text:
+                                target_table = table
+                                logger.debug(f"Table des exigences trouvée: '{header_text}'")
+                                break
+                    finally:
+                        for h in headers:
+                            await h.dispose()
+                    if target_table:
                         break
-                if target_table:
-                    break
+            finally:
+                for t in tables:
+                    if t is not target_table:
+                        await t.dispose()
 
             if not target_table:
                 logger.debug("Table des exigences non trouvée")
                 return []
 
             # Extraire tous les <tr> avec 2 <td> (label + valeur)
-            rows = await target_table.query_selector_all("tbody tr")
+            try:
+                rows = await target_table.query_selector_all("tbody tr")
 
-            for row in rows:
-                cells = await row.query_selector_all("td")
-                if len(cells) == 2:
-                    # Extraire le label (véhicule) et la valeur (quantité)
-                    label_cell = cells[0]
-                    value_cell = cells[1]
-
-                    label_text = await label_cell.inner_text()
-                    value_text = await value_cell.inner_text()
-
-                    # Nettoyer les textes
-                    label_clean = label_text.strip()
-                    value_clean = value_text.strip()
-
-                    logger.debug(f"Ligne extraite: '{label_clean}' -> '{value_clean}'")
-
-                    # Ignorer les indicateurs de ressources (Eau nécessaire, etc.)
-                    if "Eau nécessaire" in label_clean:
-                        logger.debug(f"Ignoré indicateur de ressource: {label_clean}")
-                        continue
-
-                    # Vérifier que la valeur est un nombre (quantité de véhicules)
+                for row in rows:
+                    cells = await row.query_selector_all("td")
                     try:
-                        quantity = int(value_clean)
-                        if 1 <= quantity <= 50:  # Filtre de cohérence
-                            # Créer un texte formaté pour le parser
-                            formatted_text = f"{label_clean} {quantity}"
+                        if len(cells) == 2:
+                            label_cell = cells[0]
+                            value_cell = cells[1]
 
-                            # Utiliser le parser intelligent pour détecter le type de véhicule
-                            parsed_requirements = self.requirement_parser.parse_mission_text(formatted_text)
+                            label_text = await label_cell.inner_text()
+                            value_text = await value_cell.inner_text()
 
-                            if parsed_requirements:
-                                requirements.extend(parsed_requirements)
-                                logger.debug(f"✅ Ajouté via <tr>: {label_clean} -> {quantity}")
-                            else:
-                                logger.debug(f"⚠️ Pas de match parser pour: {repr(formatted_text)}")
-                        else:
-                            logger.debug(f"Quantité hors limites ignorée: {value_clean}")
-                    except ValueError:
-                        logger.debug(f"Valeur non numérique ignorée: {value_clean}")
+                            label_clean = label_text.strip()
+                            value_clean = value_text.strip()
+
+                            logger.debug(f"Ligne extraite: '{label_clean}' -> '{value_clean}'")
+
+                            if "Eau nécessaire" in label_clean:
+                                logger.debug(f"Ignoré indicateur de ressource: {label_clean}")
+                                continue
+
+                            try:
+                                quantity = int(value_clean)
+                                if 1 <= quantity <= 50:
+                                    formatted_text = f"{label_clean} {quantity}"
+                                    parsed_requirements = self.requirement_parser.parse_mission_text(formatted_text)
+
+                                    if parsed_requirements:
+                                        requirements.extend(parsed_requirements)
+                                        logger.debug(f"✅ Ajouté via <tr>: {label_clean} -> {quantity}")
+                                    else:
+                                        logger.debug(f"⚠️ Pas de match parser pour: {repr(formatted_text)}")
+                                else:
+                                    logger.debug(f"Quantité hors limites ignorée: {value_clean}")
+                            except ValueError:
+                                logger.debug(f"Valeur non numérique ignorée: {value_clean}")
+                    finally:
+                        for c in cells:
+                            await c.dispose()
+
+                for r in rows:
+                    await r.dispose()
+            finally:
+                await target_table.dispose()
 
             logger.debug(f"Extraction structurée <tr>: {len(requirements)} exigences trouvées")
 

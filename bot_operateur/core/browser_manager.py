@@ -64,8 +64,8 @@ class BrowserManager:
                 ]
             )
 
-            # Configuration du répertoire de cache dans un dossier accessible
-            cache_dir = Path("/tmp/browser_cache")
+            # Configuration du répertoire de cache
+            cache_dir = Path(self.settings.cache_dir)
             cache_dir.mkdir(parents=True, exist_ok=True)
 
             logger.info(f"Utilisation du cache navigateur: {cache_dir}")
@@ -151,7 +151,7 @@ class BrowserManager:
         # Sauvegarder l'état du cache avant fermeture
         if self.context:
             try:
-                cache_dir = Path("/tmp/browser_cache")
+                cache_dir = Path(self.settings.cache_dir)
                 storage_file = cache_dir / "storage_state.json"
                 await self.context.storage_state(path=str(storage_file))
                 logger.info(f"Cache sauvegardé: {storage_file}")
@@ -362,7 +362,7 @@ class BrowserManager:
             return
 
         self._last_cache_cleanup = now
-        cache_dir = Path("/tmp/browser_cache")
+        cache_dir = Path(self.settings.cache_dir)
 
         try:
             # Nettoyer les profils Playwright temporaires orphelins

@@ -110,23 +110,27 @@ class PatientTransportHandler:
         try:
             # Récupérer tous les liens de transport
             links = await alert_element.query_selector_all('a.btn.btn-xs.btn-success')
-            
-            for link in links:
-                try:
-                    href = await link.get_attribute('href')
-                    text = await link.inner_text()
-                    
-                    if href and text:
-                        transport_links.append({
-                            'href': href,
-                            'text': text.strip(),
-                            'type': 'patient'
-                        })
-                        
-                except Exception as e:
-                    logger.warning(f"Erreur extraction lien transport: {e}")
-                    continue
-                    
+
+            try:
+                for link in links:
+                    try:
+                        href = await link.get_attribute('href')
+                        text = await link.inner_text()
+
+                        if href and text:
+                            transport_links.append({
+                                'href': href,
+                                'text': text.strip(),
+                                'type': 'patient'
+                            })
+
+                    except Exception as e:
+                        logger.warning(f"Erreur extraction lien transport: {e}")
+                        continue
+            finally:
+                for link in links:
+                    await link.dispose()
+
         except Exception as e:
             logger.error(f"Erreur extraction liens transport: {e}")
         
@@ -192,23 +196,27 @@ class PatientTransportHandler:
         try:
             # Chercher les boutons d'hôpitaux avec indication de lits libres
             hospital_buttons = await self.browser_manager.page.query_selector_all('button.btn.btn-success')
-            
-            for button in hospital_buttons:
-                try:
-                    button_text = await button.inner_text()
-                    
-                    # Chercher indication de lits libres
-                    if any(indicator in button_text.lower() for indicator in ['lit libre', 'disponible', 'libre']):
-                        await button.click()
-                        logger.debug(f"🏥 Hôpital sélectionné (lits libres): {button_text[:30]}...")
-                        await asyncio.sleep(1)
-                        return True
-                        
-                except Exception as e:
-                    logger.warning(f"Erreur vérification bouton hôpital: {e}")
-                    continue
-            
-            return False
+
+            try:
+                for button in hospital_buttons:
+                    try:
+                        button_text = await button.inner_text()
+
+                        # Chercher indication de lits libres
+                        if any(indicator in button_text.lower() for indicator in ['lit libre', 'disponible', 'libre']):
+                            await button.click()
+                            logger.debug(f"🏥 Hôpital sélectionné (lits libres): {button_text[:30]}...")
+                            await asyncio.sleep(1)
+                            return True
+
+                    except Exception as e:
+                        logger.warning(f"Erreur vérification bouton hôpital: {e}")
+                        continue
+
+                return False
+            finally:
+                for btn in hospital_buttons:
+                    await btn.dispose()
             
         except Exception as e:
             logger.warning(f"Erreur sélection hôpital avec lits libres: {e}")
@@ -226,23 +234,26 @@ class PatientTransportHandler:
             
             for selector in selectors:
                 buttons = await self.browser_manager.page.query_selector_all(selector)
-                
-                if buttons:
-                    button = buttons[0]  # Premier disponible
-                    
-                    try:
-                        # Vérifier si le bouton est cliquable
-                        if await button.is_enabled():
-                            await button.click()
-                            
-                            button_text = await button.inner_text() if hasattr(button, 'inner_text') else "N/A"
-                            logger.debug(f"🏥 Premier hôpital sélectionné: {button_text[:30]}...")
-                            await asyncio.sleep(1)
-                            return True
-                            
-                    except Exception as e:
-                        logger.warning(f"Erreur clic bouton hôpital: {e}")
-                        continue
+
+                try:
+                    if buttons:
+                        button = buttons[0]  # Premier disponible
+
+                        try:
+                            if await button.is_enabled():
+                                await button.click()
+
+                                button_text = await button.inner_text() if hasattr(button, 'inner_text') else "N/A"
+                                logger.debug(f"🏥 Premier hôpital sélectionné: {button_text[:30]}...")
+                                await asyncio.sleep(1)
+                                return True
+
+                        except Exception as e:
+                            logger.warning(f"Erreur clic bouton hôpital: {e}")
+                            continue
+                finally:
+                    for btn in buttons:
+                        await btn.dispose()
             
             return False
             
@@ -333,27 +344,35 @@ class PatientTransportHandler:
         try:
             # Chercher dans les tableaux de patients pour liens hôpital
             patient_tables = await self.browser_manager.page.query_selector_all('table')
-            
-            for table in patient_tables:
-                # Chercher les liens de transport dans chaque table
-                links = await table.query_selector_all('a[href*="/hospital_transports/"]')
-                
-                for link in links:
+
+            try:
+                for table in patient_tables:
+                    # Chercher les liens de transport dans chaque table
+                    links = await table.query_selector_all('a[href*="/hospital_transports/"]')
+
                     try:
-                        href = await link.get_attribute('href')
-                        text = await link.inner_text()
-                        
-                        if href and text:
-                            transport_links.append({
-                                'href': href,
-                                'text': text.strip(),
-                                'type': 'hospital'
-                            })
-                            
-                    except Exception as e:
-                        logger.warning(f"Erreur extraction lien hôpital: {e}")
-                        continue
-                        
+                        for link in links:
+                            try:
+                                href = await link.get_attribute('href')
+                                text = await link.inner_text()
+
+                                if href and text:
+                                    transport_links.append({
+                                        'href': href,
+                                        'text': text.strip(),
+                                        'type': 'hospital'
+                                    })
+
+                            except Exception as e:
+                                logger.warning(f"Erreur extraction lien hôpital: {e}")
+                                continue
+                    finally:
+                        for link in links:
+                            await link.dispose()
+            finally:
+                for table in patient_tables:
+                    await table.dispose()
+
         except Exception as e:
             logger.error(f"Erreur extraction liens transport hôpital: {e}")
         

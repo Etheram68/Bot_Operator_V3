@@ -41,6 +41,9 @@ class Settings(BaseModel):
     mission_cooldown: int = Field(default=5, description="Cooldown entre missions (ultra-optimisé)")
     cycle_delay: int = Field(default=5, description="Délai entre cycles en mode continu (secondes)")
     
+    # Cache
+    cache_dir: str = Field(default="/tmp/browser_cache", description="Répertoire de cache du navigateur")
+
     # Optimisation des déploiements
     vehicle_threshold: int = Field(default=3, description="DEPRECATED: Utiliser optimization_threshold et deployment_threshold")
     optimization_threshold: int = Field(default=3, description="Seuil pour privilégier un gros véhicule vs plusieurs petits")
@@ -76,6 +79,7 @@ class Settings(BaseModel):
             auto_deploy=os.getenv("AUTO_DEPLOY", "true").lower() == "true",
             min_credits_threshold=int(os.getenv("MIN_CREDITS_THRESHOLD", "1000")),
             
+            cache_dir=os.getenv("CACHE_DIR", "/tmp/browser_cache"),
             max_concurrent_missions=int(os.getenv("MAX_CONCURRENT_MISSIONS", "5")),
             mission_cooldown=int(os.getenv("MISSION_COOLDOWN", "5")),
             cycle_delay=int(os.getenv("CYCLE_DELAY", "5")),
