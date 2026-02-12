@@ -1,123 +1,122 @@
 #!/usr/bin/env python3
 """
-Analyseur de patterns de véhicules manquants non reconnus.
+Analyseur de labels non reconnus.
 
-Ce script analyse le fichier unrecognized_vehicle_patterns.jsonl pour 
-générer des statistiques et suggérer des patterns à ajouter aux fichiers JSON.
+Ce script analyse le fichier unmatched_labels.jsonl pour
+générer des statistiques et suggérer des labels à ajouter à vehicle_labels.json.
 """
 
 import json
 import os
 from collections import Counter
-from datetime import datetime
+from pathlib import Path
+
 
 def analyze_patterns():
-    """Analyse les patterns non reconnus et génère des statistiques."""
-    
-    # Chemin vers le dossier data dans bot_operateur
-    from pathlib import Path
+    """Analyse les labels non reconnus et génère des statistiques."""
+
     data_dir = Path(__file__).parent.parent / "data"
-    log_file = data_dir / "unrecognized_vehicle_patterns.jsonl"
-    
+    log_file = data_dir / "unmatched_labels.jsonl"
+
     if not os.path.exists(log_file):
-        print("❌ Aucun fichier de patterns trouvé.")
-        print(f"Le fichier {log_file} sera créé automatiquement lors de la détection de nouveaux patterns.")
+        print("Aucun fichier de labels non reconnus trouvé.")
+        print(f"Le fichier {log_file} sera créé automatiquement lors de la détection.")
         return
-    
-    print("📊 Analyse des patterns de véhicules manquants non reconnus")
+
+    print("Analyse des labels non reconnus")
     print("=" * 60)
-    
-    patterns = []
+
+    entries = []
     missions = set()
-    
-    # Lire tous les patterns
+
     with open(log_file, "r", encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 try:
                     entry = json.loads(line)
-                    patterns.append(entry)
+                    entries.append(entry)
                     missions.add(entry.get("mission_id", "unknown"))
                 except json.JSONDecodeError:
                     continue
-    
-    if not patterns:
-        print("❌ Aucun pattern trouvé dans le fichier.")
+
+    if not entries:
+        print("Aucun label non reconnu dans le fichier.")
         return
-    
-    print(f"📈 Statistiques générales:")
-    print(f"   Total des patterns non reconnus: {len(patterns)}")
-    print(f"   Missions concernées: {len(missions)}")
+
+    print(f"Statistiques generales:")
+    print(f"   Total labels non reconnus: {len(entries)}")
+    print(f"   Missions concernees: {len(missions)}")
     print()
-    
-    # Compter les patterns les plus fréquents
-    pattern_counts = Counter(entry["unrecognized_pattern"] for entry in patterns)
-    
-    print("🔥 Top 10 des patterns les plus fréquents:")
-    for i, (pattern, count) in enumerate(pattern_counts.most_common(10), 1):
-        print(f"   {i:2d}. [{count:2d}x] '{pattern}'")
+
+    # Par source
+    source_counts = Counter(entry.get("source", "unknown") for entry in entries)
+    print("Par source:")
+    for source, count in source_counts.most_common():
+        print(f"   {source}: {count}")
     print()
-    
-    # Grouper par type apparent
-    print("📋 Suggestions pour enrichir les fichiers JSON:")
+
+    # Labels les plus frequents
+    label_counts = Counter(entry.get("label", entry.get("unrecognized_pattern", "?")) for entry in entries)
+
+    print("Top 15 des labels les plus frequents:")
+    for i, (label, count) in enumerate(label_counts.most_common(15), 1):
+        suggestion = suggest_mapping(label)
+        print(f"   {i:2d}. [{count:3d}x] '{label}'  ->  {suggestion}")
+    print()
+
+    # Suggestions pour vehicle_labels.json
+    print("Suggestions pour vehicle_labels.json:")
     print("-" * 50)
-    
-    for pattern, count in pattern_counts.most_common():
-        suggestion = suggest_mapping(pattern)
-        print(f"Pattern: '{pattern}' (vu {count}x)")
-        print(f"   → Suggestion: {suggestion}")
-        print()
-    
-    # Missions récentes
-    recent_patterns = sorted(patterns, key=lambda x: x["timestamp"], reverse=True)[:5]
-    print("🕐 5 patterns les plus récents:")
-    for entry in recent_patterns:
-        timestamp = entry["timestamp"][:19]  # Garder YYYY-MM-DD HH:MM:SS
-        mission_title = entry.get("mission_title", "N/A")[:30]  # Tronquer si trop long
-        pattern = entry["unrecognized_pattern"]
-        print(f"   {timestamp} | {mission_title:<30} | '{pattern}'")
+    for label, count in label_counts.most_common():
+        if count >= 2:  # Seulement les labels vus 2+ fois
+            suggestion = suggest_mapping(label)
+            normalized = label.lower().strip()
+            print(f'    "{normalized}": "{suggestion}",  // vu {count}x')
+    print()
+
+    # Entries recentes
+    recent = sorted(entries, key=lambda x: x.get("timestamp", ""), reverse=True)[:5]
+    print("5 labels les plus recents:")
+    for entry in recent:
+        ts = entry.get("timestamp", "?")[:19]
+        label = entry.get("label", entry.get("unrecognized_pattern", "?"))
+        source = entry.get("source", "?")
+        mission_id = entry.get("mission_id", "?")
+        print(f"   {ts} | mission {mission_id} | [{source}] '{label}'")
+
 
 def suggest_mapping(pattern: str) -> str:
-    """Suggère un mapping possible pour un pattern donné."""
-    
+    """Suggere un type de vehicule pour un label donne."""
+
     pattern_lower = pattern.lower()
-    
-    # Suggestions basées sur des mots-clés
+
     suggestions = [
         (["chef", "groupe"], "CHEF_DE_GROUPE"),
-        (["camion", "citerne"], "CCR"),
+        (["camion", "citerne"], "CITERNE"),
         (["fourgon", "incendie"], "FPT"),
         (["ambulance"], "AMBULANCE"),
-        (["vsav"], "VSAV"),
-        (["assu"], "ASSU"),
-        (["smur"], "SMUR"),
-        (["police"], "VL POLICE"),
-        (["motard"], "MOTO POLICE"),
+        (["vsav"], "AMBULANCE"),
+        (["assu"], "AMBULANCE"),
+        (["smur"], "AMBULANCE"),
+        (["police", "patrouille"], "CARS_POLICE"),
+        (["police"], "CARS_POLICE"),
         (["vlhr"], "VLHR"),
         (["vpc"], "VPC"),
-        (["dragon"], "Dragon"),
-        (["hélicoptère"], "Dragon"),
-        (["échelle"], "EPA"),
-        (["bea"], "BEA"),
-        (["ccr"], "CCR"),
+        (["dragon"], "DRAGON"),
+        (["helicoptere", "helico"], "HELICOPTER"),
+        (["echelle", "bea"], "BEA"),
         (["fpt"], "FPT"),
-        (["sr"], "_SR"),
+        (["secours routier", "vsr"], "VSR"),
+        (["cynophile"], "CARS_DROGUE"),
+        (["drone"], "DRONE"),
     ]
-    
+
     for keywords, mapping in suggestions:
         if any(keyword in pattern_lower for keyword in keywords):
-            return f"Probable: {mapping}"
-    
-    return "À analyser manuellement"
+            return mapping
 
-def create_sample_json_entry(pattern: str, vehicle_type: str):
-    """Crée un exemple d'entrée JSON pour les fichiers de mapping."""
-    
-    return {
-        "pattern": f"r'(\\d+)\\s*{pattern.lower()}[s]?'",
-        "vehicle_type": vehicle_type,
-        "note": f"Pattern ajouté depuis l'analyse automatique: '{pattern}'"
-    }
+    return "???"
+
 
 if __name__ == "__main__":
     analyze_patterns()

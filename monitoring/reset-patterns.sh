@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script pour remettre à zéro le fichier unrecognized_vehicle_patterns.jsonl
 
-PATTERNS_FILE="/usr/share/nginx/html/data/unrecognized_vehicle_patterns.jsonl"
+PATTERNS_FILE="/usr/share/nginx/html/data/unmatched_labels.jsonl.jsonl"
 
 # Vérifier si le fichier existe
 if [ -f "$PATTERNS_FILE" ]; then

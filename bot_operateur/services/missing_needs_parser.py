@@ -367,24 +367,23 @@ class MissingNeedsParser:
             missing_vehicles[primary] = missing_vehicles.get(primary, 0) + quantity
     
     async def _log_unrecognized_vehicle_pattern(self, pattern: str, mission: 'Mission'):
-        """Log les patterns non reconnus pour amélioration future."""
+        """Log les patterns non reconnus dans unmatched_labels.jsonl."""
         try:
-            # Enregistrer dans un fichier pour analyse
             import json
+            from datetime import datetime, timezone
             from pathlib import Path
-            
-            log_file = Path("bot_operateur/data/unrecognized_vehicle_patterns.jsonl")
-            
-            entry = {
-                "pattern": pattern,
+
+            log_file = Path(__file__).parent.parent / "data" / "unmatched_labels.jsonl"
+
+            entry = json.dumps({
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "label": pattern,
                 "mission_id": mission.id,
-                "mission_type": mission.type.value if mission.type else "unknown",
-                "timestamp": str(logger._core.min_level)  # Simple timestamp
-            }
-            
-            # Ajouter au fichier JSONL
-            with open(log_file, 'a', encoding='utf-8') as f:
-                f.write(json.dumps(entry, ensure_ascii=False) + '\n')
-                
-        except Exception as e:
+                "source": "missing_needs_parser",
+            }, ensure_ascii=False)
+
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(entry + "\n")
+
+        except OSError as e:
             logger.warning(f"Impossible d'enregistrer pattern non reconnu: {e}")

@@ -7,6 +7,8 @@ from loguru import logger
 from ..models.mission import Mission, MissionType, MissionRequirement, MissionState
 from ..models.patient import Patient, PatientSeverity
 from ..models.requirement_parser import RequirementParser
+from ..models.label_matcher import LabelMatcher
+from ..models.keyword_parser import KeywordParser
 from ..utils.dom_utils import DOMUtils
 from ..utils.text_utils import extract_number_from_text
 from ..utils.exceptions import ExceptionContext, MissionParsingError
@@ -35,6 +37,8 @@ class MissionScraper:
         self.page = page
         self.dom_utils = DOMUtils(page)
         self.requirement_parser = RequirementParser()
+        self.label_matcher = LabelMatcher()
+        self.keyword_parser = KeywordParser(self.label_matcher)
         self.conditions_analyzer = ConditionsAnalyzer(page)
         self.patient_scraper = PatientScraper(page)
     
@@ -486,8 +490,20 @@ class MissionScraper:
             # Fallback : Extraire le texte spécifiquement de la seconde colonne des besoins
             requirements_text = await self._extract_requirements_text_from_columns()
 
-            # Utiliser le parser intelligent pour extraire les exigences
-            requirements = self.requirement_parser.parse_mission_text(requirements_text) if requirements_text else []
+            if requirements_text:
+                # 1. Essayer KeywordParser (lookup par mots-clés, pas de regex)
+                keyword_results = self.keyword_parser.parse_text(requirements_text)
+                if keyword_results:
+                    for vehicle_type, quantity, optional in keyword_results:
+                        requirements.append(MissionRequirement(
+                            vehicle_type=vehicle_type,
+                            quantity=quantity,
+                            optional=optional,
+                        ))
+                    logger.debug(f"KeywordParser: {len(requirements)} exigences trouvées")
+                else:
+                    # 2. Fallback regex
+                    requirements = self.requirement_parser.parse_mission_text(requirements_text)
 
             # Fallback : méthode traditionnelle si le parser ne trouve rien
             if not requirements:
@@ -587,14 +603,26 @@ class MissionScraper:
                             try:
                                 quantity = int(value_clean)
                                 if 1 <= quantity <= 50:
-                                    formatted_text = f"{label_clean} {quantity}"
-                                    parsed_requirements = self.requirement_parser.parse_mission_text(formatted_text)
-
-                                    if parsed_requirements:
-                                        requirements.extend(parsed_requirements)
-                                        logger.debug(f"✅ Ajouté via <tr>: {label_clean} -> {quantity}")
+                                    # 1. Essayer LabelMatcher (lookup direct O(1))
+                                    vehicle_type = self.label_matcher.match(label_clean)
+                                    if vehicle_type:
+                                        requirements.append(MissionRequirement(
+                                            vehicle_type=vehicle_type,
+                                            quantity=quantity,
+                                            optional=False,
+                                        ))
+                                        logger.debug(f"✅ LabelMatcher: '{label_clean}' -> {vehicle_type} x{quantity}")
                                     else:
-                                        logger.debug(f"⚠️ Pas de match parser pour: {repr(formatted_text)}")
+                                        # 2. Fallback regex existant
+                                        formatted_text = f"{label_clean} {quantity}"
+                                        parsed_requirements = self.requirement_parser.parse_mission_text(formatted_text)
+                                        if parsed_requirements:
+                                            requirements.extend(parsed_requirements)
+                                            logger.debug(f"✅ Regex fallback: '{label_clean}' -> {quantity}")
+                                        else:
+                                            # 3. Log pour auto-learning futur
+                                            self._log_unmatched_label(label_clean, quantity, "unknown")
+                                            logger.debug(f"⚠️ Pas de match pour: {repr(label_clean)}")
                                 else:
                                     logger.debug(f"Quantité hors limites ignorée: {value_clean}")
                             except ValueError:
@@ -614,6 +642,25 @@ class MissionScraper:
             logger.error(f"Erreur lors de l'extraction structurée <tr>: {e}")
 
         return requirements
+
+    def _log_unmatched_label(self, label: str, quantity: int, mission_id: str) -> None:
+        """Log un label non reconnu pour analyse future (auto-learning)."""
+        import datetime
+        from pathlib import Path
+
+        log_path = Path(__file__).parent.parent / "data" / "unmatched_labels.jsonl"
+        entry = json.dumps({
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "label": label,
+            "quantity": quantity,
+            "mission_id": mission_id,
+            "source": "table_row",
+        }, ensure_ascii=False)
+        try:
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(entry + "\n")
+        except OSError as e:
+            logger.warning(f"Impossible de loguer label non reconnu: {e}")
 
     async def analyze_mission_conditions(self, mission_id: str) -> Optional[Dict]:
         """Analyse les conditions de réalisation d'une mission pour enrichir les données"""

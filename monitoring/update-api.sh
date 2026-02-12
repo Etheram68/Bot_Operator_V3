@@ -17,7 +17,7 @@ mkdir -p "$API_DIR"
 generate_stats() {
     local output_file="$API_DIR/stats.json"
     local temp_file="${output_file}.tmp"
-    
+
     # Vérifier si le container existe et est en cours d'exécution
     if ! docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
         cat > "$temp_file" << EOF
@@ -30,11 +30,11 @@ EOF
         mv "$temp_file" "$output_file"
         return
     fi
-    
+
     # Récupérer les stats
     local stats=$(docker stats --no-stream --format "table {{.Container}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.NetIO}}\\t{{.BlockIO}}" "$CONTAINER_NAME" 2>/dev/null | tail -n 1)
     local inspect=$(docker inspect "$CONTAINER_NAME" 2>/dev/null)
-    
+
     if [ -z "$stats" ]; then
         cat > "$temp_file" << EOF
 {
@@ -46,34 +46,34 @@ EOF
         mv "$temp_file" "$output_file"
         return
     fi
-    
+
     # Parser les stats CPU avec normalisation simple
     local cpu_raw=$(echo "$stats" | awk '{print $2}' | sed 's/%//')
     local cpu="$cpu_raw"
-    
+
     # Si CPU > 100%, c'est probablement du multi-core
     # Normaliser pour affichage (diviser par le nombre de cores alloués)
     if [ -n "$cpu_raw" ] && (( $(echo "$cpu_raw > 100" | bc -l 2>/dev/null || echo 0) )); then
         # Le container a 2.0 cores max selon docker-compose.yml
         # Donc 200% max théorique, normalisons sur 100%
         cpu=$(echo "scale=1; $cpu_raw / 2" | bc 2>/dev/null || echo "$cpu_raw")
-        
+
         # Limiter à 100% pour l'affichage
         if (( $(echo "$cpu > 100" | bc -l 2>/dev/null || echo 0) )); then
             cpu="99.9"
         fi
     fi
-    
+
     # Validation du format numérique
     if ! echo "$cpu" | grep -q '^[0-9]\+\(\.[0-9]\+\)\?$'; then
         cpu="0.0"
     fi
-    
+
     # Parser la mémoire correctement
     local memory_raw=$(docker stats --no-stream --format "{{.MemUsage}}" "$CONTAINER_NAME" 2>/dev/null)
     local memory_usage=""
     local memory_limit=""
-    
+
     if [ -n "$memory_raw" ]; then
         # Gérer différents formats (MiB, GiB, MB, GB)
         if echo "$memory_raw" | grep -q "MiB"; then
@@ -99,11 +99,11 @@ EOF
         memory_usage="unknown"
         memory_limit="unknown"
     fi
-    
+
     # Obtenir l'uptime - méthode robuste
     local uptime_seconds=""
     local uptime_formatted="unknown"
-    
+
     # Méthode 1: via jq si disponible
     if command -v jq >/dev/null 2>&1; then
         local started_at=$(echo "$inspect" | jq -r '.[0].State.StartedAt' 2>/dev/null || echo "")
@@ -115,7 +115,7 @@ EOF
             fi
         fi
     fi
-    
+
     # Méthode 2: si jq échoue, utiliser grep/sed
     if [ -z "$uptime_seconds" ] || [ "$uptime_seconds" = "" ]; then
         local started_at=$(echo "$inspect" | grep -o '"StartedAt":"[^"]*"' | sed 's/"StartedAt":"//' | sed 's/"//' | head -n1)
@@ -128,7 +128,7 @@ EOF
             fi
         fi
     fi
-    
+
     # Méthode 3: fallback - utiliser docker stats directement
     if [ -z "$uptime_seconds" ] || [ "$uptime_seconds" = "" ]; then
         # Extraire l'uptime depuis la colonne Status de docker ps
@@ -145,7 +145,7 @@ EOF
             fi
         fi
     fi
-    
+
     # Formater l'uptime
     if [ -n "$uptime_seconds" ] && [ "$uptime_seconds" != "" ] && [ "$uptime_seconds" -gt 0 ]; then
         local hours=$((uptime_seconds / 3600))
@@ -166,7 +166,7 @@ EOF
             uptime_seconds=0
         fi
     fi
-    
+
     # Générer le JSON
     cat > "$temp_file" << EOF
 {
@@ -179,7 +179,7 @@ EOF
     "timestamp": "$(date -Iseconds)"
 }
 EOF
-    
+
     # Remplacer atomiquement le fichier
     mv "$temp_file" "$output_file"
 }
@@ -224,7 +224,7 @@ echo "✅ Missions actives générées: $(ls -la $API_DIR/active-missions.json 2
 # Fonction pour gérer la remise à zéro des patterns
 handle_reset_trigger() {
     local trigger_file="$API_DIR/reset-trigger"
-    local patterns_file="/usr/share/nginx/html/data/unrecognized_vehicle_patterns.jsonl"
+    local patterns_file="/usr/share/nginx/html/data/unmatched_labels.jsonl.jsonl"
 
     if [ -f "$trigger_file" ]; then
         echo "🗑️  Remise à zéro des patterns détectée..."

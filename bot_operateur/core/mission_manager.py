@@ -2741,123 +2741,45 @@ class MissionManager:
             return 0
     
     async def _log_unrecognized_missing_pattern(self, missing_text: str, mission: 'Mission') -> None:
-        """
-        Enregistre les patterns de besoins "Il nous manque" non reconnus dans un fichier.
-        
-        Permet d'enrichir ultérieurement le système de parsing avec les nouveaux patterns
-        découverts lors des missions réelles.
-        
-        Args:
-            missing_text: Texte du besoin manquant non reconnu (après "Il nous manque:")
-            mission: Mission concernée pour le contexte
-        """
-        try:
-            import os
-            import json
-            from datetime import datetime
-            
-            # Utiliser le même dossier data que pour les véhicules non reconnus
-            from pathlib import Path
-            data_dir = Path(__file__).parent.parent / "data"
-            data_dir.mkdir(exist_ok=True)
-            
-            log_file = data_dir / "unrecognized_missing_patterns.jsonl"
-            
-            # Préparer l'entrée de log
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "mission_id": mission.id if mission else "unknown",
-                "mission_title": mission.title if mission else "unknown",
-                "pattern_type": "missing_need",
-                "unrecognized_text": missing_text.strip(),
-                "full_context": f"Il nous manque: {missing_text.strip()}",
-                "suggested_categories": self._suggest_pattern_category(missing_text)
-            }
-            
-            # Ajouter au fichier (format JSONL - une ligne JSON par entrée)
-            with open(log_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
-            
-            logger.info(f"💾 Pattern 'Il nous manque' non reconnu sauvegardé: '{missing_text}'")
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de la sauvegarde du pattern non reconnu: {e}")
-    
-    def _suggest_pattern_category(self, text: str) -> list:
-        """
-        Suggère des catégories possibles pour un pattern non reconnu basé sur la configuration.
-        
-        Args:
-            text: Texte à analyser
-            
-        Returns:
-            list: Liste des catégories suggérées
-        """
-        suggestions = []
-        text_lower = text.lower()
-        
-        # Utiliser la configuration pour les suggestions
-        other_needs_mapping = self.missing_needs_config.get("other_needs_mapping", {})
-        
-        for category_key, category_config in other_needs_mapping.items():
-            keywords = category_config.get("keywords", [])
-            exclusions = category_config.get("exclusions", [])
-            category_type = category_config.get("type", category_key)
-            
-            # Vérifier les exclusions d'abord
-            if exclusions and any(excl in text_lower for excl in exclusions):
-                continue
-                
-            # Vérifier les mots-clés
-            if keywords and any(keyword in text_lower for keyword in keywords):
-                suggestions.append(category_type)
-        
-        # Si aucune suggestion spécifique, catégorie générale
-        if not suggestions:
-            suggestions.append('unknown')
-        
-        return suggestions
-    
+        """Enregistre un pattern 'Il nous manque' non reconnu dans unmatched_labels.jsonl."""
+        self._log_unmatched_label(
+            label=missing_text.strip(),
+            mission_id=mission.id if mission else "unknown",
+            source="missing_alert",
+        )
+        logger.info(f"Pattern 'Il nous manque' non reconnu sauvegardé: '{missing_text}'")
+
     async def _log_unrecognized_vehicle_pattern(self, missing_item: str, mission: 'Mission') -> None:
-        """
-        Enregistre les patterns de véhicules manquants non reconnus dans un fichier.
-        
-        Permet d'enrichir ultérieurement les fichiers JSON de mapping avec
-        les nouveaux patterns découverts.
-        
-        Args:
-            missing_item: Texte du véhicule manquant non reconnu
-            mission: Mission concernée pour le contexte
-        """
+        """Enregistre un pattern de véhicule non reconnu dans unmatched_labels.jsonl."""
+        self._log_unmatched_label(
+            label=missing_item.strip(),
+            mission_id=mission.id if mission else "unknown",
+            source="vehicle_pattern",
+        )
+        logger.debug(f"Pattern non reconnu sauvegardé: {missing_item}")
+
+    @staticmethod
+    def _log_unmatched_label(label: str, mission_id: str, source: str) -> None:
+        """Écrit un label non reconnu dans unmatched_labels.jsonl (fichier centralisé)."""
         try:
-            import os
             import json
-            from datetime import datetime
-            
-            # Utiliser le dossier data existant dans bot_operateur
+            from datetime import datetime, timezone
             from pathlib import Path
+
             data_dir = Path(__file__).parent.parent / "data"
-            data_dir.mkdir(exist_ok=True)
-            
-            log_file = data_dir / "unrecognized_vehicle_patterns.jsonl"
-            
-            # Préparer l'entrée de log
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "mission_id": mission.id if mission else "unknown",
-                "mission_title": mission.title if mission else "unknown",
-                "unrecognized_pattern": missing_item.strip(),
-                "original_div_context": missing_item  # Garder le contexte original
-            }
-            
-            # Ajouter au fichier (format JSONL - une ligne JSON par entrée)
+            log_file = data_dir / "unmatched_labels.jsonl"
+
+            entry = json.dumps({
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "label": label,
+                "mission_id": mission_id,
+                "source": source,
+            }, ensure_ascii=False)
+
             with open(log_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
-            
-            logger.debug(f"Pattern non reconnu sauvegardé: {missing_item}")
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de la sauvegarde du pattern non reconnu: {e}")
+                f.write(entry + "\n")
+        except OSError as e:
+            logger.warning(f"Impossible de loguer label non reconnu: {e}")
     
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
         """Déploie automatiquement les missions selon la configuration"""
