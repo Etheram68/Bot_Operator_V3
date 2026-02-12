@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- Version: 2025-10-01-flask-api-v2 -->
+    <title>Bot Opérateur 112 - Monitoring</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-full-width {
+            width: 100%;
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 8px;
+            color: white;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-running {
+            background-color: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-stopped {
+            background-color: #ef4444;
+        }
+
+        .status-error {
+            background-color: #f59e0b;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .logs-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 600px;
+            overflow-y: auto;
+            overflow-x: auto;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .logs-container::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .logs-container::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 5px;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-right: 10px;
+            transition: transform 0.2s;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            border-left: 4px solid #c33;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 1.2em;
+            padding: 20px;
+        }
+
+        .last-update {
+            text-align: right;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .patterns-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .patterns-table th,
+        .patterns-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .patterns-table th {
+            background: #f3f4f6;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .patterns-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .pattern-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .no-patterns {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+            font-size: 1.1em;
+        }
+
+        .bot-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .bot-stat-card {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 20px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+
+        .bot-stat-card.warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .bot-stat-card.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .bot-stat-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bot-stat-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .bot-stat-subtext {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .alert-banner {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-banner.critical {
+            background: #fee;
+            border-left-color: #ef4444;
+            color: #991b1b;
+        }
+
+        .alert-icon {
+            font-size: 1.5em;
+        }
+
+        .last-mission-box {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #374151;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+
+        .log-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .filter-checkbox {
+            margin: 0;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .filter-label {
+            font-size: 0.9em;
+            color: #374151;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .log-line-error {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .log-line-warning {
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .log-line-success {
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .highlight {
+            background-color: yellow;
+            color: black;
+            font-weight: bold;
+        }
+
+        .missions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .mission-card {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            transition: transform 0.2s;
+        }
+
+        .mission-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .mission-card.status-success {
+            border-left-color: #10b981;
+        }
+
+        .mission-card.status-failed {
+            border-left-color: #ef4444;
+        }
+
+        .mission-id {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .mission-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.9em;
+        }
+
+        .mission-label {
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .mission-vehicles {
+            background: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #374151;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin-top: 20px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .no-missions {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+            font-size: 1em;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .action-button.danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .action-button.warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .action-button.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #10b981;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .debug-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .debug-label {
+            font-size: 0.95em;
+            color: #374151;
+            font-weight: 600;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 Bot Opérateur 112</h1>
+            <p>Tableau de bord de monitoring en temps réel</p>
+        </div>
+
+        <!-- Alertes -->
+        <div id="alerts-container"></div>
+
+        <div class="card">
+            <h2>📊 Statistiques du Container</h2>
+
+            <!-- Actions rapides -->
+            <div class="quick-actions">
+                <button class="action-button warning" onclick="restartBot()">
+                    <span>🔄</span> Redémarrer
+                </button>
+                <button class="action-button danger" onclick="stopBot()">
+                    <span>🛑</span> Arrêter
+                </button>
+                <button class="action-button" onclick="clearCache()">
+                    <span>🗑️</span> Vider le Cache
+                </button>
+            </div>
+
+            <!-- Toggle Mode Debug -->
+            <div class="debug-toggle-container">
+                <span class="debug-label">🐛 Mode Debug</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="debug-toggle" onchange="toggleDebug()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span id="debug-status" style="font-size: 0.85em; color: #6b7280;">Chargement...</span>
+            </div>
+
+            <div id="stats-content" class="loading">Chargement des statistiques...</div>
+
+            <!-- Graphiques en temps réel -->
+            <div class="charts-grid">
+                <div>
+                    <h3 style="margin-top: 20px; margin-bottom: 10px;">📈 CPU (5 dernières minutes)</h3>
+                    <div class="chart-container">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin-top: 20px; margin-bottom: 10px;">💾 Mémoire (5 dernières minutes)</h3>
+                    <div class="chart-container">
+                        <canvas id="memoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🚗 Labels Non Reconnus</h2>
+            <button class="button" onclick="refreshPatterns()">🔄 Rafraîchir</button>
+            <button class="button" onclick="downloadPatterns()">⬇️ Télécharger JSONL</button>
+            <button class="button" onclick="resetPatterns()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">🗑️ Remettre à zéro</button>
+            <div id="patterns-content" class="loading">Chargement des labels...</div>
+        </div>
+
+        <div class="card card-full-width">
+            <h2>📝 Logs du Bot</h2>
+            <div style="margin-bottom: 15px;">
+                <button class="button" onclick="refreshLogs()">🔄 Rafraîchir</button>
+                <button class="button" onclick="downloadLogs()">⬇️ Télécharger</button>
+            </div>
+
+            <div class="log-filters">
+                <input type="text" id="log-search" class="search-input" placeholder="🔍 Rechercher dans les logs..." onkeyup="applyLogFilters()">
+
+                <div class="filter-group">
+                    <input type="checkbox" id="filter-error" class="filter-checkbox" checked onchange="applyLogFilters()">
+                    <label for="filter-error" class="filter-label">🔴 Erreurs</label>
+                </div>
+
+                <div class="filter-group">
+                    <input type="checkbox" id="filter-warning" class="filter-checkbox" checked onchange="applyLogFilters()">
+                    <label for="filter-warning" class="filter-label">🟡 Warnings</label>
+                </div>
+
+                <div class="filter-group">
+                    <input type="checkbox" id="filter-info" class="filter-checkbox" checked onchange="applyLogFilters()">
+                    <label for="filter-info" class="filter-label">🔵 Info</label>
+                </div>
+
+                <div class="filter-group">
+                    <input type="checkbox" id="filter-success" class="filter-checkbox" checked onchange="applyLogFilters()">
+                    <label for="filter-success" class="filter-label">✅ Succès</label>
+                </div>
+            </div>
+
+            <div id="logs-content" class="logs-container">Chargement des logs...</div>
+            <div id="log-stats" style="margin-top: 10px; font-size: 0.85em; color: #6b7280;"></div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshInterval;
+        let currentAlerts = [];
+        let rawLogs = '';
+
+        // Graphiques
+        let cpuChart = null;
+        let memoryChart = null;
+        let cpuData = [];
+        let memoryData = [];
+        const maxDataPoints = 60; // 5 minutes à 5 secondes d'intervalle
+
+        // Formater la date ISO en format lisible
+        function formatDate(isoString) {
+            if (!isoString) return 'N/A';
+            const date = new Date(isoString);
+            return date.toLocaleString('fr-FR');
+        }
+
+        // Formater l'uptime en format lisible
+        function formatUptime(seconds) {
+            if (!seconds || seconds === 0) return 'N/A';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            }
+            return `${minutes}m`;
+        }
+
+        // Convertir la mémoire en MB pour calculs uniformes
+        function parseMemoryToMB(memStr) {
+            if (!memStr) return 0;
+
+            const match = memStr.match(/([\d.]+)\s*(MB|MiB|GB|GiB)/i);
+            if (!match) return 0;
+
+            const value = parseFloat(match[1]);
+            const unit = match[2].toUpperCase();
+
+            // Convertir tout en MB
+            if (unit === 'GB' || unit === 'GIB') {
+                return value * 1024;
+            } else if (unit === 'MB' || unit === 'MIB') {
+                return value;
+            }
+            return 0;
+        }
+
+        // Afficher les alertes
+        function displayAlerts() {
+            const container = document.getElementById('alerts-container');
+
+            if (currentAlerts.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            currentAlerts.forEach(alert => {
+                const bannerClass = alert.level === 'critical' ? 'alert-banner critical' : 'alert-banner';
+                html += `
+                    <div class="${bannerClass}">
+                        <div class="alert-icon">${alert.icon}</div>
+                        <div><strong>${alert.title}:</strong> ${alert.message}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Initialiser les graphiques
+        function initCharts() {
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    },
+                    x: {
+                        display: false
+                    }
+                },
+                animation: {
+                    duration: 0
+                }
+            };
+
+            // Graphique CPU
+            const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+            cpuChart = new Chart(cpuCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'CPU %',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: commonOptions
+            });
+
+            // Graphique Mémoire
+            const memCtx = document.getElementById('memoryChart').getContext('2d');
+            memoryChart = new Chart(memCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Mémoire %',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: commonOptions
+            });
+        }
+
+        // Mettre à jour les graphiques
+        function updateCharts(cpuPercent, memoryUsage, memoryLimit) {
+            const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            // Ajouter les nouvelles données
+            cpuData.push(cpuPercent);
+            if (cpuData.length > maxDataPoints) cpuData.shift();
+
+            // Calculer le pourcentage mémoire avec conversion d'unités
+            let memPercent = 0;
+            if (memoryUsage && memoryLimit) {
+                const usageMB = parseMemoryToMB(memoryUsage);
+                const limitMB = parseMemoryToMB(memoryLimit);
+
+                if (usageMB > 0 && limitMB > 0) {
+                    memPercent = (usageMB / limitMB) * 100;
+                }
+            }
+
+            memoryData.push(memPercent);
+            if (memoryData.length > maxDataPoints) memoryData.shift();
+
+            // Mettre à jour les graphiques
+            cpuChart.data.labels = Array(cpuData.length).fill('').map((_, i) => i);
+            cpuChart.data.datasets[0].data = cpuData;
+            cpuChart.update();
+
+            memoryChart.data.labels = Array(memoryData.length).fill('').map((_, i) => i);
+            memoryChart.data.datasets[0].data = memoryData;
+            memoryChart.update();
+        }
+
+        // Charger les stats du container
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/container/stats');
+                const data = await response.json();
+
+                let html = '';
+                currentAlerts = [];
+
+                if (data.status === 'running') {
+                    // Vérifier les alertes
+                    const cpuPercent = parseFloat(data.cpu_percent) || 0;
+                    const memoryUsage = data.memory_usage || '';
+                    const memoryLimit = data.memory_limit || '';
+
+                    // Alerte CPU élevé
+                    if (cpuPercent > 80) {
+                        currentAlerts.push({
+                            level: 'critical',
+                            icon: '🔥',
+                            title: 'CPU élevé',
+                            message: `Utilisation CPU à ${cpuPercent}% (seuil: 80%)`
+                        });
+                    } else if (cpuPercent > 60) {
+                        currentAlerts.push({
+                            level: 'warning',
+                            icon: '⚠️',
+                            title: 'CPU modéré',
+                            message: `Utilisation CPU à ${cpuPercent}%`
+                        });
+                    }
+
+                    // Alerte mémoire élevée avec conversion d'unités
+                    if (memoryUsage && memoryLimit) {
+                        const usageMB = parseMemoryToMB(memoryUsage);
+                        const limitMB = parseMemoryToMB(memoryLimit);
+
+                        if (usageMB > 0 && limitMB > 0) {
+                            const memPercent = (usageMB / limitMB) * 100;
+                            if (memPercent > 90) {
+                                currentAlerts.push({
+                                    level: 'critical',
+                                    icon: '💾',
+                                    title: 'Mémoire critique',
+                                    message: `Utilisation mémoire à ${memPercent.toFixed(1)}% (${memoryUsage} / ${memoryLimit})`
+                                });
+                            } else if (memPercent > 75) {
+                                currentAlerts.push({
+                                    level: 'warning',
+                                    icon: '💾',
+                                    title: 'Mémoire élevée',
+                                    message: `Utilisation mémoire à ${memPercent.toFixed(1)}%`
+                                });
+                            }
+                        }
+                    }
+
+                    html = `
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-label">Statut</div>
+                                <div class="stat-value">
+                                    <span class="status-indicator status-running"></span>
+                                    En ligne
+                                </div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Uptime</div>
+                                <div class="stat-value">${data.uptime || 'N/A'}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">CPU</div>
+                                <div class="stat-value">${data.cpu_percent || '0'}%</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Mémoire</div>
+                                <div class="stat-value">${data.memory_usage || 'N/A'}</div>
+                                <div class="stat-label" style="font-size: 0.8em; margin-top: 5px;">
+                                    Limite: ${data.memory_limit || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="last-update">Dernière mise à jour: ${formatDate(data.timestamp)}</div>
+                    `;
+                } else if (data.status === 'stopped') {
+                    currentAlerts.push({
+                        level: 'critical',
+                        icon: '🛑',
+                        title: 'Bot arrêté',
+                        message: 'Le container bot-operateur-112 n\'est pas en cours d\'exécution'
+                    });
+
+                    html = `
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-label">Statut</div>
+                                <div class="stat-value">
+                                    <span class="status-indicator status-stopped"></span>
+                                    Arrêté
+                                </div>
+                            </div>
+                        </div>
+                        <div class="error-message">⚠️ Le container bot-operateur-112 n'est pas en cours d'exécution</div>
+                    `;
+                } else {
+                    currentAlerts.push({
+                        level: 'critical',
+                        icon: '❌',
+                        title: 'Erreur',
+                        message: 'Impossible de récupérer les statistiques du container'
+                    });
+
+                    html = `
+                        <div class="error-message">
+                            ⚠️ Erreur lors de la récupération des statistiques: ${data.error || 'Erreur inconnue'}
+                        </div>
+                    `;
+                }
+
+                document.getElementById('stats-content').innerHTML = html;
+                displayAlerts();
+
+                // Mettre à jour les graphiques
+                if (data.status === 'running') {
+                    const cpuPercent = parseFloat(data.cpu_percent) || 0;
+                    updateCharts(cpuPercent, data.memory_usage, data.memory_limit);
+                }
+            } catch (error) {
+                document.getElementById('stats-content').innerHTML = `
+                    <div class="error-message">
+                        ❌ Impossible de charger les statistiques: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Charger les logs
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/container/logs');
+                const text = await response.text();
+
+                // Nettoyer et formater les logs
+                rawLogs = text
+                    .split('\n')
+                    .filter(line => line.trim() !== '')
+                    .slice(-100)  // Garder les 100 dernières lignes
+                    .join('\n');
+
+                // Appliquer les filtres
+                applyLogFilters();
+            } catch (error) {
+                document.getElementById('logs-content').textContent =
+                    `❌ Impossible de charger les logs: ${error.message}`;
+            }
+        }
+
+        // Classifier une ligne de log
+        function classifyLogLine(line) {
+            const lowerLine = line.toLowerCase();
+            if (lowerLine.includes('error') || lowerLine.includes('erreur') || lowerLine.includes('exception') || lowerLine.includes('traceback')) {
+                return 'error';
+            }
+            if (lowerLine.includes('warning') || lowerLine.includes('warn') || lowerLine.includes('attention')) {
+                return 'warning';
+            }
+            if (lowerLine.includes('success') || lowerLine.includes('succès') || lowerLine.includes('✅') || lowerLine.includes('déployée')) {
+                return 'success';
+            }
+            return 'info';
+        }
+
+        // Appliquer les filtres sur les logs
+        function applyLogFilters() {
+            if (!rawLogs) {
+                return;
+            }
+
+            const searchTerm = document.getElementById('log-search').value.toLowerCase();
+            const showError = document.getElementById('filter-error').checked;
+            const showWarning = document.getElementById('filter-warning').checked;
+            const showInfo = document.getElementById('filter-info').checked;
+            const showSuccess = document.getElementById('filter-success').checked;
+
+            const lines = rawLogs.split('\n');
+            let filteredLines = [];
+            let stats = { error: 0, warning: 0, info: 0, success: 0, total: lines.length };
+
+            lines.forEach(line => {
+                const type = classifyLogLine(line);
+                stats[type]++;
+
+                // Appliquer le filtre de type
+                if ((type === 'error' && !showError) ||
+                    (type === 'warning' && !showWarning) ||
+                    (type === 'info' && !showInfo) ||
+                    (type === 'success' && !showSuccess)) {
+                    return;
+                }
+
+                // Appliquer le filtre de recherche
+                if (searchTerm && !line.toLowerCase().includes(searchTerm)) {
+                    return;
+                }
+
+                filteredLines.push(line);
+            });
+
+            // Afficher les logs filtrés avec coloration et highlight
+            const logsContainer = document.getElementById('logs-content');
+            if (filteredLines.length === 0) {
+                logsContainer.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">Aucun log ne correspond aux filtres</div>';
+            } else {
+                let html = '';
+                filteredLines.forEach(line => {
+                    const type = classifyLogLine(line);
+                    let displayLine = escapeHtml(line);
+
+                    // Highlight du terme de recherche
+                    if (searchTerm) {
+                        const regex = new RegExp('(' + escapeRegex(searchTerm) + ')', 'gi');
+                        displayLine = displayLine.replace(regex, '<span class="highlight">$1</span>');
+                    }
+
+                    html += `<div class="log-line-${type}">${displayLine}</div>`;
+                });
+                logsContainer.innerHTML = html;
+            }
+
+            // Afficher les statistiques
+            document.getElementById('log-stats').textContent =
+                `Affichage de ${filteredLines.length} sur ${stats.total} lignes | ` +
+                `🔴 ${stats.error} erreurs | 🟡 ${stats.warning} warnings | ✅ ${stats.success} succès | 🔵 ${stats.info} info`;
+
+            // Scroller vers le bas
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        // Échapper HTML pour éviter XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Échapper les caractères spéciaux regex
+        function escapeRegex(text) {
+            return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // DÉSACTIVÉ - Charger les statistiques du bot
+        /*
+        async function loadBotStats() {
+            try {
+                const response = await fetch('/api/bot/stats');
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    const successRateClass = data.success_rate > 80 ? '' : (data.success_rate > 50 ? 'warning' : 'error');
+                    const errorsClass = data.total_errors === 0 ? '' : (data.total_errors > 10 ? 'error' : 'warning');
+
+                    let html = `
+                        <div class="bot-stats-grid">
+                            <div class="bot-stat-card">
+                                <div class="bot-stat-label">Missions Déployées</div>
+                                <div class="bot-stat-value">${data.missions_deployed || 0}</div>
+                                <div class="bot-stat-subtext">Depuis le démarrage</div>
+                            </div>
+                            <div class="bot-stat-card">
+                                <div class="bot-stat-label">Succès</div>
+                                <div class="bot-stat-value">${data.missions_success || 0}</div>
+                            </div>
+                            <div class="bot-stat-card ${errorsClass}">
+                                <div class="bot-stat-label">Échecs</div>
+                                <div class="bot-stat-value">${data.missions_failed || 0}</div>
+                            </div>
+                            <div class="bot-stat-card ${successRateClass}">
+                                <div class="bot-stat-label">Taux de Succès</div>
+                                <div class="bot-stat-value">${data.success_rate || 0}%</div>
+                            </div>
+                            <div class="bot-stat-card ${data.total_errors > 0 ? 'warning' : ''}">
+                                <div class="bot-stat-label">Erreurs</div>
+                                <div class="bot-stat-value">${data.total_errors || 0}</div>
+                            </div>
+                            <div class="bot-stat-card ${data.total_warnings > 5 ? 'warning' : ''}">
+                                <div class="bot-stat-label">Avertissements</div>
+                                <div class="bot-stat-value">${data.total_warnings || 0}</div>
+                            </div>
+                        </div>
+                    `;
+
+                    if (data.last_mission && data.last_mission !== 'Aucune mission récente') {
+                        html += `
+                            <div style="margin-top: 20px;">
+                                <strong>Dernière mission :</strong>
+                                <div class="last-mission-box">${data.last_mission}</div>
+                            </div>
+                        `;
+                    }
+
+                    html += `<div class="last-update">Dernière mise à jour: ${formatDate(data.timestamp)}</div>`;
+
+                    // Ajouter une alerte si trop d'erreurs
+                    if (data.total_errors > 10) {
+                        const errorAlert = {
+                            level: 'warning',
+                            icon: '⚠️',
+                            title: 'Erreurs détectées',
+                            message: `${data.total_errors} erreurs détectées dans les logs récents`
+                        };
+                        if (!currentAlerts.some(a => a.title === 'Erreurs détectées')) {
+                            currentAlerts.push(errorAlert);
+                            displayAlerts();
+                        }
+                    }
+
+                    document.getElementById('bot-stats-content').innerHTML = html;
+                } else {
+                    document.getElementById('bot-stats-content').innerHTML = `
+                        <div class="error-message">
+                            ⚠️ Impossible de charger les statistiques: ${data.error || 'Erreur inconnue'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('bot-stats-content').innerHTML = `
+                    <div class="error-message">
+                        ❌ Impossible de charger les statistiques du bot: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        */
+
+        // Rafraîchir les logs manuellement
+        function refreshLogs() {
+            loadLogs();
+        }
+
+        // Télécharger les logs
+        function downloadLogs() {
+            window.open('/api/container/logs', '_blank');
+        }
+
+        // Charger les labels non reconnus
+        async function loadPatterns() {
+            try {
+                const response = await fetch('/api/unmatched-labels');
+                const text = await response.text();
+
+                // Parser les lignes JSONL
+                const lines = text.trim().split('\n').filter(line => line.trim() !== '');
+
+                if (lines.length === 0) {
+                    document.getElementById('patterns-content').innerHTML = `
+                        <div class="no-patterns">
+                            Aucun label non reconnu pour le moment
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Compter les occurrences de chaque label, grouper par source
+                const labelCounts = {};
+                const sourceCounts = {};
+                lines.forEach(line => {
+                    try {
+                        const data = JSON.parse(line);
+                        const key = data.label || data.unrecognized_pattern || data.pattern || 'Unknown';
+                        const source = data.source || 'unknown';
+                        labelCounts[key] = (labelCounts[key] || 0) + 1;
+                        sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+                    } catch (e) {
+                        console.error('Erreur parsing ligne:', e);
+                    }
+                });
+
+                // Sources summary
+                const sourceSummary = Object.entries(sourceCounts)
+                    .map(([source, count]) => `${source}: ${count}`)
+                    .join(' | ');
+
+                // Créer le tableau HTML
+                let html = `
+                    <div style="margin-bottom: 15px;">
+                        <strong>Total:</strong> <span class="pattern-count">${lines.length} occurrence(s)</span>
+                        <strong style="margin-left: 20px;">Labels uniques:</strong> <span class="pattern-count">${Object.keys(labelCounts).length}</span>
+                        <div style="margin-top: 5px; font-size: 0.85em; color: #6b7280;">Sources: ${sourceSummary}</div>
+                    </div>
+                    <table class="patterns-table">
+                        <thead>
+                            <tr>
+                                <th>Label non reconnu</th>
+                                <th style="text-align: center;">Occurrences</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // Trier par nombre d'occurrences (décroissant)
+                const sortedLabels = Object.entries(labelCounts)
+                    .sort((a, b) => b[1] - a[1]);
+
+                sortedLabels.forEach(([label, count]) => {
+                    html += `
+                        <tr>
+                            <td><code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">${escapeHtml(label)}</code></td>
+                            <td style="text-align: center;"><span class="pattern-count">${count}</span></td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById('patterns-content').innerHTML = html;
+            } catch (error) {
+                document.getElementById('patterns-content').innerHTML = `
+                    <div class="error-message">
+                        Impossible de charger les labels: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // DÉSACTIVÉ - Charger les missions actives
+        /*
+        async function loadActiveMissions() {
+            try {
+                const response = await fetch('/api/bot/active-missions');
+                const data = await response.json();
+
+                if (data.status === 'ok' && data.missions && data.missions.length > 0) {
+                    let html = `
+                        <div style="margin-bottom: 15px;">
+                            <strong>Résumé:</strong>
+                            <span style="margin-left: 10px;">🔵 ${data.active_count || 0} en cours</span>
+                            <span style="margin-left: 10px;">✅ ${data.success_count || 0} succès</span>
+                            <span style="margin-left: 10px;">❌ ${data.failed_count || 0} échecs</span>
+                        </div>
+                        <div class="missions-grid">
+                    `;
+
+                    data.missions.forEach(mission => {
+                        let statusClass = '';
+                        let statusIcon = '🔵';
+                        if (mission.status === 'Succès') {
+                            statusClass = 'status-success';
+                            statusIcon = '✅';
+                        } else if (mission.status === 'Échec') {
+                            statusClass = 'status-failed';
+                            statusIcon = '❌';
+                        }
+
+                        html += `
+                            <div class="mission-card ${statusClass}">
+                                <div class="mission-id">Mission #${mission.id}</div>
+                                <div class="mission-info">
+                                    <div><span class="mission-label">Type:</span> ${mission.type || 'Inconnue'}</div>
+                                    <div><span class="mission-label">Statut:</span> ${statusIcon} ${mission.status}</div>
+                                    <div><span class="mission-label">Véhicules:</span></div>
+                                    <div class="mission-vehicles">${mission.vehicles || 'Aucun'}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                    document.getElementById('missions-content').innerHTML = html;
+                } else {
+                    document.getElementById('missions-content').innerHTML = `
+                        <div class="no-missions">
+                            ℹ️ Aucune mission active pour le moment
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('missions-content').innerHTML = `
+                    <div class="error-message">
+                        ❌ Impossible de charger les missions: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        */
+
+        // Rafraîchir les patterns manuellement
+        function refreshPatterns() {
+            loadPatterns();
+        }
+
+        // Télécharger les labels non reconnus
+        function downloadPatterns() {
+            window.open('/api/unmatched-labels', '_blank');
+        }
+
+        // Redémarrer le container du bot
+        async function restartBot() {
+            if (!confirm('⚠️ Êtes-vous sûr de vouloir redémarrer le container du bot ?\n\nLe bot sera indisponible pendant 10-15 secondes.')) {
+                return;
+            }
+
+            try {
+                // Afficher un loader
+                const statsContent = document.getElementById('stats-content');
+                const originalContent = statsContent.innerHTML;
+                statsContent.innerHTML = '<div class="loading">🔄 Redémarrage en cours...</div>';
+
+                const response = await fetch('/api/container/restart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message + '\n\nLe bot redémarre. Patientez 15 secondes...');
+
+                    // Recharger les stats après 15 secondes
+                    setTimeout(() => {
+                        loadStats();
+                    }, 15000);
+                } else {
+                    alert('❌ Erreur: ' + (data.error || data.message));
+                    statsContent.innerHTML = originalContent;
+                }
+            } catch (error) {
+                alert('❌ Erreur de connexion: ' + error.message);
+                loadStats();
+            }
+        }
+
+        // Arrêter le container du bot
+        async function stopBot() {
+            if (!confirm('🛑 ATTENTION: Êtes-vous sûr de vouloir ARRÊTER le container du bot ?\n\nLe bot ne traitera plus aucune mission jusqu\'au prochain démarrage manuel.')) {
+                return;
+            }
+
+            // Double confirmation pour l'arrêt
+            if (!confirm('⚠️ DERNIÈRE CONFIRMATION\n\nCette action va arrêter complètement le bot.\nÊtes-vous VRAIMENT sûr ?')) {
+                return;
+            }
+
+            try {
+                // Afficher un loader
+                const statsContent = document.getElementById('stats-content');
+                statsContent.innerHTML = '<div class="loading">🛑 Arrêt en cours...</div>';
+
+                const response = await fetch('/api/container/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message + '\n\nLe bot est maintenant arrêté.\n\nPour redémarrer: Utilisez le bouton "Redémarrer" ou la commande:\ndocker start bot-operateur-112');
+
+                    // Recharger les stats
+                    setTimeout(() => {
+                        loadStats();
+                    }, 3000);
+                } else {
+                    alert('❌ Erreur: ' + (data.error || data.message));
+                    loadStats();
+                }
+            } catch (error) {
+                alert('❌ Erreur de connexion: ' + error.message);
+                loadStats();
+            }
+        }
+
+        // Vider le cache
+        async function clearCache() {
+            if (!confirm('🗑️ Voulez-vous vider le cache du navigateur du bot ?\n\nCela peut résoudre certains problèmes de connexion.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/container/clear-cache', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message + '\n\nLe cache a été vidé avec succès !\n\nRecommandation: Redémarrez le bot pour une prise en compte complète.');
+                } else {
+                    alert('❌ Erreur: ' + (data.error || data.message));
+                }
+            } catch (error) {
+                alert('❌ Erreur de connexion: ' + error.message);
+            }
+        }
+
+        // Toggle mode debug
+        async function toggleDebug() {
+            const checkbox = document.getElementById('debug-toggle');
+            const isEnabled = checkbox.checked;
+
+            const action = isEnabled ? 'activer' : 'désactiver';
+
+            try {
+                const response = await fetch('/api/container/debug', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enable: isEnabled })
+                });
+
+                const data = await response.json();
+
+                // Le mode debug nécessite une modification de docker-compose.yml
+                if (!data.success) {
+                    const instructions = `⚠️ ${data.message}
+
+📋 Instructions pour ${action} le mode debug:
+
+1. Connectez-vous en SSH à votre QNAP
+2. Éditez le fichier docker-compose.yml:
+   cd /share/Container/Bot_OperateurV3
+   nano docker-compose.yml
+
+3. Modifiez la ligne LOG_LEVEL:
+   - LOG_LEVEL=\${LOG_LEVEL:-${isEnabled ? 'DEBUG' : 'INFO'}}
+
+4. Redémarrez le bot:
+   docker-compose restart bot-operateur
+
+⚠️ Le mode debug génère BEAUCOUP plus de logs`;
+
+                    alert(instructions);
+
+                    // Restaurer l'état précédent car changement non effectué
+                    checkbox.checked = !isEnabled;
+                }
+            } catch (error) {
+                alert('❌ Erreur: ' + error.message);
+                checkbox.checked = !isEnabled;
+            }
+        }
+
+        // Charger le statut du mode debug
+        async function loadDebugStatus() {
+            try {
+                const response = await fetch('/api/container/debug');
+                const data = await response.json();
+
+                // Pour l'instant, on ne peut pas détecter le mode debug dynamiquement
+                // On affiche juste un message
+                document.getElementById('debug-status').textContent = 'Voir docker-compose.yml';
+            } catch (error) {
+                document.getElementById('debug-status').textContent = 'Inconnu';
+            }
+        }
+
+        // Remettre à zéro les labels non reconnus
+        async function resetPatterns() {
+            try {
+                const response = await fetch('/api/unmatched-labels/reset', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                // Afficher les instructions
+                const instructions = `Instructions pour remettre à zéro les labels non reconnus:
+
+1. Connectez-vous en SSH à votre QNAP
+2. Exécutez la commande:
+   docker exec bot-monitoring /usr/local/bin/reset-patterns.sh
+
+3. Une sauvegarde sera automatiquement créée
+4. Actualisez cette page pour voir les changements`;
+
+                // Créer une popup personnalisée avec les instructions
+                const popup = confirm(instructions + '\n\nVoulez-vous copier la commande dans le presse-papier ?');
+
+                if (popup) {
+                    navigator.clipboard.writeText('docker exec bot-monitoring /usr/local/bin/reset-patterns.sh')
+                        .then(() => alert('Commande copiée dans le presse-papier !'))
+                        .catch(() => alert('Impossible de copier automatiquement'));
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // Rafraîchissement automatique toutes les 5 secondes
+        function startAutoRefresh() {
+            // Initialiser les graphiques
+            initCharts();
+
+            // Charger les données initiales
+            loadStats();
+            loadLogs();
+            loadPatterns();
+            loadDebugStatus();
+
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+
+            autoRefreshInterval = setInterval(() => {
+                loadStats();
+                loadLogs();
+                loadPatterns();
+            }, 5000);
+        }
+
+        // Arrêter le rafraîchissement quand on quitte la page
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+
+        // Démarrer au chargement de la page
+        startAutoRefresh();
+    </script>
+</body>
+</html>

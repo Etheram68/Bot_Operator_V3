@@ -224,14 +224,14 @@ echo "✅ Missions actives générées: $(ls -la $API_DIR/active-missions.json 2
 # Fonction pour gérer la remise à zéro des patterns
 handle_reset_trigger() {
     local trigger_file="$API_DIR/reset-trigger"
-    local patterns_file="/usr/share/nginx/html/data/unmatched_labels.jsonl.jsonl"
+    local patterns_file="/usr/share/nginx/html/data/unmatched_labels.jsonl"
 
     if [ -f "$trigger_file" ]; then
-        echo "🗑️  Remise à zéro des patterns détectée..."
+        echo "🗑️  Remise à zéro des labels non reconnus détectée..."
 
         # Faire une sauvegarde si le fichier existe
         if [ -f "$patterns_file" ]; then
-            local backup_file="/usr/share/nginx/html/data/unrecognized_vehicle_patterns_backup_$(date +%Y%m%d_%H%M%S).jsonl"
+            local backup_file="/usr/share/nginx/html/data/unmatched_labels_backup_$(date +%Y%m%d_%H%M%S).jsonl"
             cp "$patterns_file" "$backup_file" 2>/dev/null || true
             echo "💾 Backup créé: $backup_file"
         fi
@@ -242,7 +242,7 @@ handle_reset_trigger() {
         # Supprimer le trigger
         rm -f "$trigger_file"
 
-        echo "✅ Patterns remis à zéro"
+        echo "✅ Labels non reconnus remis à zéro"
     fi
 }
 

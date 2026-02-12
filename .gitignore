@@ -32,7 +32,6 @@ build/
 # Data and cache
 data/
 cache/
-*.html
 
 # Docker
 docker-compose.override.yml

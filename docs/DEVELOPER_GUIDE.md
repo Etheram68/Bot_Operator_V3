@@ -38,7 +38,8 @@ Bot_OperateurV3/
 │       ├── needs_labels_v2.json      # Patterns véhicules
 │       ├── vehicles_v2.json          # Mapping véhicules
 │       ├── missing_needs_config.json # Config "Il nous manque"
-│       └── unrecognized_vehicle_patterns.jsonl
+│       ├── vehicle_labels.json        # Mapping label → type véhicule (LabelMatcher)
+│       └── unmatched_labels.jsonl     # Labels non reconnus (auto-learning)
 ├── tests/                     # Tests automatisés
 │   ├── test_performance_improvements.py
 │   ├── test_vehicle_threshold_skip.py
