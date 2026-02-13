@@ -215,8 +215,6 @@ class OperateurBot:
             }
         }
         
-        if self.is_running and self.mission_manager:
-            status["active_missions"] = 0
         
         return status
     

@@ -128,13 +128,6 @@ async def status_monitoring_example():
         print(f"  - Utilisateur: {status['settings']['username']}")
         print(f"  - Stratégie: {status['settings']['strategy']}")
         
-        if 'active_missions' in status:
-            print(f"  - Missions actives: {status['active_missions']}")
-            
-            if status.get('missions_details'):
-                print("  📋 Missions en cours:")
-                for mission_info in status['missions_details']:
-                    print(f"    - {mission_info['title']} ({mission_info['status']})")
 
 
 if __name__ == "__main__":
