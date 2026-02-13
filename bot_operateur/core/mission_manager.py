@@ -559,15 +559,19 @@ class MissionManager:
                     # Récupérer TOUS les liens de transport (href + texte) avant navigation
                     transport_links = await transport_alert.query_selector_all('a.btn.btn-xs.btn-success')
 
-                    # Extraire les informations des liens avant navigation
-                    for link in transport_links:
-                        try:
-                            href = await link.get_attribute('href')
-                            text = await link.inner_text()
-                            transport_data.append({'href': href, 'text': text, 'type': 'patient'})
-                        except Exception as e:
-                            logger.error(f"Erreur lors de l'extraction d'un lien de transport: {e}")
-                            continue
+                    try:
+                        # Extraire les informations des liens avant navigation
+                        for link in transport_links:
+                            try:
+                                href = await link.get_attribute('href')
+                                text = await link.inner_text()
+                                transport_data.append({'href': href, 'text': text, 'type': 'patient'})
+                            except Exception as e:
+                                logger.error(f"Erreur lors de l'extraction d'un lien de transport: {e}")
+                                continue
+                    finally:
+                        for link in transport_links:
+                            await link.dispose()
 
                     if len([t for t in transport_data if t.get('type') == 'patient']) > 0:
                         logger.debug(f"🚑 {len([t for t in transport_data if t.get('type') == 'patient'])} transport(s) sanitaire(s) détecté(s)")
@@ -762,39 +766,43 @@ class MissionManager:
             # Chercher tous les liens de transport de prisonniers dans les véhicules
             # Structure: td.vehicle_prisoner_select > div[id^="prison-select-"] 
             prisoner_cells = await self.browser_manager.page.query_selector_all('td.vehicle_prisoner_select div[id^="prison-select-"]')
-            
+
             if not prisoner_cells:
                 logger.debug("Aucune cellule de sélection de prisonniers trouvée")
                 return []
-            
+
             transport_data = []
-            
-            for cell in prisoner_cells:
-                try:
-                    # Trouver le premier lien btn-success dans cette cellule (prison la plus proche)
-                    success_link = await cell.query_selector('a.btn.btn-success')
-                    
-                    if success_link:
-                        href = await success_link.get_attribute('href')
-                        text = await success_link.inner_text()
-                        
-                        # Extraire le vehicle_id depuis l'ID de la div (format: prison-select-VEHICLE_ID)
-                        cell_id = await cell.get_attribute('id')
-                        vehicle_id = cell_id.replace('prison-select-', '') if cell_id and cell_id.startswith('prison-select-') else 'unknown'
-                        
-                        if href:  # S'assurer que le lien est valide
-                            transport_data.append({
-                                'href': href, 
-                                'text': f"🚔 Véhicule {vehicle_id} → {text}",  # Info détaillée
-                                'type': 'prisoner',
-                                'vehicle_id': vehicle_id
-                            })
-                            logger.debug(f"Lien de transport prisonnier trouvé: Véhicule {vehicle_id} → {text}")
-                
-                except Exception as e:
-                    logger.error(f"Erreur lors de l'extraction d'un lien de transport prisonnier: {e}")
-                    continue
-            
+
+            try:
+                for cell in prisoner_cells:
+                    try:
+                        # Trouver le premier lien btn-success dans cette cellule (prison la plus proche)
+                        success_link = await cell.query_selector('a.btn.btn-success')
+
+                        if success_link:
+                            href = await success_link.get_attribute('href')
+                            text = await success_link.inner_text()
+
+                            # Extraire le vehicle_id depuis l'ID de la div (format: prison-select-VEHICLE_ID)
+                            cell_id = await cell.get_attribute('id')
+                            vehicle_id = cell_id.replace('prison-select-', '') if cell_id and cell_id.startswith('prison-select-') else 'unknown'
+
+                            if href:  # S'assurer que le lien est valide
+                                transport_data.append({
+                                    'href': href,
+                                    'text': f"🚔 Véhicule {vehicle_id} → {text}",  # Info détaillée
+                                    'type': 'prisoner',
+                                    'vehicle_id': vehicle_id
+                                })
+                                logger.debug(f"Lien de transport prisonnier trouvé: Véhicule {vehicle_id} → {text}")
+
+                    except Exception as e:
+                        logger.error(f"Erreur lors de l'extraction d'un lien de transport prisonnier: {e}")
+                        continue
+            finally:
+                for cell in prisoner_cells:
+                    await cell.dispose()
+
             return transport_data
             
         except Exception as e:
@@ -885,72 +893,76 @@ class MissionManager:
             
             # Chercher les div avec data-requirement-type="vehicles"
             vehicle_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="vehicles"]')
-            
-            for div in vehicle_requirement_divs:
-                try:
-                    div_text = await div.inner_text()
-                    
-                    # Parser le texte pour extraire les véhicules manquants
-                    # Format attendu: "Véhicules manquants: 1 camion-citerne" ou "Véhicules manquants: 1 Chef de groupe, 1 camion-citerne"
-                    if "Véhicules manquants:" in div_text:
-                        # Extraire la partie après "Véhicules manquants:"
-                        missing_part = div_text.split("Véhicules manquants:")[1].strip()
-                        
-                        # Nettoyer les entités HTML (&nbsp; -> espaces normaux)
-                        import html
-                        missing_part_cleaned = html.unescape(missing_part)
 
-                        # Diviser par les virgules pour traiter chaque véhicule manquant séparément
-                        missing_items = [item.strip() for item in missing_part_cleaned.split(',')]
-                        
-                        # Utiliser le système de mapping existant depuis les fichiers JSON
-                        from ..models.requirement_parser import RequirementParser
-                        parser = RequirementParser()
-                        
-                        for missing_item in missing_items:
-                            # Utiliser la méthode existante pour parser les exigences de véhicules
-                            # On simule un texte de mission pour utiliser le parser existant
-                            simulated_text = f"Exigences de véhicules et du personnel {missing_item} requis"
-                            
-                            try:
-                                # Parser avec le système existant
-                                parsed_requirements = parser.parse_mission_text(simulated_text)
-                                
-                                found_match = False
-                                for requirement in parsed_requirements:
-                                    if requirement.quantity > 0:
-                                        vehicle_type = requirement.vehicle_type
-                                        quantity = requirement.quantity
+            try:
+                for div in vehicle_requirement_divs:
+                    try:
+                        div_text = await div.inner_text()
 
-                                        # ✅ Pattern reconnu - marquer immédiatement
-                                        found_match = True
+                        # Parser le texte pour extraire les véhicules manquants
+                        # Format attendu: "Véhicules manquants: 1 camion-citerne" ou "Véhicules manquants: 1 Chef de groupe, 1 camion-citerne"
+                        if "Véhicules manquants:" in div_text:
+                            # Extraire la partie après "Véhicules manquants:"
+                            missing_part = div_text.split("Véhicules manquants:")[1].strip()
 
-                                        # Vérifier si des véhicules de ce type sont EN ROUTE (ignorer)
-                                        # Mais PAS ceux sur site (table mission_vehicle_at_mission)
-                                        should_add = True
-                                        vehicles_en_route = vehicles_en_route_by_type.get(vehicle_type, 0)
-                                        if vehicles_en_route > 0:
-                                            should_add = False
+                            # Nettoyer les entités HTML (&nbsp; -> espaces normaux)
+                            import html
+                            missing_part_cleaned = html.unescape(missing_part)
 
-                                        if should_add:
-                                            missing_vehicles_needs[vehicle_type] = missing_vehicles_needs.get(vehicle_type, 0) + quantity
-                                            logger.debug(f"✅ Pattern '{missing_item}' reconnu comme {vehicle_type} x{quantity}, ajouté aux besoins")
-                                        else:
-                                            logger.debug(f"⏭️ Pattern '{missing_item}' reconnu comme {vehicle_type} x{quantity}, mais ignoré car {vehicles_en_route} véhicules en route")
+                            # Diviser par les virgules pour traiter chaque véhicule manquant séparément
+                            missing_items = [item.strip() for item in missing_part_cleaned.split(',')]
 
-                                        break
-                                
-                                if not found_match:
-                                    # Si aucun pattern ne correspond, logger pour analyse et sauvegarder
-                                    logger.warning(f"Pattern de véhicule manquant non reconnu: '{missing_item}'")
-                                    await self._log_unrecognized_vehicle_pattern(missing_item, mission)
-                                    
-                            except Exception as e:
-                                logger.warning(f"Erreur lors du parsing avec RequirementParser pour '{missing_item}': {e}")
-                    
-                except Exception as e:
-                    logger.error(f"Erreur lors de l'analyse d'une div de véhicules manquants: {e}")
-                    continue
+                            # Utiliser le système de mapping existant depuis les fichiers JSON
+                            from ..models.requirement_parser import RequirementParser
+                            parser = RequirementParser()
+
+                            for missing_item in missing_items:
+                                # Utiliser la méthode existante pour parser les exigences de véhicules
+                                # On simule un texte de mission pour utiliser le parser existant
+                                simulated_text = f"Exigences de véhicules et du personnel {missing_item} requis"
+
+                                try:
+                                    # Parser avec le système existant
+                                    parsed_requirements = parser.parse_mission_text(simulated_text)
+
+                                    found_match = False
+                                    for requirement in parsed_requirements:
+                                        if requirement.quantity > 0:
+                                            vehicle_type = requirement.vehicle_type
+                                            quantity = requirement.quantity
+
+                                            # ✅ Pattern reconnu - marquer immédiatement
+                                            found_match = True
+
+                                            # Vérifier si des véhicules de ce type sont EN ROUTE (ignorer)
+                                            # Mais PAS ceux sur site (table mission_vehicle_at_mission)
+                                            should_add = True
+                                            vehicles_en_route = vehicles_en_route_by_type.get(vehicle_type, 0)
+                                            if vehicles_en_route > 0:
+                                                should_add = False
+
+                                            if should_add:
+                                                missing_vehicles_needs[vehicle_type] = missing_vehicles_needs.get(vehicle_type, 0) + quantity
+                                                logger.debug(f"✅ Pattern '{missing_item}' reconnu comme {vehicle_type} x{quantity}, ajouté aux besoins")
+                                            else:
+                                                logger.debug(f"⏭️ Pattern '{missing_item}' reconnu comme {vehicle_type} x{quantity}, mais ignoré car {vehicles_en_route} véhicules en route")
+
+                                            break
+
+                                    if not found_match:
+                                        # Si aucun pattern ne correspond, logger pour analyse et sauvegarder
+                                        logger.warning(f"Pattern de véhicule manquant non reconnu: '{missing_item}'")
+                                        await self._log_unrecognized_vehicle_pattern(missing_item, mission)
+
+                                except Exception as e:
+                                    logger.warning(f"Erreur lors du parsing avec RequirementParser pour '{missing_item}': {e}")
+
+                    except Exception as e:
+                        logger.error(f"Erreur lors de l'analyse d'une div de véhicules manquants: {e}")
+                        continue
+            finally:
+                for div in vehicle_requirement_divs:
+                    await div.dispose()
             
             # Analyser les besoins non-véhicules (eau, personnel, etc.)
             other_needs = await self._extract_other_missing_needs_from_alert(mission)
@@ -1000,53 +1012,59 @@ class MissionManager:
             # Chercher les div avec data-requirement-type="other" et "personnel"
             other_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="other"]')
             personnel_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="personnel"]')
-            
-            # Traiter les besoins "other" (eau, équipement, etc.)
-            for div in other_requirement_divs:
-                try:
-                    div_text = await div.inner_text()
-                    logger.debug(f"Analyse du texte de besoin: '{div_text}'")
-                    
-                    # Parser le texte pour extraire les besoins non-véhicules
-                    if "Il nous manque:" in div_text:
-                        # Extraire la partie après "Il nous manque:"
-                        missing_part = div_text.split("Il nous manque:")[1].strip()
-                        
-                        # Parser différents types de besoins
-                        need_info = self._parse_missing_need_text(missing_part)
-                        if need_info:
-                            other_needs[need_info['type']] = need_info['quantity']
-                            logger.info(f"Besoin détecté: {need_info['type']} = {need_info['quantity']}")
-                        else:
-                            # Si le pattern n'est pas reconnu, le sauvegarder pour analyse future
-                            await self._log_unrecognized_missing_pattern(missing_part, mission)
-                        
-                except Exception as e:
-                    logger.error(f"Erreur lors de l'analyse d'une div de besoins autres: {e}")
-                    continue
-            
-            # Traiter les besoins en personnel
-            for div in personnel_requirement_divs:
-                try:
-                    div_text = await div.inner_text()
-                    logger.debug(f"Analyse du texte de personnel: '{div_text}'")
-                    
-                    # Parser le texte pour extraire les besoins en personnel
-                    if "Personnel manquant:" in div_text:
-                        # Extraire la partie après "Personnel manquant:"
-                        personnel_part = div_text.split("Personnel manquant:")[1].strip()
-                        
-                        # Parser le format "3x PLG (Plongeur), 3x SAV (Sauvetage Aquatique)"
-                        personnel_needs = self._parse_missing_personnel_text(personnel_part)
-                        
-                        # Ajouter aux besoins avec un préfixe pour les distinguer
-                        for personnel_type, quantity in personnel_needs.items():
-                            other_needs[f"personnel_{personnel_type}"] = quantity
-                            logger.info(f"Personnel manquant détecté: {quantity}x {personnel_type}")
-                        
-                except Exception as e:
-                    logger.error(f"Erreur lors de l'analyse d'une div de personnel manquant: {e}")
-                    continue
+
+            try:
+                # Traiter les besoins "other" (eau, équipement, etc.)
+                for div in other_requirement_divs:
+                    try:
+                        div_text = await div.inner_text()
+                        logger.debug(f"Analyse du texte de besoin: '{div_text}'")
+
+                        # Parser le texte pour extraire les besoins non-véhicules
+                        if "Il nous manque:" in div_text:
+                            # Extraire la partie après "Il nous manque:"
+                            missing_part = div_text.split("Il nous manque:")[1].strip()
+
+                            # Parser différents types de besoins
+                            need_info = self._parse_missing_need_text(missing_part)
+                            if need_info:
+                                other_needs[need_info['type']] = need_info['quantity']
+                                logger.info(f"Besoin détecté: {need_info['type']} = {need_info['quantity']}")
+                            else:
+                                # Si le pattern n'est pas reconnu, le sauvegarder pour analyse future
+                                await self._log_unrecognized_missing_pattern(missing_part, mission)
+
+                    except Exception as e:
+                        logger.error(f"Erreur lors de l'analyse d'une div de besoins autres: {e}")
+                        continue
+
+                # Traiter les besoins en personnel
+                for div in personnel_requirement_divs:
+                    try:
+                        div_text = await div.inner_text()
+                        logger.debug(f"Analyse du texte de personnel: '{div_text}'")
+
+                        # Parser le texte pour extraire les besoins en personnel
+                        if "Personnel manquant:" in div_text:
+                            # Extraire la partie après "Personnel manquant:"
+                            personnel_part = div_text.split("Personnel manquant:")[1].strip()
+
+                            # Parser le format "3x PLG (Plongeur), 3x SAV (Sauvetage Aquatique)"
+                            personnel_needs = self._parse_missing_personnel_text(personnel_part)
+
+                            # Ajouter aux besoins avec un préfixe pour les distinguer
+                            for personnel_type, quantity in personnel_needs.items():
+                                other_needs[f"personnel_{personnel_type}"] = quantity
+                                logger.info(f"Personnel manquant détecté: {quantity}x {personnel_type}")
+
+                    except Exception as e:
+                        logger.error(f"Erreur lors de l'analyse d'une div de personnel manquant: {e}")
+                        continue
+            finally:
+                for div in other_requirement_divs:
+                    await div.dispose()
+                for div in personnel_requirement_divs:
+                    await div.dispose()
             
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des besoins non-véhicules: {e}")
