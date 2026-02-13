@@ -1,6 +1,5 @@
 import asyncio
 import json
-import time
 from pathlib import Path
 from typing import List, Optional, Dict
 from loguru import logger
@@ -28,7 +27,6 @@ class MissionManager:
         mission_scraper: Scraper pour extraire les missions
         vehicle_scraper: Scraper pour gérer les véhicules
         strategies: Stratégies de déploiement disponibles
-        active_missions: Liste des missions en cours
     """
     
     def __init__(self, browser_manager: BrowserManager, settings: Settings):
@@ -42,8 +40,6 @@ class MissionManager:
             "smart_optimized": SmartStrategyOptimized(),
         }
 
-        self.active_missions: List[Mission] = []
-        self._mission_timestamps: Dict[str, float] = {}  # mission_id -> timestamp d'ajout
 
     async def initialize(self):
         """Initialisation asynchrone - doit être appelée après la création"""
@@ -499,17 +495,6 @@ class MissionManager:
                 raise
             logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
             return False
-
-    async def finalize(self):
-        """Finalisation du mission manager"""
-        try:
-            logger.info("🔄 Finalisation du mission manager...")
-            # Nettoyer les missions actives
-            self.clear_completed_missions()
-            logger.info("✅ Finalisation terminée")
-
-        except Exception as e:
-            logger.warning(f"Erreur lors de la finalisation: {e}")
 
     async def _handle_patient_transport_initial(self, mission: Mission) -> bool:
         """
@@ -2475,12 +2460,6 @@ class MissionManager:
         """Déploie automatiquement les missions selon la configuration"""
         max_missions = max_missions or self.settings.max_concurrent_missions
 
-        # Nettoyer les missions terminées pour éviter l'accumulation en mémoire
-        before_count = len(self.active_missions)
-        self.clear_completed_missions()
-        if before_count > len(self.active_missions):
-            logger.debug(f"Nettoyage: {before_count - len(self.active_missions)} missions terminées supprimées")
-
         logger.info(f"Déploiement automatique - max {max_missions} missions")
 
         stats = {
@@ -2519,8 +2498,6 @@ class MissionManager:
                 if success:
                     stats["deployed"] += 1
                     deployed_count += 1
-                    self.active_missions.append(mission)
-                    self._mission_timestamps[mission.id] = time.monotonic()
                 else:
                     stats["failed"] += 1
                     failed_missions.append(mission)
@@ -2703,37 +2680,3 @@ class MissionManager:
                 raise
             logger.error(f"Erreur dans le cycle de missions: {e}")
     
-    def get_active_missions(self) -> List[Mission]:
-        """Retourne les missions actuellement actives"""
-        return self.active_missions.copy()
-    
-    def clear_completed_missions(self) -> None:
-        """Nettoie les missions terminées, anciennes, et limite la taille de la liste active"""
-        now = time.monotonic()
-        max_age_seconds = 1800  # 30 minutes max en mémoire
-        max_tracked = 30
-
-        before_count = len(self.active_missions)
-
-        # Filtrer : garder uniquement les missions IN_PROGRESS et pas trop anciennes
-        self.active_missions = [
-            m for m in self.active_missions
-            if m.status == MissionStatus.IN_PROGRESS
-            and (now - self._mission_timestamps.get(m.id, now)) < max_age_seconds
-        ]
-
-        # Garde-fou : tronquer si la liste dépasse la limite
-        if len(self.active_missions) > max_tracked:
-            removed = len(self.active_missions) - max_tracked
-            self.active_missions = self.active_missions[-max_tracked:]
-            logger.warning(f"Liste active tronquée: {removed} anciennes missions supprimées (limite: {max_tracked})")
-
-        # Nettoyer les timestamps orphelins
-        active_ids = {m.id for m in self.active_missions}
-        self._mission_timestamps = {
-            mid: ts for mid, ts in self._mission_timestamps.items() if mid in active_ids
-        }
-
-        cleaned = before_count - len(self.active_missions)
-        if cleaned > 0:
-            logger.debug(f"Nettoyage mémoire: {cleaned} missions supprimées de la liste active")

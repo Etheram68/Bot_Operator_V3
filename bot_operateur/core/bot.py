@@ -68,10 +68,6 @@ class OperateurBot:
         logger.info("Arrêt du bot...")
         
         try:
-            # Sauvegarder les patterns d'apprentissage avant l'arrêt
-            if self.mission_manager:
-                await self.mission_manager.finalize()
-
             # Arrêter le navigateur
             await self.browser_manager.stop()
 
@@ -220,12 +216,7 @@ class OperateurBot:
         }
         
         if self.is_running and self.mission_manager:
-            active_missions = self.mission_manager.get_active_missions()
-            status["active_missions"] = len(active_missions)
-            status["missions_details"] = [
-                {"id": m.id, "title": m.title, "status": m.status.value}
-                for m in active_missions
-            ]
+            status["active_missions"] = 0
         
         return status
     
