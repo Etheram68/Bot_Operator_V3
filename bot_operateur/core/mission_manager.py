@@ -134,6 +134,11 @@ class MissionManager:
                 mission.patient_count = len(mission.patients)
                 mission.requirements = details.get('requirements', [])
                 
+                other_info = details.get('other_info', {})
+                if other_info.get('water_to_pump'):
+                    mission.water_to_pump = other_info['water_to_pump']
+                    logger.info(f"💧 Eau à pomper: {mission.water_to_pump}L")
+
                 if details.get('title'):
                     mission.title = details['title']
                     logger.debug(f"Titre mis à jour: '{mission.title}'")
@@ -307,6 +312,9 @@ class MissionManager:
                     logger.info(f"📋 Besoins enrichis avec prisonniers: {vehicle_needs}")
             except Exception as e:
                 logger.warning(f"⚠️ Erreur lors de l'enrichissement des besoins pour prisonniers: {e}")
+
+            # Optimiser les pompes selon le volume d'eau à pomper
+            vehicle_needs = self._optimize_pump_needs(vehicle_needs, mission)
 
             # Vérifier les véhicules manquants depuis l'alerte MÊME SI la stratégie ne trouve rien
             try:
@@ -793,6 +801,24 @@ class MissionManager:
             logger.error(f"Erreur lors de l'extraction des liens de transport de prisonniers: {e}")
             return []
     
+    def _optimize_pump_needs(self, vehicle_needs: Dict[str, int], mission: 'Mission') -> Dict[str, int]:
+        """Optimise les besoins en pompes selon le volume d'eau à pomper.
+
+        Si le volume >= 50000L, ajoute 1 UPM (90 000 l/min) en plus des
+        besoins existants pour accélérer significativement le pompage.
+        """
+        if not mission.water_to_pump or mission.water_to_pump <= 0:
+            return vehicle_needs
+
+        if mission.water_to_pump >= 50000:
+            vehicle_needs['UPM_CONSTRAINED'] = vehicle_needs.get('UPM_CONSTRAINED', 0) + 1
+            logger.info(
+                f"💧 Volume d'eau élevé ({mission.water_to_pump}L >= 50000L) "
+                f"→ +1 UPM_CONSTRAINED (90 000 l/min) ajouté aux besoins"
+            )
+
+        return vehicle_needs
+
     async def _extract_prisoner_count_from_mission_info(self) -> int:
         """
         Extrait le nombre de prisonniers depuis mission_general_info.

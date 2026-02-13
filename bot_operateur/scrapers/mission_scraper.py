@@ -236,7 +236,8 @@ class MissionScraper:
                 'patients': patients,
                 'requirements': await self._scrape_requirements_from_current_page(),
                 'credits': None,  # Les crédits sont déjà récupérés dans _extract_mission_from_element
-                'title': title_complete  # Titre complet récupéré depuis la page de mission
+                'title': title_complete,  # Titre complet récupéré depuis la page de mission
+                'other_info': await self._extract_other_info_from_tables()
             }
             
             return details
@@ -642,6 +643,62 @@ class MissionScraper:
             logger.error(f"Erreur lors de l'extraction structurée <tr>: {e}")
 
         return requirements
+
+    async def _extract_other_info_from_tables(self) -> Dict:
+        """Extraction des données du tableau 'Autre information' (eau à pomper, etc.)"""
+        result = {}
+        try:
+            tables = await self.page.query_selector_all("table")
+            target_table = None
+            try:
+                for table in tables:
+                    headers = await table.query_selector_all("th")
+                    try:
+                        for header in headers:
+                            header_text = await header.inner_text()
+                            if "Autre" in header_text and "information" in header_text:
+                                target_table = table
+                                logger.debug(f"Table 'Autre information' trouvée: '{header_text}'")
+                                break
+                    finally:
+                        for h in headers:
+                            await h.dispose()
+                    if target_table:
+                        break
+            finally:
+                for t in tables:
+                    if t is not target_table:
+                        await t.dispose()
+
+            if not target_table:
+                logger.debug("Table 'Autre information' non trouvée")
+                return result
+
+            try:
+                rows = await target_table.query_selector_all("tbody tr")
+                for row in rows:
+                    cells = await row.query_selector_all("td")
+                    try:
+                        if len(cells) == 2:
+                            label = (await cells[0].inner_text()).strip().lower()
+                            value = (await cells[1].inner_text()).strip()
+                            if "eau" in label and "pomp" in label:
+                                clean_value = re.sub(r'[^\d]', '', value)
+                                if clean_value:
+                                    result['water_to_pump'] = int(clean_value)
+                                    logger.debug(f"Eau à pomper détectée: {result['water_to_pump']}L")
+                    finally:
+                        for c in cells:
+                            await c.dispose()
+                for r in rows:
+                    await r.dispose()
+            finally:
+                await target_table.dispose()
+
+        except Exception as e:
+            logger.warning(f"Erreur lors de l'extraction 'Autre information': {e}")
+
+        return result
 
     def _log_unmatched_label(self, label: str, quantity: int, mission_id: str) -> None:
         """Log un label non reconnu pour analyse future (auto-learning)."""

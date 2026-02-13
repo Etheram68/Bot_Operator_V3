@@ -259,6 +259,14 @@
         "primary": ["FDGP", "UPM"],
         "secondary": ["RLC"]
       },
+      "UPM": {
+        "primary": ["UPM"],
+        "secondary": []
+      },
+      "UPM_CONSTRAINED": {
+        "primary": ["UPM"],
+        "secondary": ["FDGP"]
+      },
       "CAMION_DEVIDOIRS": {
         "primary": ["FDGP", "RLC"],
         "secondary": ["CEDEV"]
@@ -526,6 +534,15 @@
     },
     "CEEP": {
       "pump_capacity_l_min": 1500
+    },
+    "UPM": {
+      "pump_capacity_l_min": 90000
+    },
+    "MAI": {
+      "pump_capacity_l_min": 1000
+    },
+    "CEDEV": {
+      "pump_capacity_l_min": 1000
     },
     "GN": {
       "crew_size": 4
