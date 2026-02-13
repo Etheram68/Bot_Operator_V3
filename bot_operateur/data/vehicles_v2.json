@@ -256,8 +256,8 @@
         "secondary": []
       },
       "MOTOPOMPES": {
-        "primary": ["FDGP", "RLC", "MAI", "UPM"],
-        "secondary": ["CEEP"]
+        "primary": ["FDGP", "UPM"],
+        "secondary": ["RLC"]
       },
       "CAMION_DEVIDOIRS": {
         "primary": ["FDGP", "RLC"],
