@@ -96,37 +96,16 @@ class SmartStrategyOptimized(BaseStrategy):
         return base_needs
 
     def _get_alternatives_mapping_for_adjustment(self) -> Dict[str, Dict[str, List[str]]]:
-        """Retourne le mapping des alternatives pour l'ajustement."""
-        return {
-            "AMBULANCE": {
-                "primary": ["VSAV", "ASSU", "SMUR"],
-                "secondary": []
-            },
-            "FPT": {
-                "primary": ["FPTL", "FPT-SR"],
-                "secondary": []
-            },
-            "VL": {
-                "primary": ["VLHR", "VLCG"],
-                "secondary": []
-            },
-            "POLICE": {
-                "primary": ["VL-POLICE", "CARS_POLICE"],
-                "secondary": []
-            },
-            "VSAV": {
-                "primary": ["ASSU"],
-                "secondary": ["AMBULANCE"]
-            },
-            "BEA": {
-                "primary": ["FPT_BEA", "FPT_SR_BEA"],
-                "secondary": []
-            },
-            "VSR": {
-                "primary": ["FPT_SR", "FPT_SR_BEA"],
-                "secondary": []
-            }
-        }
+        """Construit le mapping des alternatives avec primary/secondary depuis vehicles_v2.json."""
+        alternatives = {}
+        vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
+        for category in vehicle_mapping.values():
+            for vehicle_type, mapping_info in category.items():
+                alternatives[vehicle_type] = {
+                    'primary': mapping_info.get('primary', []),
+                    'secondary': mapping_info.get('secondary', []),
+                }
+        return alternatives
 
     async def select_vehicles_for_mission(self, mission: Mission, available_vehicles: List[Vehicle]) -> List[str]:
         """Sélection optimisée de véhicules avec algorithmes rapides et gestion de complexité."""
@@ -154,24 +133,15 @@ class SmartStrategyOptimized(BaseStrategy):
         return selected_ids
 
     def _get_alternatives_mapping(self) -> Dict[str, List[str]]:
-        """Retourne le mapping des alternatives optimisé"""
-
-        return {
-            # Alternatives principales (ordre de priorité)
-            "AMBULANCE": ["VSAV", "ASSU", "SMUR"],
-            "FPT": ["FPTL", "FPT-SR"],
-            "VL": ["VLHR", "VLCG"],
-            "POLICE": ["VL-POLICE", "CARS_POLICE"],
-
-            # Alternatives spécialisées
-            "VSAV": ["ASSU", "AMBULANCE"],
-            "BEA": ["FPT_BEA", "FPT_SR_BEA"],
-            "VSR": ["FPT_SR", "FPT_SR_BEA"],
-
-            # Alternatives de fallback
-            "VLHR": ["VL", "VLCG"],
-            "CARS_POLICE": ["VL-POLICE"],
-        }
+        """Construit le mapping des alternatives depuis vehicles_v2.json."""
+        alternatives = {}
+        vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
+        for category in vehicle_mapping.values():
+            for vehicle_type, mapping_info in category.items():
+                primary = mapping_info.get('primary', [])
+                secondary = mapping_info.get('secondary', [])
+                alternatives[vehicle_type] = primary + secondary
+        return alternatives
 
     def get_strategy_stats(self) -> Dict:
         """Retourne les statistiques de performance de la stratégie"""
