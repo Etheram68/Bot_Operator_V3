@@ -127,8 +127,11 @@ class MissionManager:
             except Exception:
                 await self.browser_manager.page.wait_for_load_state('domcontentloaded', timeout=5000)
             
+            # Cliquer sur les easter eggs saisonniers (fire-and-forget)
+            asyncio.create_task(self._click_easter_egg(mission.id))
+
             await self._handle_patient_transport_initial(mission)
-            
+
             details = await self.mission_scraper.get_mission_details(mission)
             if details:
                 mission.patients = details.get('patients', [])
@@ -154,6 +157,19 @@ class MissionManager:
             logger.error(f"Erreur lors de la récupération des détails de {mission.id}: {e}")
             return mission
     
+    async def _click_easter_egg(self, mission_id: str) -> None:
+        """Clique sur les liens saisonniers (easter eggs) présents sur la page de mission."""
+        try:
+            page = self.browser_manager.page
+            link = await page.query_selector("a[id='easter-egg-link']")
+            if link:
+                href = await link.get_attribute("href") or ""
+                await link.click()
+                logger.info(f"🎉 Easter egg cliqué sur mission {mission_id}: {href}")
+        except Exception as e:
+            # Ne jamais bloquer le traitement de la mission pour un easter egg
+            logger.debug(f"Easter egg non cliqué pour mission {mission_id}: {e}")
+
     async def deploy_vehicles_for_mission(
         self, 
         mission: Mission, 
