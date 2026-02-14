@@ -12,6 +12,8 @@ from ..models.mission import MissionRequirement
 class VehicleSelectionOptimizer:
     """Optimise la sélection de véhicules avec des algorithmes plus efficaces"""
 
+    MAX_CACHE_SIZE = 50  # Limite pour éviter une croissance mémoire non bornée
+
     def __init__(self):
         self._vehicle_type_cache = {}  # Cache des groupements par type
         self._proximity_cache = {}     # Cache des calculs de proximité
@@ -40,6 +42,10 @@ class VehicleSelectionOptimizer:
             # Tri simple par ID (les IDs plus bas = plus proches/anciens)
             vehicle_list.sort(key=lambda v: int(v.id) if v.id.isdigit() else 999999)
 
+        # Fix #7 : Éviction si le cache dépasse la taille max
+        if len(self._vehicle_type_cache) >= self.MAX_CACHE_SIZE:
+            self._vehicle_type_cache.clear()
+            logger.debug("🗑️ Cache groupement véhicules évicté (taille max atteinte)")
         self._vehicle_type_cache[cache_key] = groups
         logger.debug(f"💾 Groupement mis en cache: {len(groups)} types")
 
