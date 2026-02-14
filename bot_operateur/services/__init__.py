@@ -4,11 +4,11 @@ Contient les services extraits de MissionManager pour une architecture modulaire
 """
 
 from .missing_needs_parser import MissingNeedsParser
-from .patient_transport_handler import PatientTransportHandler
-from .prisoner_transport_handler import PrisonerTransportHandler
+from .transport_service import TransportService
+from .water_pump_service import WaterPumpService
 
 __all__ = [
     'MissingNeedsParser',
-    'PatientTransportHandler', 
-    'PrisonerTransportHandler'
+    'TransportService',
+    'WaterPumpService',
 ]

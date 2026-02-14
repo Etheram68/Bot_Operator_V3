@@ -117,9 +117,9 @@ class VehicleScraper:
         ceux plus éloignés géographiquement.
         """
         try:
-            # Compter les véhicules avant chargement pour vérifier que ça change
-            rows_before = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-            count_before = len(rows_before) if rows_before else 0
+            # Compter les véhicules via JS (évite de créer des ElementHandle juste pour compter)
+            count_js = "document.querySelectorAll('#vehicle_show_table_all tr[id^=\"vehicle_element_content_\"]').length"
+            count_before = await self.page.evaluate(count_js)
 
             # Essayer plusieurs sélecteurs pour le bouton de chargement
             load_button = None
@@ -140,20 +140,15 @@ class VehicleScraper:
                 logger.info("Clic sur le bouton de chargement des véhicules supplémentaires...")
 
                 # Attendre que de nouveaux véhicules apparaissent dans le DOM (AJAX)
-                # networkidle se résout souvent avant la réponse AJAX, donc on attend
-                # que le nombre de lignes augmente réellement
                 max_wait = 10  # secondes max
                 for i in range(max_wait * 2):  # check toutes les 0.5s
                     await asyncio.sleep(0.5)
-                    rows_after = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-                    count_after = len(rows_after) if rows_after else 0
+                    count_after = await self.page.evaluate(count_js)
                     if count_after > count_before:
                         logger.info(f"Véhicules chargés: {count_before} -> {count_after} ({count_after - count_before:+d})")
                         break
                 else:
-                    # Timeout atteint sans changement
-                    rows_after = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-                    count_after = len(rows_after) if rows_after else 0
+                    count_after = await self.page.evaluate(count_js)
                     if count_after > count_before:
                         logger.info(f"Véhicules chargés: {count_before} -> {count_after} ({count_after - count_before:+d})")
                     else:
@@ -166,8 +161,7 @@ class VehicleScraper:
                     await self.page.evaluate("if(typeof(vehicle_load_all) === 'function') vehicle_load_all()")
                     for i in range(10):
                         await asyncio.sleep(0.5)
-                        rows_after = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
-                        count_after = len(rows_after) if rows_after else 0
+                        count_after = await self.page.evaluate(count_js)
                         if count_after > count_before:
                             logger.info(f"Chargement JS réussi: {count_before} -> {count_after} ({count_after - count_before:+d})")
                             break
@@ -494,8 +488,11 @@ class VehicleScraper:
         """Retourne le nombre de véhicules actuellement sélectionnés"""
         try:
             selected_checkboxes = await self.page.query_selector_all(".vehicle_checkbox:checked")
-            return len(selected_checkboxes)
-            
+            count = len(selected_checkboxes)
+            for cb in selected_checkboxes:
+                await cb.dispose()
+            return count
+
         except Exception as e:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
@@ -507,6 +504,7 @@ class VehicleScraper:
             tuple[int, int]: (nombre de véhicules sélectionnés, nombre de véhicules manquants)
         """
         total_selected = 0
+        vehicle_rows = []  # Initialiser pour le finally
         # Garde-fou: limite le nombre max de véhicules sélectionnables par appel
         max_total_vehicles = sum(vehicle_needs.values()) + 10  # marge de 10
 
@@ -556,15 +554,14 @@ class VehicleScraper:
             
             # Récupérer les lignes de véhicules visibles (triées par proximité)
             vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")
-            
+
             if not vehicle_rows:
                 logger.warning("Aucune ligne de véhicule trouvée")
-                # Calculer le nombre total de véhicules manquants
                 total_missing = sum(adjusted_vehicle_needs.values())
                 return (0, total_missing)
-            
+
             logger.info(f"Sélection parmi {len(vehicle_rows)} véhicules visibles (triés par proximité)")
-            
+
             # Préparer les compteurs avec gestion d'alternatives (utiliser adjusted_vehicle_needs)
             selected_counts = {}
             alternatives_used = {}  # Track quelles alternatives ont été utilisées
@@ -676,12 +673,16 @@ class VehicleScraper:
                     # Re-compter les véhicules sélectionnés après le chargement supplémentaire
                     selected_checkboxes = await self.page.query_selector_all(".vehicle_checkbox:checked")
                     actual_selected = len(selected_checkboxes)
+                    for cb in selected_checkboxes:
+                        await cb.dispose()
                     logger.info(f"✅ Véhicules supplémentaires trouvés: +{additional_selected} (total: {actual_selected})")
             
             # Log du résumé final avec détails des alternatives (besoins originaux + ajustés)
             logger.info("📊 Résumé de la sélection finale:")
             final_selected = await self.page.query_selector_all(".vehicle_checkbox:checked")
             final_count = len(final_selected)
+            for fs in final_selected:
+                await fs.dispose()
             
             # Afficher les besoins originaux vs ajustés vs sélectionnés
             for vtype, original_needed in vehicle_needs.items():
@@ -713,14 +714,21 @@ class VehicleScraper:
             logger.debug(f"   • Manquants calculés: {total_missing}")
             
             logger.info(f"📊 Résumé final: {final_count} sélectionnés, {total_missing} manquants")
-            
+
             return (final_count, total_missing)
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de la sélection des véhicules proches: {e}")
-            # En cas d'erreur, calculer le manque total des besoins
             total_missing = sum(vehicle_needs.values()) if vehicle_needs else 0
             return (0, total_missing)
+        finally:
+            # Disposer les ElementHandle des lignes de véhicules
+            if vehicle_rows:
+                for row in vehicle_rows:
+                    try:
+                        await row.dispose()
+                    except Exception:
+                        pass
     
     async def _get_already_deployed_vehicles(self) -> List[str]:
         """
@@ -1162,11 +1170,10 @@ class VehicleScraper:
         try:
             logger.info("📡 Chargement ciblé de véhicules supplémentaires...")
 
-            # Compter les véhicules actuels avant chargement
+            # Compter les véhicules actuels avant chargement (via JS, sans créer de handles)
             final_table_selector = table_selector or "#vehicle_show_table_all"
             selector_complet = f"{final_table_selector} tr[id^='vehicle_element_content_']"
-            rows_before = await self.page.query_selector_all(selector_complet)
-            count_before = len(rows_before) if rows_before else 0
+            count_before = await self.page.evaluate(f"document.querySelectorAll('{selector_complet}').length")
 
             # ÉTAPE 1: Chargement des véhicules (attend l'arrivée des lignes AJAX)
             await self._load_all_vehicles()
@@ -1257,7 +1264,7 @@ class VehicleScraper:
             
             logger.info(f"📊 Véhicules supplémentaires sélectionnés: {additional_selected}")
             return additional_selected
-            
+
         except Exception as global_error:
             logger.error(f"Erreur globale dans _load_and_select_additional_vehicles: {global_error}")
             
@@ -1275,8 +1282,16 @@ class VehicleScraper:
             
             import traceback
             logger.debug(f"  - Traceback complet: {traceback.format_exc()}")
-            
+
             return 0
+        finally:
+            # Disposer les ElementHandle des lignes de véhicules
+            if 'all_vehicle_rows' in locals() and all_vehicle_rows:
+                for row in all_vehicle_rows:
+                    try:
+                        await row.dispose()
+                    except Exception:
+                        pass
             
             
     def _validate_dom_element(self, element, index: int) -> bool:

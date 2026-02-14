@@ -12,6 +12,8 @@ from ..strategies.smart_strategy import SmartStrategy
 from ..strategies.smart_strategy_optimized import SmartStrategyOptimized
 from ..core.browser_manager import BrowserManager
 from ..config.settings import Settings
+from ..services.transport_service import TransportService
+from ..services.water_pump_service import WaterPumpService
 
 
 class MissionManager:
@@ -34,7 +36,9 @@ class MissionManager:
         self.settings = settings
         self.mission_scraper = MissionScraper(browser_manager.page)
         self.vehicle_scraper = VehicleScraper(browser_manager.page)
-        
+        self.transport_service = TransportService(browser_manager.page)
+        self.water_pump_service = WaterPumpService(self.vehicle_scraper)
+
         self.strategies = {
             "smart": SmartStrategy(),
             "smart_optimized": SmartStrategyOptimized(),
@@ -123,7 +127,7 @@ class MissionManager:
             # Cliquer sur les easter eggs saisonniers (fire-and-forget)
             asyncio.create_task(self._click_easter_egg(mission.id))
 
-            await self._handle_patient_transport_initial(mission)
+            await self.transport_service.handle_patient_transport_initial(mission)
 
             details = await self.mission_scraper.get_mission_details(mission, skip_mission_navigation=True)
             if details:
@@ -300,7 +304,7 @@ class MissionManager:
 
             # Enrichir automatiquement les besoins avec les véhicules police pour les prisonniers
             try:
-                prisoner_count = await self._extract_prisoner_count_from_mission_info()
+                prisoner_count = await self.transport_service.extract_prisoner_count_from_mission_info()
                 if prisoner_count > 0:
                     # Ajouter autant de CARS_POLICE que de prisonniers
                     current_police_need = vehicle_needs.get('CARS_POLICE', 0)
@@ -311,7 +315,7 @@ class MissionManager:
                 logger.warning(f"⚠️ Erreur lors de l'enrichissement des besoins pour prisonniers: {e}")
 
             # Optimiser les pompes selon le volume d'eau à pomper
-            vehicle_needs = self._optimize_pump_needs(vehicle_needs, mission)
+            vehicle_needs = self.water_pump_service.optimize_pump_needs(vehicle_needs, mission)
 
             # Vérifier les véhicules manquants depuis l'alerte MÊME SI la stratégie ne trouve rien
             try:
@@ -501,366 +505,6 @@ class MissionManager:
             logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
             return False
 
-    async def _handle_patient_transport_initial(self, mission: Mission) -> bool:
-        """
-        Gère automatiquement les demandes de transport (patients/prisonniers) en début de mission.
-
-        Détecte et traite les alertes de transport avant de lire les conditions,
-        supportant à la fois les transports sanitaires et les transports de prisonniers.
-
-        Args:
-            mission: Mission à traiter
-
-        Returns:
-            bool: True si traitement réussi (ou aucun transport), False en cas d'erreur
-        """
-        logger.info(f"🚑 Vérification des transports initiaux pour mission {mission.title} ({mission.id})")
-
-        try:
-            # Vérifier d'abord si la mission est accomplie
-            mission_complete_selector = ".mission-success"
-            mission_complete = await self.browser_manager.page.query_selector(mission_complete_selector)
-
-            if mission_complete:
-                logger.info(f"🏁 Mission {mission.id} déjà accomplie - aucun transport nécessaire")
-                return True  # Succès car mission terminée
-
-            # On est déjà sur la page de mission
-            transports_handled = 0
-
-            # D'abord, vérifier TOUJOURS les transports de prisonniers
-            logger.debug("Vérification des transports de prisonniers...")
-            prisoner_transport_data = await self._extract_prisoner_transport_links(mission)
-
-            # Ensuite, chercher les transports sanitaires classiques
-            # Attendre brièvement que les alertes AJAX soient chargées
-            try:
-                transport_alert = await self.browser_manager.page.wait_for_selector(
-                    'div.alert.alert-danger:not(.alert-missing-vehicles)',
-                    timeout=3000, state='attached'
-                )
-            except Exception:
-                transport_alert = None
-
-            transport_data = []
-
-            # Ajouter les transports de prisonniers s'il y en a
-            if prisoner_transport_data:
-                logger.debug(f"🚔 {len(prisoner_transport_data)} véhicule(s) avec transport de prisonniers détecté(s)")
-                transport_data.extend(prisoner_transport_data)
-
-            # Ajouter les transports sanitaires s'il y en a
-            if transport_alert:
-                alert_text = await transport_alert.inner_text()
-                if "Transport nécessaire" in alert_text:
-                    # Récupérer TOUS les liens de transport (href + texte) avant navigation
-                    transport_links = await transport_alert.query_selector_all('a.btn.btn-xs.btn-success')
-
-                    try:
-                        # Extraire les informations des liens avant navigation
-                        for link in transport_links:
-                            try:
-                                href = await link.get_attribute('href')
-                                text = await link.inner_text()
-                                transport_data.append({'href': href, 'text': text, 'type': 'patient'})
-                            except Exception as e:
-                                logger.error(f"Erreur lors de l'extraction d'un lien de transport: {e}")
-                                continue
-                    finally:
-                        for link in transport_links:
-                            await link.dispose()
-
-                    if len([t for t in transport_data if t.get('type') == 'patient']) > 0:
-                        logger.debug(f"🚑 {len([t for t in transport_data if t.get('type') == 'patient'])} transport(s) sanitaire(s) détecté(s)")
-                else:
-                    logger.debug(f"Alerte détectée mais pas de transport sanitaire (contenu: '{alert_text.strip()[:50]}...')")
-            else:
-                logger.debug("Aucune alerte de transport sanitaire détectée")
-
-            # Si aucun transport trouvé, continuer le traitement normal de la mission
-            if not transport_data:
-                logger.debug("Aucun transport (sanitaire ou prisonniers) disponible, poursuite du traitement de la mission")
-                logger.info(f"✅ Aucun transport initial requis pour mission {mission.title} ({mission.id})")
-                return True
-
-            # Afficher le résumé des transports trouvés
-            if len([t for t in transport_data if t.get('type') == 'patient']) > 0:
-                logger.debug(f"🚑 {len([t for t in transport_data if t.get('type') == 'patient'])} transport(s) sanitaire(s) détecté(s)")
-            if len([t for t in transport_data if t.get('type') == 'prisoner']) > 0:
-                logger.debug(f"🚔 {len([t for t in transport_data if t.get('type') == 'prisoner'])} transport(s) de prisonniers détecté(s)")
-
-            # Traiter chaque véhicule de transport via son URL
-            for i, transport_info in enumerate(transport_data):
-                try:
-                    href = transport_info['href']
-                    text = transport_info['text']
-                    transport_type = transport_info.get('type', 'patient')
-                    transport_emoji = "🚔" if transport_type == 'prisoner' else "🚑"
-                    logger.debug(f"{transport_emoji} Transport initial {i+1}/{len(transport_data)}: {text}")
-
-                    # Naviguer directement vers l'URL du transport
-                    transport_url = f"https://www.operateur112.fr{href}" if href.startswith('/') else href
-                    await self.browser_manager.page.goto(transport_url)
-                    await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-
-                    # Traiter selon le type de transport
-
-                    if transport_type == 'prisoner':
-                        # Pour les prisonniers, traitement différent (sélection prison)
-                        transport_success = await self._handle_prison_selection(mission)
-                    else:
-                        # Pour les patients, sélection d'hôpital
-                        transport_success = await self._handle_hospital_selection(mission)
-
-                    if transport_success:
-                        transports_handled += 1
-                        transport_emoji = "🚔" if transport_type == 'prisoner' else "🚑"
-                        logger.info(f"✅ {transport_emoji} Transport initial {transports_handled} effectué pour {text}")
-
-                        # Chercher le bouton "Passez au prochain véhicule"
-                        next_vehicle_button = await self.browser_manager.page.query_selector('a.btn.btn-success[id^="next-vehicle-fms-"]')
-
-                        if next_vehicle_button:
-                            logger.debug("🔄 Passage au prochain véhicule")
-                            await next_vehicle_button.click()
-                            await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-                        else:
-                            logger.debug("Aucun véhicule suivant pour ce transport")
-                    else:
-                        logger.warning(f"Échec du transport pour {text}")
-
-                except Exception as e:
-                    logger.error(f"Erreur lors du traitement du transport initial {i+1}: {e}")
-                    continue
-
-            if transports_handled > 0:
-                logger.info(f"🚑 {transports_handled} transport(s) initial(aux) effectué(s) pour mission {mission.title} ({mission.id})")
-
-                # S'assurer qu'on est bien sur la page de mission pour la suite
-                mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
-                await self.browser_manager.page.goto(mission_url)
-                await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-
-                return True
-            else:
-                logger.debug(f"ℹ️ Aucun transport nécessaire pour mission {mission.title} ({mission.id})")
-                return True  # Succès car pas d'erreur, juste pas de transport nécessaire
-                
-        except Exception as e:
-            logger.error(f"Erreur lors des transports initiaux pour mission {mission.id}: {e}")
-            return False
-    
-    async def _handle_hospital_selection(self, mission: Mission) -> bool:
-        """
-        Sélectionne automatiquement le premier hôpital disponible pour un transport sanitaire.
-        
-        Args:
-            mission: Mission en cours
-            
-        Returns:
-            bool: True si sélection réussie, False sinon
-        """
-        try:
-            # Attendre que le tableau des hôpitaux soit chargé
-            hospitals_table = await self.browser_manager.page.wait_for_selector('#own-hospitals tbody', timeout=5000)
-            
-            if not hospitals_table:
-                logger.warning("Tableau des hôpitaux non trouvé")
-                return False
-            
-            # Trouver le premier bouton de sélection d'hôpital disponible
-            hospital_button = await hospitals_table.query_selector('a.btn.btn-success')
-            
-            if not hospital_button:
-                logger.warning("Aucun hôpital disponible pour le transport")
-                return False
-            
-            # Récupérer des infos sur l'hôpital sélectionné
-            hospital_text = await hospital_button.inner_text()
-            logger.debug(f"🏥 Sélection hôpital: {hospital_text}")
-            
-            # Cliquer sur le bouton de sélection
-            await hospital_button.click()
-            await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de la sélection d'hôpital: {e}")
-            return False
-    
-    async def _handle_prison_selection(self, mission: Mission) -> bool:
-        """
-        Sélectionne automatiquement la première prison disponible pour un transport de prisonniers.
-        
-        Args:
-            mission: Mission en cours
-            
-        Returns:
-            bool: True si sélection réussie, False sinon
-        """
-        try:
-            
-            # Attendre que la page de sélection soit chargée
-            await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-            
-            # Chercher le premier bouton de sélection disponible (à adapter selon l'interface)
-            prison_button = await self.browser_manager.page.query_selector('a.btn.btn-success')
-            
-            if not prison_button:
-                logger.warning("Aucune prison disponible pour le transport")
-                return False
-            
-            # Récupérer des infos sur la prison sélectionnée
-            prison_text = await prison_button.inner_text()
-            logger.debug(f"🏢 Sélection prison: {prison_text}")
-            
-            # Cliquer sur le bouton de sélection
-            await prison_button.click()
-            await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de la sélection de prison: {e}")
-            return False
-    
-    async def _extract_prisoner_transport_links(self, mission: Mission) -> list:
-        """
-        Extrait les liens de transport de prisonniers depuis le tableau des véhicules.
-        
-        Recherche les cellules de sélection de prison dans le DOM et extrait
-        les liens de transport pour chaque véhicule de police disponible.
-        
-        Args:
-            mission: Mission en cours
-            
-        Returns:
-            list: Liste des données de transport (href, text, type, vehicle_id)
-        """
-        try:
-            # Vérifier qu'il y a l'alerte de prisonniers à transporter
-            try:
-                missing_vehicles_alert = await self.browser_manager.page.wait_for_selector(
-                    'div.alert.alert-danger.alert-missing-vehicles',
-                    timeout=3000, state='attached'
-                )
-            except Exception:
-                missing_vehicles_alert = None
-
-            if not missing_vehicles_alert:
-                return []
-
-            # Vérifier le contenu de l'alerte principale
-            missing_text = await missing_vehicles_alert.inner_text()
-
-            if "Des prisonniers doivent être transportés" not in missing_text:
-                logger.debug("Alerte détectée mais ne concerne pas les transports de prisonniers")
-                return []
-
-            logger.debug("🚔 Transport de prisonniers requis détecté")
-            
-            # Chercher tous les liens de transport de prisonniers dans les véhicules
-            # Structure: td.vehicle_prisoner_select > div[id^="prison-select-"] 
-            prisoner_cells = await self.browser_manager.page.query_selector_all('td.vehicle_prisoner_select div[id^="prison-select-"]')
-
-            if not prisoner_cells:
-                logger.debug("Aucune cellule de sélection de prisonniers trouvée")
-                return []
-
-            transport_data = []
-
-            try:
-                for cell in prisoner_cells:
-                    try:
-                        # Trouver le premier lien btn-success dans cette cellule (prison la plus proche)
-                        success_link = await cell.query_selector('a.btn.btn-success')
-
-                        if success_link:
-                            href = await success_link.get_attribute('href')
-                            text = await success_link.inner_text()
-
-                            # Extraire le vehicle_id depuis l'ID de la div (format: prison-select-VEHICLE_ID)
-                            cell_id = await cell.get_attribute('id')
-                            vehicle_id = cell_id.replace('prison-select-', '') if cell_id and cell_id.startswith('prison-select-') else 'unknown'
-
-                            if href:  # S'assurer que le lien est valide
-                                transport_data.append({
-                                    'href': href,
-                                    'text': f"🚔 Véhicule {vehicle_id} → {text}",  # Info détaillée
-                                    'type': 'prisoner',
-                                    'vehicle_id': vehicle_id
-                                })
-                                logger.debug(f"Lien de transport prisonnier trouvé: Véhicule {vehicle_id} → {text}")
-
-                    except Exception as e:
-                        logger.error(f"Erreur lors de l'extraction d'un lien de transport prisonnier: {e}")
-                        continue
-            finally:
-                for cell in prisoner_cells:
-                    await cell.dispose()
-
-            return transport_data
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de l'extraction des liens de transport de prisonniers: {e}")
-            return []
-    
-    def _optimize_pump_needs(self, vehicle_needs: Dict[str, int], mission: 'Mission') -> Dict[str, int]:
-        """Optimise les besoins en pompes selon le volume d'eau à pomper.
-
-        Si le volume >= 50000L, ajoute 1 UPM (90 000 l/min) en plus des
-        besoins existants pour accélérer significativement le pompage.
-        """
-        if not mission.water_to_pump or mission.water_to_pump <= 0:
-            return vehicle_needs
-
-        if mission.water_to_pump >= 50000:
-            vehicle_needs['UPM_CONSTRAINED'] = vehicle_needs.get('UPM_CONSTRAINED', 0) + 1
-            logger.info(
-                f"💧 Volume d'eau élevé ({mission.water_to_pump}L >= 50000L) "
-                f"→ +1 UPM_CONSTRAINED (90 000 l/min) ajouté aux besoins"
-            )
-
-        return vehicle_needs
-
-    async def _extract_prisoner_count_from_mission_info(self) -> int:
-        """
-        Extrait le nombre de prisonniers depuis mission_general_info.
-
-        Cherche dans la div class="mission_header_info row" -> div id="mission_general_info"
-        -> small pour trouver le nombre avant l'icône prisoner_dark.svg
-
-        Returns:
-            int: Nombre de prisonniers détectés (0 si aucun)
-        """
-        try:
-            # Chercher le div mission_general_info
-            general_info = await self.browser_manager.page.query_selector('div#mission_general_info small')
-
-            if not general_info:
-                logger.debug("Div mission_general_info non trouvée")
-                return 0
-
-            # Récupérer le contenu HTML pour analyser les icônes
-            content_html = await general_info.inner_html()
-
-            # Chercher le pattern: nombre + espace + <img src="/images/prisoner_dark.svg"
-            import re
-            prisoner_pattern = r'(\d+)\s*<img[^>]*prisoner_dark\.svg[^>]*>'
-            matches = re.findall(prisoner_pattern, content_html)
-
-            if matches:
-                prisoner_count = sum(int(match) for match in matches)
-                logger.debug(f"🚔 {prisoner_count} prisonnier(s) détecté(s) dans mission_general_info")
-                return prisoner_count
-            else:
-                logger.debug("Aucun prisonnier détecté dans mission_general_info")
-                return 0
-
-        except Exception as e:
-            logger.error(f"Erreur lors de l'extraction du nombre de prisonniers: {e}")
-            return 0
 
     async def _extract_missing_vehicles_from_alert(self, mission: 'Mission') -> dict:
         """
@@ -1303,7 +947,7 @@ class MissionManager:
                          Pour personnel générique: list de dict (peut être plusieurs véhicules)
         """
         if need_type == 'water_l':
-            return await self._find_water_vehicle_with_fallback(needed_quantity, vehicle_specs)
+            return await self.water_pump_service.find_water_vehicle_with_fallback(needed_quantity, vehicle_specs)
         elif need_type.startswith('personnel_'):
             personnel_type = need_type.replace('personnel_', '')
             if personnel_type.isupper() and len(personnel_type) <= 4:
@@ -1314,62 +958,6 @@ class MissionManager:
                 return await self._find_personnel_vehicle_with_fallback(personnel_type, needed_quantity, vehicle_specs)
         
         return None
-    
-    async def _find_water_vehicle_with_fallback(self, water_needed_l: int, vehicle_specs: dict) -> dict:
-        """
-        Trouve le véhicule d'eau optimal et ses alternatives par capacité croissante.
-        
-        Returns:
-            dict: {primary: str, quantity: int, alternatives: list, need_type: str}
-        """
-        # Calculer le véhicule optimal comme avant
-        vehicles_needed = await self._calculate_water_vehicles(water_needed_l, vehicle_specs)
-        
-        if not vehicles_needed:
-            return None
-        
-        # Prendre le premier véhicule comme primaire
-        primary_vehicle = list(vehicles_needed.keys())[0]
-        primary_quantity = vehicles_needed[primary_vehicle]
-        
-        # Générer les alternatives par capacité croissante
-        alternatives = self._generate_water_alternatives(water_needed_l, vehicle_specs, primary_vehicle)
-        
-        return {
-            'primary': primary_vehicle,
-            'quantity': primary_quantity,
-            'alternatives': alternatives,
-            'need_type': 'water'
-        }
-    
-    def _generate_water_alternatives(self, water_needed_l: int, vehicle_specs: dict, exclude_primary: str) -> list:
-        """
-        Génère une liste d'alternatives par capacité croissante pour l'eau.
-        
-        Returns:
-            list: Liste de véhicules ordonés par capacité croissante
-        """
-        water_vehicles = []
-        
-        for vehicle_type, specs in vehicle_specs.items():
-            if vehicle_type == exclude_primary:
-                continue
-                
-            water_capacity = specs.get('water_capacity_l', 0)
-            if water_capacity >= water_needed_l:  # Seulement les véhicules suffisants
-                extra_pct = specs.get('extra_water_storage_pct', 0)
-                effective_capacity = water_capacity * (1 + extra_pct / 100)
-                
-                water_vehicles.append({
-                    'type': vehicle_type,
-                    'capacity': int(effective_capacity)
-                })
-        
-        # Trier par capacité croissante
-        water_vehicles.sort(key=lambda x: x['capacity'])
-        
-        # Retourner seulement les types de véhicules
-        return [v['type'] for v in water_vehicles]
     
     async def _find_personnel_vehicle_with_fallback(self, personnel_type: str, needed_quantity: int, vehicle_specs: dict) -> list:
         """
@@ -1589,7 +1177,7 @@ class MissionManager:
         
         if need_type == 'water_l':
             # Calculer les véhicules pour l'eau
-            vehicles_needed = await self._calculate_water_vehicles(needed_quantity, vehicle_specs)
+            vehicles_needed = await self.water_pump_service.calculate_water_vehicles(needed_quantity, vehicle_specs)
             
         elif need_type.startswith('personnel_'):
             # Calculer les véhicules pour le personnel
@@ -1604,433 +1192,6 @@ class MissionManager:
                 vehicles_needed = await self._calculate_personnel_vehicles(personnel_type, needed_quantity, vehicle_specs)
         
         return vehicles_needed
-    
-    async def _calculate_water_vehicles(self, water_needed_l: int, vehicle_specs: dict) -> dict:
-        """
-        Calcule les véhicules nécessaires pour fournir une quantité d'eau de manière optimale.
-        
-        Utilise un algorithme intelligent pour minimiser le gaspillage en choisissant
-        la combinaison de véhicules qui se rapproche le plus du besoin exact.
-        
-        Args:
-            water_needed_l: Quantité d'eau nécessaire en litres
-            vehicle_specs: Spécifications des véhicules
-            
-        Returns:
-            dict: Véhicules recommandés {vehicle_type: quantité}
-        """
-        vehicles_needed = {}
-        
-        # Calculer la capacité d'eau totale actuelle en route vers la mission
-        current_water_capacity = await self._estimate_current_water_capacity()
-        
-        # Calculer ce qu'il manque réellement
-        remaining_water_needed = max(0, water_needed_l - current_water_capacity)
-        if remaining_water_needed <= 0:
-            logger.info(f"💧 Capacité d'eau suffisante sur site ({current_water_capacity}L), pas de véhicule supplémentaire nécessaire")
-            return vehicles_needed
-        
-        logger.info(f"💧 Eau nécessaire: {remaining_water_needed}L (total: {water_needed_l}L - sur site: {current_water_capacity}L)")
-        
-        # Créer une liste SEULEMENT des véhicules avec capacité d'eau réelle
-        # IMPORTANT: Pour les besoins d'eau, seuls les véhicules avec water_capacity_l > 0 sont valides
-        # Ne pas utiliser les véhicules de remplacement sans eau (ex: FS n'a pas d'eau)
-        water_vehicles = []
-        for vehicle_type, specs in vehicle_specs.items():
-            water_capacity = specs.get('water_capacity_l', 0)
-            if water_capacity > 0:  # OBLIGATOIRE: seulement les véhicules avec capacité d'eau
-                # Appliquer le bonus de stockage d'eau si applicable
-                extra_pct = specs.get('extra_water_storage_pct', 0)
-                effective_capacity = water_capacity * (1 + extra_pct / 100)
-                
-                water_vehicles.append({
-                    'type': vehicle_type,
-                    'capacity': int(effective_capacity),
-                    'base_capacity': water_capacity,
-                    'bonus_pct': extra_pct
-                })
-        
-        # Trier par capacité croissante pour commencer par les plus petits
-        water_vehicles.sort(key=lambda x: x['capacity'])
-        
-        logger.info("💧 Véhicules d'eau disponibles:")
-        for v in water_vehicles:
-            logger.info(f"   - {v['type']}: {v['capacity']}L (base: {v['base_capacity']}L, bonus: {v['bonus_pct']}%)")
-        
-        # Algorithme d'optimisation : trouver la combinaison la plus proche du besoin
-        best_combination = self._find_optimal_water_combination(remaining_water_needed, water_vehicles)
-        
-        if best_combination:
-            vehicles_needed = best_combination['vehicles']
-            total_capacity = best_combination['total_capacity']
-            waste = total_capacity - remaining_water_needed
-            
-            logger.info(f"💧 Solution optimale trouvée:")
-            logger.info(f"   - Besoin: {remaining_water_needed}L")
-            logger.info(f"   - Capacité fournie: {total_capacity}L") 
-            logger.info(f"   - Gaspillage: {waste}L ({waste/remaining_water_needed*100:.1f}%)")
-            
-            for vehicle_type, count in vehicles_needed.items():
-                vehicle_info = next(v for v in water_vehicles if v['type'] == vehicle_type)
-                logger.info(f"   - {count}x {vehicle_type} ({vehicle_info['capacity']}L chacun)")
-        else:
-            logger.warning(f"💧 Impossible de satisfaire le besoin en eau de {remaining_water_needed}L")
-        
-        return vehicles_needed
-    
-    def _find_optimal_water_combination(self, target_water: int, water_vehicles: list) -> dict:
-        """
-        Trouve la combinaison optimale de véhicules pour l'eau.
-        
-        PRIORITÉ 1: Minimiser le nombre total de véhicules
-        PRIORITÉ 2: Parmi les solutions avec le même nombre de véhicules, minimiser le gaspillage
-        
-        Args:
-            target_water: Quantité d'eau cible en litres
-            water_vehicles: Liste des véhicules avec leurs capacités
-            
-        Returns:
-            dict: Meilleure combinaison avec 'vehicles' et 'total_capacity'
-        """
-        if not water_vehicles:
-            return None
-        
-        # Trier par capacité décroissante pour commencer par les plus gros
-        water_vehicles_desc = sorted(water_vehicles, key=lambda x: x['capacity'], reverse=True)
-        
-        best_solution = None
-        min_vehicles_count = float('inf')
-        min_waste_for_min_vehicles = float('inf')
-        
-        # Limite raisonnable pour éviter explosion combinatoire
-        max_vehicles_per_type = min(10, (target_water // 400) + 2)  # 400L = plus petit véhicule (VPI)
-        
-        logger.debug(f"💧 Recherche solution optimale pour {target_water}L avec max {max_vehicles_per_type} véhicules par type")
-        
-        # Approche gloutonne améliorée : commencer par les plus gros véhicules
-        greedy_solution = self._greedy_water_solution(target_water, water_vehicles_desc)
-        if greedy_solution:
-            vehicles_count = sum(greedy_solution['vehicles'].values())
-            waste = greedy_solution['total_capacity'] - target_water
-            
-            if vehicles_count < min_vehicles_count or (vehicles_count == min_vehicles_count and waste < min_waste_for_min_vehicles):
-                best_solution = greedy_solution
-                min_vehicles_count = vehicles_count
-                min_waste_for_min_vehicles = waste
-                
-            logger.debug(f"💧 Solution gloutonne: {vehicles_count} véhicules, gaspillage: {waste}L")
-        
-        # Si la solution gloutonne utilise plus de 5 véhicules, essayer des combinaisons spécialisées
-        if min_vehicles_count > 5:
-            specialized_solution = self._find_large_water_combinations(target_water, water_vehicles_desc)
-            if specialized_solution:
-                vehicles_count = sum(specialized_solution['vehicles'].values())
-                waste = specialized_solution['total_capacity'] - target_water
-                
-                if vehicles_count < min_vehicles_count or (vehicles_count == min_vehicles_count and waste < min_waste_for_min_vehicles):
-                    best_solution = specialized_solution
-                    min_vehicles_count = vehicles_count
-                    min_waste_for_min_vehicles = waste
-                    
-                logger.debug(f"💧 Solution spécialisée: {vehicles_count} véhicules, gaspillage: {waste}L")
-        
-        if best_solution:
-            logger.debug(f"💧 Solution finale: {min_vehicles_count} véhicules, gaspillage: {min_waste_for_min_vehicles}L")
-        
-        return best_solution
-    
-    def _greedy_water_solution(self, target_water: int, water_vehicles_desc: list) -> dict:
-        """
-        Approche gloutonne améliorée : optimiser le nombre de véhicules puis le gaspillage.
-        
-        Args:
-            target_water: Quantité d'eau requise
-            water_vehicles_desc: Véhicules triés par capacité décroissante
-            
-        Returns:
-            dict: Solution avec 'vehicles' dict et 'total_capacity'
-        """
-        # Essayer différentes limites de véhicules
-        best_solution = None
-        min_vehicles = float('inf')
-        min_waste_for_min_vehicles = float('inf')
-        
-        for max_vehicles in range(1, 21):  # Essayer jusqu'à 20 véhicules max
-            solution = self._solve_water_with_limit(target_water, water_vehicles_desc, max_vehicles)
-            
-            if solution:
-                total_vehicles = sum(solution.values())
-                total_capacity = sum(qty * next(v['capacity'] for v in water_vehicles_desc if v['type'] == vtype)
-                                   for vtype, qty in solution.items())
-                
-                if total_capacity >= target_water:
-                    waste = total_capacity - target_water
-                    
-                    # Priorité 1: Moins de véhicules
-                    if total_vehicles < min_vehicles:
-                        min_vehicles = total_vehicles
-                        min_waste_for_min_vehicles = waste
-                        best_solution = solution
-                    # Priorité 2: Même nombre mais moins de gaspillage
-                    elif total_vehicles == min_vehicles and waste < min_waste_for_min_vehicles:
-                        min_waste_for_min_vehicles = waste
-                        best_solution = solution
-        
-        # Si aucune solution trouvée dans les limites, utiliser solution basique
-        if not best_solution:
-            best_solution = self._solve_water_basic(target_water, water_vehicles_desc)
-            
-        if best_solution:
-            total_capacity = sum(qty * next(v['capacity'] for v in water_vehicles_desc if v['type'] == vtype)
-                               for vtype, qty in best_solution.items())
-            return {
-                'vehicles': best_solution,
-                'total_capacity': total_capacity
-            }
-        
-        return None
-    
-    def _solve_water_with_limit(self, target_water: int, water_vehicles_desc: list, max_vehicles: int) -> dict:
-        """Résout le problème d'eau avec une limite de véhicules."""
-        vehicles = {}
-        remaining = target_water
-        used_vehicles = 0
-        
-        # Phase 1: Prendre les plus gros véhicules
-        for vehicle in water_vehicles_desc:
-            if used_vehicles >= max_vehicles or remaining <= 0:
-                break
-                
-            vehicle_type = vehicle['type']
-            capacity = vehicle['capacity']
-            
-            # Calculer le nombre optimal pour ce type
-            needed = (remaining + capacity - 1) // capacity  # Arrondir vers le haut
-            can_take = min(needed, max_vehicles - used_vehicles)
-            
-            if can_take > 0:
-                vehicles[vehicle_type] = can_take
-                remaining -= can_take * capacity
-                used_vehicles += can_take
-        
-        # Phase 2: Si pas assez, compléter avec des plus petits
-        if remaining > 0 and used_vehicles < max_vehicles:
-            for vehicle in reversed(water_vehicles_desc):  # Plus petits en premier
-                if used_vehicles >= max_vehicles or remaining <= 0:
-                    break
-                    
-                vehicle_type = vehicle['type']
-                capacity = vehicle['capacity']
-                current_qty = vehicles.get(vehicle_type, 0)
-                
-                # Ajouter des véhicules si besoin
-                needed = (remaining + capacity - 1) // capacity
-                can_add = min(needed, max_vehicles - used_vehicles)
-                
-                if can_add > 0:
-                    vehicles[vehicle_type] = current_qty + can_add
-                    remaining -= can_add * capacity
-                    used_vehicles += can_add
-        
-        # Vérifier si solution valide
-        total_capacity = sum(qty * next(v['capacity'] for v in water_vehicles_desc if v['type'] == vtype)
-                           for vtype, qty in vehicles.items())
-        
-        return vehicles if total_capacity >= target_water else None
-    
-    def _solve_water_basic(self, target_water: int, water_vehicles_desc: list) -> dict:
-        """Solution de base sans limite de véhicules."""
-        vehicles = {}
-        remaining = target_water
-        
-        for vehicle in water_vehicles_desc:
-            if remaining <= 0:
-                break
-                
-            vehicle_type = vehicle['type']
-            capacity = vehicle['capacity']
-            
-            # Prendre ce qui est nécessaire
-            needed_count = (remaining + capacity - 1) // capacity  # Arrondi supérieur
-            
-            if needed_count > 0:
-                vehicles[vehicle_type] = needed_count
-                remaining -= needed_count * capacity
-        
-        if remaining > 0:
-            return None  # Solution impossible
-            
-        return vehicles
-    
-    def _find_large_water_combinations(self, target_water: int, water_vehicles_desc: list) -> dict:
-        """Trouve des combinaisons spécialisées pour de gros besoins en eau."""
-        
-        # Identifier les véhicules à grosse capacité (>= 8000L)
-        large_vehicles = [v for v in water_vehicles_desc if v['capacity'] >= 8000]
-        
-        if len(large_vehicles) < 2:
-            return None
-        
-        best_combination = None
-        min_vehicles = float('inf')
-        min_waste = float('inf')
-        
-        # Tester les combinaisons avec 2-4 gros véhicules
-        for count_first in range(1, 5):  # 1 à 4 du premier type
-            first_vehicle = large_vehicles[0]
-            capacity_first = count_first * first_vehicle['capacity']
-            
-            if capacity_first >= target_water:
-                # Une seule grosse catégorie suffit
-                waste = capacity_first - target_water
-                if count_first < min_vehicles or (count_first == min_vehicles and waste < min_waste):
-                    best_combination = {
-                        'vehicles': {first_vehicle['type']: count_first},
-                        'total_capacity': capacity_first
-                    }
-                    min_vehicles = count_first
-                    min_waste = waste
-                continue
-            
-            remaining_after_first = target_water - capacity_first
-            
-            # Tester avec un deuxième type de gros véhicule
-            for second_vehicle in large_vehicles[1:]:
-                needed_second = (remaining_after_first + second_vehicle['capacity'] - 1) // second_vehicle['capacity']
-                
-                if needed_second > 4:  # Limiter à 4 véhicules du même type
-                    continue
-                
-                total_vehicles = count_first + needed_second
-                if total_vehicles >= min_vehicles and total_vehicles > 6:  # Pas intéressant si trop de véhicules
-                    continue
-                
-                total_capacity = capacity_first + needed_second * second_vehicle['capacity']
-                
-                if total_capacity >= target_water:
-                    waste = total_capacity - target_water
-                    
-                    if total_vehicles < min_vehicles or (total_vehicles == min_vehicles and waste < min_waste):
-                        best_combination = {
-                            'vehicles': {
-                                first_vehicle['type']: count_first,
-                                second_vehicle['type']: needed_second
-                            },
-                            'total_capacity': total_capacity
-                        }
-                        min_vehicles = total_vehicles
-                        min_waste = waste
-        
-        return best_combination
-        
-        # Générer toutes les combinaisons raisonnables
-        combinations_to_test = []
-        
-        # Stratégie 1: Véhicule unique le plus proche (PRIORITÉ MAXIMALE)
-        for vehicle in water_vehicles:
-            if vehicle['capacity'] >= target_water:
-                combinations_to_test.append({vehicle['type']: 1})
-        
-        # Stratégie 2: Combinaisons de 2 véhicules
-        for i, v1 in enumerate(water_vehicles):
-            for j, v2 in enumerate(water_vehicles):
-                if i <= j:  # Éviter les doublons symétriques
-                    for count1 in range(1, min(max_vehicles_per_type, (target_water // v1['capacity']) + 2)):
-                        for count2 in range(1 if i != j else count1, min(max_vehicles_per_type, (target_water // v2['capacity']) + 2)):
-                            combination = {}
-                            if count1 > 0:
-                                combination[v1['type']] = count1
-                            if count2 > 0 and (i != j or count2 != count1):
-                                combination[v2['type']] = combination.get(v2['type'], 0) + count2
-                            
-                            total_capacity = self._calculate_combination_capacity(combination, water_vehicles)
-                            if total_capacity >= target_water:
-                                combinations_to_test.append(combination)
-        
-        # Stratégie 3: Combinaisons de 3 véhicules pour les gros besoins
-        if target_water > 15000:  # Seulement pour les gros besoins
-            for i, v1 in enumerate(water_vehicles):
-                for j, v2 in enumerate(water_vehicles):
-                    for k, v3 in enumerate(water_vehicles):
-                        if i <= j <= k:  # Éviter les permutations
-                            max_count = min(2, (target_water // min(v1['capacity'], v2['capacity'], v3['capacity'])) + 1)
-                            for count1 in range(1, max_count + 1):
-                                for count2 in range(1, max_count + 1):
-                                    for count3 in range(1, max_count + 1):
-                                        combination = {
-                                            v1['type']: count1,
-                                            v2['type']: combination.get(v2['type'], 0) + count2,
-                                            v3['type']: combination.get(v3['type'], 0) + count3
-                                        }
-                                        
-                                        total_capacity = self._calculate_combination_capacity(combination, water_vehicles)
-                                        if total_capacity >= target_water:
-                                            combinations_to_test.append(combination)
-        
-        # Évaluer toutes les combinaisons avec logique d'optimisation intelligente
-        for combination in combinations_to_test:
-            total_capacity = self._calculate_combination_capacity(combination, water_vehicles)
-            
-            if total_capacity >= target_water:
-                waste = total_capacity - target_water
-                vehicle_count = sum(combination.values())
-                
-                # Logique d'optimisation :
-                # 1. Minimiser le gaspillage d'eau (priorité 1)
-                # 2. MAIS éviter de gaspiller des véhicules (priorité 2)
-                # 3. Si solution actuelle >= 3 véhicules ET nouvelle solution < 3 véhicules : préférer la nouvelle
-                
-                is_better = False
-                current_vehicle_count = sum(best_solution['vehicles'].values()) if best_solution else float('inf')
-                current_waste = best_solution['waste'] if best_solution else float('inf')
-                
-                if best_solution is None:
-                    # Première solution valide
-                    is_better = True
-                elif current_vehicle_count >= VEHICLE_THRESHOLD and vehicle_count < VEHICLE_THRESHOLD:
-                    # Solution actuelle gaspille des véhicules, nouvelle solution plus économe
-                    is_better = True
-                    logger.debug(f"💧 Préférence pour moins de véhicules: {vehicle_count} vs {current_vehicle_count}")
-                elif current_vehicle_count < VEHICLE_THRESHOLD and vehicle_count >= VEHICLE_THRESHOLD:
-                    # Ne pas revenir à une solution qui gaspille des véhicules
-                    is_better = False
-                elif waste < current_waste:
-                    # Moins de gaspillage d'eau (priorité 1)
-                    is_better = True
-                elif waste == current_waste and vehicle_count < current_vehicle_count:
-                    # Même gaspillage mais moins de véhicules
-                    is_better = True
-                
-                if is_better:
-                    min_waste = waste
-                    best_solution = {
-                        'vehicles': combination.copy(),
-                        'total_capacity': total_capacity,
-                        'waste': waste
-                    }
-                    logger.debug(f"💧 Nouvelle meilleure solution: {vehicle_count} véhicules, {waste}L gaspillage")
-        
-        return best_solution
-    
-    def _calculate_combination_capacity(self, combination: dict, water_vehicles: list) -> int:
-        """
-        Calcule la capacité totale d'une combinaison de véhicules.
-        
-        Args:
-            combination: Dictionnaire {vehicle_type: count}
-            water_vehicles: Liste des véhicules avec leurs spécifications
-            
-        Returns:
-            int: Capacité totale en litres
-        """
-        total_capacity = 0
-        
-        for vehicle_type, count in combination.items():
-            vehicle_info = next((v for v in water_vehicles if v['type'] == vehicle_type), None)
-            if vehicle_info:
-                total_capacity += vehicle_info['capacity'] * count
-        
-        return total_capacity
     
     async def _calculate_personnel_vehicles(self, personnel_type: str, personnel_needed: int, vehicle_specs: dict) -> dict:
         """
@@ -2412,50 +1573,6 @@ class MissionManager:
         
         return vehicles_needed
     
-    async def _estimate_current_water_capacity(self) -> int:
-        """
-        Estime la capacité d'eau totale actuellement en route vers la mission.
-        
-        Analyse les véhicules en route pour calculer leur capacité d'eau totale.
-        
-        Returns:
-            int: Capacité d'eau estimée en litres
-        """
-        try:
-            # Récupérer les véhicules en route
-            vehicles_en_route = await self.vehicle_scraper._get_vehicles_en_route_only_by_type()
-            
-            # Charger les spécifications des véhicules
-            from ..models.requirement_parser import RequirementParser
-            parser = RequirementParser()
-            vehicle_specs = parser.vehicles_mapping.get('vehicle_specs', {})
-            
-            total_water_capacity = 0
-            
-            for vehicle_type, count in vehicles_en_route.items():
-                if vehicle_type in vehicle_specs:
-                    specs = vehicle_specs[vehicle_type]
-                    water_capacity = specs.get('water_capacity_l', 0)
-                    
-                    if water_capacity > 0:
-                        # Appliquer le bonus de stockage d'eau si applicable
-                        extra_pct = specs.get('extra_water_storage_pct', 0)
-                        effective_capacity = water_capacity * (1 + extra_pct / 100)
-                        
-                        vehicle_total = int(effective_capacity) * count
-                        total_water_capacity += vehicle_total
-                        
-                        logger.debug(f"💧 Véhicule en route: {count}x {vehicle_type} = {vehicle_total}L (base: {water_capacity}L, bonus: {extra_pct}%)")
-            
-            if total_water_capacity > 0:
-                logger.info(f"💧 Capacité d'eau en route: {total_water_capacity}L")
-            
-            return total_water_capacity
-            
-        except Exception as e:
-            logger.error(f"Erreur lors du calcul de la capacité d'eau en route: {e}")
-            return 0
-    
     async def _log_unrecognized_missing_pattern(self, missing_text: str, mission: 'Mission') -> None:
         """Enregistre un pattern 'Il nous manque' non reconnu dans unmatched_labels.jsonl."""
         self._log_unmatched_label(
@@ -2532,10 +1649,17 @@ class MissionManager:
                     break
                 
                 logger.info(f"Traitement mission {mission.id}: ---------- {mission.title} ----------")
-                
-                # Utiliser le déploiement optimisé par défaut
-                success = await self.deploy_vehicles_for_mission_optimized(mission)
-                
+
+                # Déploiement optimisé avec timeout de protection (évite les blocages)
+                try:
+                    success = await asyncio.wait_for(
+                        self.deploy_vehicles_for_mission_optimized(mission),
+                        timeout=30
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(f"⏱️ Timeout déploiement mission {mission.id} (30s) - skip")
+                    success = False
+
                 if success:
                     stats["deployed"] += 1
                     deployed_count += 1
