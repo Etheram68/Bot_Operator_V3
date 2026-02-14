@@ -1173,7 +1173,8 @@ class VehicleScraper:
             # Compter les véhicules actuels avant chargement (via JS, sans créer de handles)
             final_table_selector = table_selector or "#vehicle_show_table_all"
             selector_complet = f"{final_table_selector} tr[id^='vehicle_element_content_']"
-            count_before = await self.page.evaluate(f"document.querySelectorAll('{selector_complet}').length")
+            js_selector = selector_complet.replace('"', '\\"')
+            count_before = await self.page.evaluate(f'document.querySelectorAll("{js_selector}").length')
 
             # ÉTAPE 1: Chargement des véhicules (attend l'arrivée des lignes AJAX)
             await self._load_all_vehicles()
