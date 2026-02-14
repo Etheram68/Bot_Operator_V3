@@ -22,7 +22,7 @@ class VehicleSelectionOptimizer:
         """Groupe les véhicules par type de façon optimisée"""
 
         # Créer une signature de la liste de véhicules
-        vehicle_ids = tuple(sorted([v.id for v in vehicles]))
+        vehicle_ids = frozenset(v.id for v in vehicles)
         cache_key = hash(vehicle_ids)
 
         if cache_key in self._vehicle_type_cache:
@@ -60,13 +60,18 @@ class VehicleSelectionOptimizer:
         """Sélection rapide de véhicules avec algorithme optimisé"""
 
         selected_ids = []
+        selected_id_set: Set[str] = set()
         alternatives_map = alternatives_map or {}
 
-        # Trier les besoins par priorité (requis avant optionnels)
-        sorted_requirements = sorted(
-            requirements,
-            key=lambda r: (r.optional, -r.quantity)  # Non-optionnels d'abord, puis par quantité décroissante
-        )
+        # Trier les besoins par priorité : requis d'abord, puis par rareté (moins d'options = en premier)
+        def _rarity_key(r: MissionRequirement) -> Tuple:
+            available_count = len(vehicles_by_type.get(r.vehicle_type, []))
+            alt_count = len(alternatives_map.get(r.vehicle_type, []))
+            for alt in alternatives_map.get(r.vehicle_type, []):
+                available_count += len(vehicles_by_type.get(alt, []))
+            return (r.optional, available_count + alt_count, -r.quantity)
+
+        sorted_requirements = sorted(requirements, key=_rarity_key)
 
         for requirement in sorted_requirements:
             vehicle_type = requirement.vehicle_type
@@ -77,7 +82,7 @@ class VehicleSelectionOptimizer:
 
             # Essayer le type principal d'abord
             selected_count = self._select_from_type(
-                vehicle_type, needed_count, vehicles_by_type, selected_ids
+                vehicle_type, needed_count, vehicles_by_type, selected_ids, selected_id_set
             )
 
             # Si pas assez trouvé, essayer les alternatives
@@ -89,7 +94,7 @@ class VehicleSelectionOptimizer:
                         break
 
                     alt_selected = self._select_from_type(
-                        alt_type, remaining_needed, vehicles_by_type, selected_ids
+                        alt_type, remaining_needed, vehicles_by_type, selected_ids, selected_id_set
                     )
                     selected_count += alt_selected
                     remaining_needed -= alt_selected
@@ -98,6 +103,14 @@ class VehicleSelectionOptimizer:
             if selected_count < needed_count and not requirement.optional:
                 logger.warning(f"⚠️ {vehicle_type}: {selected_count}/{needed_count} trouvés")
 
+        # Log d'efficacité du déploiement
+        total_required = sum(r.quantity for r in requirements if not r.optional)
+        total_selected = len(selected_ids)
+        if total_required > 0:
+            ratio = total_selected / total_required
+            level = "DEBUG" if 0.8 <= ratio <= 1.2 else "WARNING"
+            logger.log(level, f"📊 Efficacité déploiement: {total_selected}/{total_required} ({ratio:.0%})")
+
         return selected_ids
 
     def _select_from_type(
@@ -105,7 +118,8 @@ class VehicleSelectionOptimizer:
         vehicle_type: str,
         needed_count: int,
         vehicles_by_type: Dict[str, List[Vehicle]],
-        already_selected: List[str]
+        already_selected: List[str],
+        already_selected_set: Set[str]
     ) -> int:
         """Sélectionne des véhicules d'un type spécifique"""
 
@@ -114,9 +128,6 @@ class VehicleSelectionOptimizer:
 
         available = vehicles_by_type[vehicle_type]
         selected_count = 0
-
-        # Convertir en set pour recherche O(1)
-        already_selected_set = set(already_selected)
 
         for vehicle in available:
             if selected_count >= needed_count:
@@ -142,10 +153,7 @@ class VehicleSelectionOptimizer:
         # Filtrage en une seule passe
         filtered = []
         for vehicle in vehicles:
-            # Conditions optimisées (plus critiques en premier)
-            if (vehicle.id not in excluded_ids and
-                    vehicle.status.value == min_condition and
-                    hasattr(vehicle, 'available') and vehicle.available):
+            if vehicle.id not in excluded_ids and vehicle.is_available():
                 filtered.append(vehicle)
 
         return filtered

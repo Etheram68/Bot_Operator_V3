@@ -61,6 +61,7 @@ class SmartStrategyOptimized(BaseStrategy):
         """Calcule les besoins en véhicules de manière optimisée et stable."""
         logger.debug(f"🧠 Calcul optimisé des besoins pour mission {mission.id}")
 
+        # get_total_vehicle_requirements() gère déjà les ambulances pour patients
         requirements = mission.get_total_vehicle_requirements()
         needs = requirements.copy()
 
@@ -69,14 +70,6 @@ class SmartStrategyOptimized(BaseStrategy):
             parsed_requirements = self.parser.parse_mission_text(mission.title)
             for req in parsed_requirements:
                 needs[req.vehicle_type] = req.quantity
-
-        # Fix #6 : Ajouter des ambulances pour les patients si non couvertes
-        if mission.patient_count > 0:
-            current_ambulances = needs.get("AMBULANCE", 0)
-            if current_ambulances < mission.patient_count:
-                ambulances_needed = mission.patient_count - current_ambulances
-                needs["AMBULANCE"] = needs.get("AMBULANCE", 0) + ambulances_needed
-                logger.debug(f"🚑 Ajout de {ambulances_needed} ambulance(s) pour {mission.patient_count} patient(s)")
 
         logger.info(f"📋 Besoins finaux: {needs}")
         return needs
@@ -239,18 +232,38 @@ class SmartStrategyOptimized(BaseStrategy):
         vehicles_by_type = self.vehicle_optimizer.optimize_vehicle_grouping(filtered_vehicles)
         alternatives_map = self._get_alternatives_mapping()
 
+        # Compteur de véhicules consommés par type pour éviter le double comptage
+        consumed_by_type: Dict[str, int] = {}
+
         for req in mission.requirements:
-            available_count = len(vehicles_by_type.get(req.vehicle_type, []))
+            if req.optional:
+                continue
 
-            if available_count < req.quantity:
-                alternatives = alternatives_map.get(req.vehicle_type, [])
-                for alt_type in alternatives:
-                    available_count += len(vehicles_by_type.get(alt_type, []))
-                    if available_count >= req.quantity:
+            remaining_needed = req.quantity
+
+            # Essayer le type principal
+            vtype = req.vehicle_type
+            available = len(vehicles_by_type.get(vtype, []))
+            already_consumed = consumed_by_type.get(vtype, 0)
+            can_use = max(0, available - already_consumed)
+            used = min(can_use, remaining_needed)
+            consumed_by_type[vtype] = already_consumed + used
+            remaining_needed -= used
+
+            # Essayer les alternatives si besoin
+            if remaining_needed > 0:
+                for alt_type in alternatives_map.get(req.vehicle_type, []):
+                    if remaining_needed <= 0:
                         break
+                    available = len(vehicles_by_type.get(alt_type, []))
+                    already_consumed = consumed_by_type.get(alt_type, 0)
+                    can_use = max(0, available - already_consumed)
+                    used = min(can_use, remaining_needed)
+                    consumed_by_type[alt_type] = already_consumed + used
+                    remaining_needed -= used
 
-            if available_count < req.quantity and not req.optional:
-                logger.warning(f"❌ Impossible de satisfaire {req.vehicle_type} x{req.quantity} (disponible: {available_count})")
+            if remaining_needed > 0:
+                logger.warning(f"❌ Impossible de satisfaire {req.vehicle_type} x{req.quantity} (manque {remaining_needed})")
                 return False
 
         return True
