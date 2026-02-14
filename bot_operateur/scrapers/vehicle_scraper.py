@@ -56,7 +56,7 @@ class VehicleScraper:
         try:
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.page.goto(mission_url)
-            await self.page.wait_for_load_state('networkidle', timeout=10000)
+            await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
 
             # Vérifier si la mission est terminée avant de chercher le bouton Conditions
             mission_complete_selector = ".mission-success"
@@ -77,7 +77,7 @@ class VehicleScraper:
 
             help_url = f"https://www.operateur112.fr{help_href}"
             await self.page.goto(help_url)
-            await self.page.wait_for_load_state('networkidle', timeout=10000)
+            await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
             
             # Chercher le lien "Afficher la mission" 
             back_to_mission_link = await self.page.query_selector("#back_to_mission")
@@ -86,7 +86,7 @@ class VehicleScraper:
                 if mission_url:
                     # Naviguer vers la vraie page de la mission
                     await self.page.goto(f"https://www.operateur112.fr{mission_url}")
-                    await self.page.wait_for_load_state('networkidle', timeout=10000)
+                    await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
                 else:
                     logger.warning(f"URL de retour à la mission non trouvée pour {mission.id}")
                     return vehicles
@@ -736,8 +736,13 @@ class VehicleScraper:
         excluded_names = []  # Pour le debug
         
         try:
-            # Véhicules déjà présents sur la mission (mission_vehicle_at_mission)
-            at_mission_rows = await self.page.query_selector_all("#mission_vehicle_at_mission tbody tr")
+            # Récupérer les deux listes en parallèle (requêtes DOM indépendantes)
+            at_mission_rows, driving_rows = await asyncio.gather(
+                self.page.query_selector_all("#mission_vehicle_at_mission tbody tr"),
+                self._get_driving_vehicle_rows()
+            )
+
+            # Extraire les infos des véhicules déjà en mission
             try:
                 for row in at_mission_rows:
                     try:
@@ -760,8 +765,7 @@ class VehicleScraper:
                 for row in at_mission_rows:
                     await row.dispose()
 
-            # Véhicules en route vers la mission (h2_vehicle_driving)
-            driving_rows = await self._get_driving_vehicle_rows()
+            # Extraire les infos des véhicules en route
             try:
                 for row in driving_rows:
                     try:

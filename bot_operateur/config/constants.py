@@ -5,8 +5,8 @@ Centralise les valeurs magiques pour améliorer la maintainabilité.
 
 # Timeouts par défaut (en millisecondes)
 DEFAULT_ELEMENT_TIMEOUT_MS = 5000
-DEFAULT_PAGE_LOAD_TIMEOUT_MS = 30000
-DEFAULT_NAVIGATION_TIMEOUT_MS = 10000
+DEFAULT_PAGE_LOAD_TIMEOUT_MS = 15000
+DEFAULT_NAVIGATION_TIMEOUT_MS = 7000
 DEFAULT_RETRY_TIMEOUT_MS = 3000
 
 # Timeouts optimisés pour les opérations rapides

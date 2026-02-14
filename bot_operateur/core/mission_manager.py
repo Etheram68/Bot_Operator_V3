@@ -118,17 +118,14 @@ class MissionManager:
         try:
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.browser_manager.page.goto(mission_url)
-            try:
-                await self.browser_manager.page.wait_for_load_state('networkidle', timeout=10000)
-            except Exception:
-                await self.browser_manager.page.wait_for_load_state('domcontentloaded', timeout=5000)
+            await self.browser_manager.page.wait_for_load_state('domcontentloaded', timeout=5000)
             
             # Cliquer sur les easter eggs saisonniers (fire-and-forget)
             asyncio.create_task(self._click_easter_egg(mission.id))
 
             await self._handle_patient_transport_initial(mission)
 
-            details = await self.mission_scraper.get_mission_details(mission)
+            details = await self.mission_scraper.get_mission_details(mission, skip_mission_navigation=True)
             if details:
                 mission.patients = details.get('patients', [])
                 mission.patient_count = len(mission.patients)

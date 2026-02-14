@@ -3,7 +3,7 @@ Version optimisée de la Smart Strategy
 Intègre les optimisations de logique métier sans compromettre la fiabilité
 """
 
-from typing import List, Dict, Optional, Tuple, Set
+from typing import List, Dict, Set
 from loguru import logger
 
 from .base_strategy import BaseStrategy
@@ -20,11 +20,9 @@ class SmartStrategyOptimized(BaseStrategy):
         super().__init__("smart_optimized")
         self.parser = RequirementParser()
         self.vehicle_optimizer = get_vehicle_optimizer()
-        self._vehicle_scraper = None  # Sera injecté par le mission_manager
 
-        # Fix #1 : Pré-calculer les mappings d'alternatives (ne changent jamais à runtime)
+        # Pré-calculer le mapping d'alternatives (ne change jamais à runtime)
         self._alternatives_mapping = self._build_alternatives_mapping()
-        self._alternatives_mapping_for_adjustment = self._build_alternatives_mapping_for_adjustment()
 
     def _build_alternatives_mapping(self) -> Dict[str, List[str]]:
         """Construit le mapping des alternatives depuis vehicles_v2.json (appelé une seule fois)."""
@@ -36,26 +34,6 @@ class SmartStrategyOptimized(BaseStrategy):
                 secondary = mapping_info.get('secondary', [])
                 alternatives[vehicle_type] = primary + secondary
         return alternatives
-
-    def _build_alternatives_mapping_for_adjustment(self) -> Dict[str, Dict[str, List[str]]]:
-        """Construit le mapping primary/secondary depuis vehicles_v2.json (appelé une seule fois)."""
-        alternatives = {}
-        vehicle_mapping = self.parser.vehicles_mapping.get('vehicle_mapping', {})
-        for category in vehicle_mapping.values():
-            for vehicle_type, mapping_info in category.items():
-                alternatives[vehicle_type] = {
-                    'primary': mapping_info.get('primary', []),
-                    'secondary': mapping_info.get('secondary', []),
-                }
-        return alternatives
-
-    def _get_alternatives_mapping(self) -> Dict[str, List[str]]:
-        """Retourne le mapping des alternatives (pré-calculé)."""
-        return self._alternatives_mapping
-
-    def _get_alternatives_mapping_for_adjustment(self) -> Dict[str, Dict[str, List[str]]]:
-        """Retourne le mapping primary/secondary (pré-calculé)."""
-        return self._alternatives_mapping_for_adjustment
 
     async def get_vehicle_needs(self, mission: Mission) -> Dict[str, int]:
         """Calcule les besoins en véhicules de manière optimisée et stable."""
@@ -74,36 +52,6 @@ class SmartStrategyOptimized(BaseStrategy):
         logger.info(f"📋 Besoins finaux: {needs}")
         return needs
 
-    async def _adjust_for_deployed_vehicles(self, mission: Mission, base_needs: Dict[str, int]) -> Dict[str, int]:
-        """Ajuste les besoins selon les véhicules déjà déployés."""
-        if not base_needs:
-            return base_needs
-
-        try:
-            if self._vehicle_scraper:
-                deployed_by_type = await self._vehicle_scraper._get_already_deployed_vehicles_by_type()
-                if deployed_by_type:
-                    logger.info(f"📊 Véhicules déjà déployés détectés: {deployed_by_type}")
-                    alternatives_mapping = self._get_alternatives_mapping_for_adjustment()
-                    adjusted_needs = self._vehicle_scraper._adjust_vehicle_needs(base_needs, deployed_by_type, alternatives_mapping)
-
-                    # Fix #2 : Vérifier si des besoins restent après ajustement
-                    remaining = sum(adjusted_needs.values())
-                    if remaining == 0:
-                        logger.info("✅ Tous les besoins déjà satisfaits par les véhicules déployés")
-                        return {}
-
-                    if adjusted_needs != base_needs:
-                        logger.info(f"🔄 Besoins ajustés: {base_needs} → {adjusted_needs}")
-
-                    return adjusted_needs
-            else:
-                logger.warning("⚠️ Vehicle scraper non disponible")
-        except Exception as e:
-            logger.warning(f"⚠️ Erreur ajustement véhicules: {e}")
-
-        return base_needs
-
     async def select_vehicles_for_mission(self, mission: Mission, available_vehicles: List[Vehicle]) -> List[str]:
         """Sélection optimisée de véhicules avec algorithmes rapides et gestion de complexité."""
         filtered_vehicles = self.vehicle_optimizer.pre_filter_vehicles(available_vehicles, min_condition="available")
@@ -113,16 +61,13 @@ class SmartStrategyOptimized(BaseStrategy):
         vehicles_by_type = self.vehicle_optimizer.optimize_vehicle_grouping(filtered_vehicles)
         complexity = self.parser.analyze_mission_complexity(mission.requirements)
         vehicle_needs_dict = await self.get_vehicle_needs(mission)
-        vehicle_needs_dict = await self._adjust_for_deployed_vehicles(mission, vehicle_needs_dict)
 
         requirements = [MissionRequirement(vehicle_type=vtype, quantity=qty, optional=False)
                        for vtype, qty in vehicle_needs_dict.items()]
 
-        alternatives_map = self._get_alternatives_mapping()
-        selected_ids = self.vehicle_optimizer.fast_vehicle_selection(requirements, vehicles_by_type, alternatives_map)
+        selected_ids = self.vehicle_optimizer.fast_vehicle_selection(requirements, vehicles_by_type, self._alternatives_mapping)
         selected_vehicles = [v for v in filtered_vehicles if v.id in selected_ids]
 
-        # Fix #5 : Passer les IDs déjà sélectionnés pour éviter les doublons
         if complexity['complexity'] in ['complex', 'major_incident']:
             selected_id_set = set(selected_ids)
             support_vehicles = self._add_support_vehicles_by_complexity(
@@ -133,27 +78,6 @@ class SmartStrategyOptimized(BaseStrategy):
 
         return selected_ids
 
-    def get_strategy_stats(self) -> Dict:
-        """Retourne les statistiques de performance de la stratégie"""
-
-        optimizer_stats = self.vehicle_optimizer.get_cache_stats()
-
-        return {
-            "strategy_name": self.name,
-            "vehicle_optimizer": optimizer_stats,
-            "total_optimizations": "smart_logic + vehicle_selection + caching"
-        }
-
-    def set_vehicle_scraper(self, vehicle_scraper):
-        """
-        Injecte le vehicle_scraper pour permettre la vérification des véhicules déployés.
-
-        Args:
-            vehicle_scraper: Instance de VehicleScraper du mission_manager
-        """
-        self._vehicle_scraper = vehicle_scraper
-        logger.debug("✅ Vehicle scraper injecté dans smart_optimized")
-
     def _add_support_vehicles_by_complexity(
         self,
         mission: Mission,
@@ -162,13 +86,9 @@ class SmartStrategyOptimized(BaseStrategy):
         complexity: Dict,
         already_selected_ids: Set[str] = None
     ) -> List[Vehicle]:
-        """Ajoute des véhicules de support selon la complexité.
-
-        Fix #5 : Exclut les véhicules déjà sélectionnés pour éviter les doublons.
-        """
+        """Ajoute des véhicules de support selon la complexité."""
         support_vehicles = []
         selected_types = {v.type for v in current_selection}
-        # IDs déjà pris par la sélection principale
         excluded_ids = already_selected_ids or {v.id for v in current_selection}
 
         def _pick_first_available(type_list: List[str], max_count: int = 1) -> List[Vehicle]:
@@ -218,7 +138,6 @@ class SmartStrategyOptimized(BaseStrategy):
 
         return support_vehicles
 
-
     async def can_handle_mission(self, mission: Mission, available_vehicles: List[Vehicle]) -> bool:
         """Évalue si la stratégie peut gérer la mission avec les alternatives."""
         if not mission.requirements:
@@ -230,7 +149,6 @@ class SmartStrategyOptimized(BaseStrategy):
             return False
 
         vehicles_by_type = self.vehicle_optimizer.optimize_vehicle_grouping(filtered_vehicles)
-        alternatives_map = self._get_alternatives_mapping()
 
         # Compteur de véhicules consommés par type pour éviter le double comptage
         consumed_by_type: Dict[str, int] = {}
@@ -252,7 +170,7 @@ class SmartStrategyOptimized(BaseStrategy):
 
             # Essayer les alternatives si besoin
             if remaining_needed > 0:
-                for alt_type in alternatives_map.get(req.vehicle_type, []):
+                for alt_type in self._alternatives_mapping.get(req.vehicle_type, []):
                     if remaining_needed <= 0:
                         break
                     available = len(vehicles_by_type.get(alt_type, []))
@@ -267,8 +185,3 @@ class SmartStrategyOptimized(BaseStrategy):
                 return False
 
         return True
-
-    def clear_caches(self) -> None:
-        """Vide tous les caches pour forcer le recalcul"""
-        self.vehicle_optimizer.clear_cache()
-        logger.info("🗑️ Caches de stratégie vidés")

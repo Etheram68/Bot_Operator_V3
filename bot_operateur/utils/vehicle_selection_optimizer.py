@@ -3,7 +3,7 @@ Optimisateur pour la sélection de véhicules
 Réduit les calculs redondants et améliore la logique de sélection
 """
 
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Set, Tuple
 from loguru import logger
 from ..models.vehicle import Vehicle
 from ..models.mission import MissionRequirement
@@ -16,7 +16,6 @@ class VehicleSelectionOptimizer:
 
     def __init__(self):
         self._vehicle_type_cache = {}  # Cache des groupements par type
-        self._proximity_cache = {}     # Cache des calculs de proximité
 
     def optimize_vehicle_grouping(self, vehicles: List[Vehicle]) -> Dict[str, List[Vehicle]]:
         """Groupe les véhicules par type de façon optimisée"""
@@ -42,7 +41,7 @@ class VehicleSelectionOptimizer:
             # Tri simple par ID (les IDs plus bas = plus proches/anciens)
             vehicle_list.sort(key=lambda v: int(v.id) if v.id.isdigit() else 999999)
 
-        # Fix #7 : Éviction si le cache dépasse la taille max
+        # Éviction si le cache dépasse la taille max
         if len(self._vehicle_type_cache) >= self.MAX_CACHE_SIZE:
             self._vehicle_type_cache.clear()
             logger.debug("🗑️ Cache groupement véhicules évicté (taille max atteinte)")
@@ -157,68 +156,6 @@ class VehicleSelectionOptimizer:
                 filtered.append(vehicle)
 
         return filtered
-
-    def calculate_deployment_efficiency(
-        self,
-        requirements: List[MissionRequirement],
-        selected_vehicles: List[str]
-    ) -> Dict[str, float]:
-        """Calcule l'efficacité du déploiement"""
-
-        total_required = sum(req.quantity for req in requirements if not req.optional)
-        total_selected = len(selected_vehicles)
-
-        if total_required == 0:
-            return {"efficiency": 1.0, "over_deployment": 0.0}
-
-        efficiency = min(total_selected / total_required, 1.0)
-        over_deployment = max(0, (total_selected - total_required) / total_required)
-
-        return {
-            "efficiency": efficiency,
-            "over_deployment": over_deployment,
-            "total_required": total_required,
-            "total_selected": total_selected
-        }
-
-    def suggest_optimizations(
-        self,
-        requirements: List[MissionRequirement],
-        vehicles_by_type: Dict[str, List[Vehicle]]
-    ) -> List[str]:
-        """Suggère des optimisations pour la mission"""
-
-        suggestions = []
-
-        # Vérifier si on peut consolider des véhicules
-        total_light_vehicles = sum(
-            req.quantity for req in requirements
-            if req.vehicle_type in ["VL", "VLHR", "VLCG"]
-        )
-
-        if total_light_vehicles >= 3:
-            suggestions.append("Considérer 1 fourgon au lieu de plusieurs VL")
-
-        # Vérifier la disponibilité des alternatives
-        for req in requirements:
-            available_count = len(vehicles_by_type.get(req.vehicle_type, []))
-            if available_count < req.quantity:
-                suggestions.append(f"Manque {req.quantity - available_count}x {req.vehicle_type}")
-
-        return suggestions
-
-    def clear_cache(self) -> None:
-        """Vide les caches pour forcer le recalcul"""
-        self._vehicle_type_cache.clear()
-        self._proximity_cache.clear()
-        logger.debug("🗑️ Cache véhicules vidé")
-
-    def get_cache_stats(self) -> Dict:
-        """Retourne les statistiques du cache"""
-        return {
-            "grouping_cache_size": len(self._vehicle_type_cache),
-            "proximity_cache_size": len(self._proximity_cache)
-        }
 
 
 # Instance globale

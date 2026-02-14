@@ -196,12 +196,17 @@ class MissionScraper:
         
         return location if location else None
     
-    async def get_mission_details(self, mission: 'Mission') -> Optional[Dict]:
-        """Récupère les détails complets d'une mission depuis la page des conditions"""
+    async def get_mission_details(self, mission: 'Mission', skip_mission_navigation: bool = False) -> Optional[Dict]:
+        """Récupère les détails complets d'une mission depuis la page des conditions
+
+        Args:
+            mission: Mission à analyser
+            skip_mission_navigation: Si True, assume que la page mission est déjà chargée
+        """
         try:
-            # On va d'abord sur la page de mission principale
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
-            await self.page.goto(mission_url, timeout=15000)
+            if not skip_mission_navigation:
+                await self.page.goto(mission_url, timeout=15000)
 
             # Vérifier si la mission est déjà accomplie
             mission_completed = await self.page.query_selector(".alert-info.mission-success")
