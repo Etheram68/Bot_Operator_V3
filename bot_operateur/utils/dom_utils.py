@@ -30,26 +30,29 @@ class DOMUtils:
             return False
     
     async def safe_get_text(self, selector: str, default: str = "") -> str:
-        """Récupère le texte d'un élément de façon sécurisée"""
+        """Récupère le texte d'un élément de façon sécurisée (via JS, zéro fuite)"""
         try:
-            element = await self.page.query_selector(selector)
-            if element:
-                return await element.inner_text()
+            result = await self.page.evaluate(
+                f'(s => {{ const el = document.querySelector(s); return el ? el.innerText : null; }})',
+                selector
+            )
+            return result if result is not None else default
         except Exception as e:
             logger.debug(f"Erreur lors de la récupération du texte '{selector}': {e}")
-        
+
         return default
     
     async def safe_get_attribute(self, selector: str, attribute: str, default: str = "") -> str:
-        """Récupère un attribut d'un élément de façon sécurisée"""
+        """Récupère un attribut d'un élément de façon sécurisée (via JS, zéro fuite)"""
         try:
-            element = await self.page.query_selector(selector)
-            if element:
-                value = await element.get_attribute(attribute)
-                return value or default
+            result = await self.page.evaluate(
+                '([s, a]) => { const el = document.querySelector(s); return el ? el.getAttribute(a) : null; }',
+                [selector, attribute]
+            )
+            return result if result is not None else default
         except Exception as e:
             logger.debug(f"Erreur lors de la récupération de l'attribut '{attribute}' pour '{selector}': {e}")
-        
+
         return default
     
     async def safe_click(self, selector: str, timeout: int = DEFAULT_ELEMENT_TIMEOUT_MS) -> bool:
@@ -100,16 +103,19 @@ class DOMUtils:
         await self.page.wait_for_selector(selector, timeout=timeout)
     
     async def get_elements_count(self, selector: str) -> int:
-        """Retourne le nombre d'éléments correspondant au sélecteur"""
+        """Retourne le nombre d'éléments correspondant au sélecteur (via JS, zéro fuite)"""
         try:
-            elements = await self.page.query_selector_all(selector)
-            return len(elements)
+            return await self.page.evaluate(
+                f'(s => document.querySelectorAll(s).length)',
+                selector
+            )
         except Exception as e:
             logger.debug(f"Erreur lors du comptage des éléments '{selector}': {e}")
             return 0
     
     async def scroll_to_element(self, selector: str) -> bool:
         """Fait défiler la page jusqu'à un élément"""
+        element = None
         try:
             element = await self.page.query_selector(selector)
             if element:
@@ -117,11 +123,18 @@ class DOMUtils:
                 return True
         except Exception as e:
             logger.debug(f"Erreur lors du scroll vers '{selector}': {e}")
-        
+        finally:
+            if element:
+                try:
+                    await element.dispose()
+                except Exception:
+                    pass
+
         return False
     
     async def hover_element(self, selector: str) -> bool:
         """Survole un élément"""
+        element = None
         try:
             element = await self.page.query_selector(selector)
             if element:
@@ -129,7 +142,13 @@ class DOMUtils:
                 return True
         except Exception as e:
             logger.debug(f"Erreur lors du survol de '{selector}': {e}")
-        
+        finally:
+            if element:
+                try:
+                    await element.dispose()
+                except Exception:
+                    pass
+
         return False
     
     async def wait_for_page_stability(self, timeout: int = DEFAULT_ELEMENT_TIMEOUT_MS) -> None:
@@ -140,24 +159,21 @@ class DOMUtils:
             logger.debug(f"Timeout lors de l'attente de stabilité: {e}")
     
     async def extract_table_data(self, table_selector: str) -> List[List[str]]:
-        """Extrait les données d'un tableau"""
-        data = []
-        
+        """Extrait les données d'un tableau entièrement via JS (zéro fuite)"""
         try:
-            rows = await self.page.query_selector_all(f"{table_selector} tr")
-            
-            for row in rows:
-                cells = await row.query_selector_all("td, th")
-                row_data = []
-                
-                for cell in cells:
-                    text = await cell.inner_text()
-                    row_data.append(text.strip())
-                
-                if row_data:
-                    data.append(row_data)
-                    
+            return await self.page.evaluate("""
+                (selector) => {
+                    const data = [];
+                    const rows = document.querySelectorAll(selector + ' tr');
+                    rows.forEach(row => {
+                        const cells = row.querySelectorAll('td, th');
+                        const rowData = [];
+                        cells.forEach(cell => rowData.push(cell.innerText.trim()));
+                        if (rowData.length > 0) data.push(rowData);
+                    });
+                    return data;
+                }
+            """, table_selector)
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction du tableau '{table_selector}': {e}")
-        
-        return data
+            return []

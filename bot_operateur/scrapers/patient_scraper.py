@@ -24,32 +24,38 @@ class PatientScraper:
             await self.page.goto(mission_url)
             await self.page.wait_for_load_state('networkidle', timeout=10000)
             
-            # Vérifier s'il y a des patients
-            patient_form = await self.page.query_selector("#patient_button_form")
-            if not patient_form:
+            # Vérifier et extraire le texte du bouton patient via JS (zéro fuite)
+            patient_info = await self.page.evaluate("""
+                () => {
+                    const form = document.querySelector('#patient_button_form');
+                    if (!form) return null;
+                    const span = document.querySelector('#patient_button_text');
+                    return span ? span.innerText : form.innerText;
+                }
+            """)
+            if not patient_info:
                 logger.debug(f"Aucun patient trouvé pour mission {mission_id}")
                 return patients
-            
-            # Compter les patients depuis le texte spécifique du span
-            patient_text_span = await self.page.query_selector("#patient_button_text")
-            if patient_text_span:
-                patient_count_text = await patient_text_span.inner_text()
-                patient_count = extract_number_from_text(patient_count_text)
-            else:
-                # Fallback sur tout l'élément patient_form
-                patient_count_text = await patient_form.inner_text()
-                patient_count = extract_number_from_text(patient_count_text)
-            
+
+            patient_count = extract_number_from_text(patient_info)
+
             # Récupérer les détails des patients
             patient_elements = await self.page.query_selector_all(".mission_patient")
-            
-            for i, element in enumerate(patient_elements):
-                try:
-                    patient = await self._extract_patient_from_element(element, str(i))
-                    if patient:
-                        patients.append(patient)
-                except Exception as e:
-                    logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
+
+            try:
+                for i, element in enumerate(patient_elements):
+                    try:
+                        patient = await self._extract_patient_from_element(element, str(i))
+                        if patient:
+                            patients.append(patient)
+                    except Exception as e:
+                        logger.warning(f"Erreur lors de l'extraction du patient {i}: {e}")
+            finally:
+                for el in patient_elements:
+                    try:
+                        await el.dispose()
+                    except Exception:
+                        pass
             
             # Si pas de détails mais on a un compte, créer des patients génériques
             if not patients and patient_count > 0:
@@ -72,24 +78,31 @@ class PatientScraper:
             # Extraire les besoins depuis les alertes
             needs = []
             alert_elements = await element.query_selector_all(".alert-danger, .alert-warning, .alert-info")
-            
-            for alert in alert_elements:
-                alert_text = await alert.inner_text()
-                if "Il nous faut" in alert_text:
-                    # Nettoyer le texte et séparer les besoins multiples
-                    need_text = alert_text.replace("Il nous faut : ", "").replace("Il nous faut: ", "")
-                    need_text = need_text.replace("Il nous faut\u00a0: ", "").strip()  # gérer les espaces insécables
-                    
-                    # Séparer les besoins multiples par virgules
-                    parts = [part.strip() for part in need_text.split(',') if part.strip()]
-                    logger.debug(f"Besoins parsés: {parts}")
-                    
-                    for part in parts:
-                        mapped = self._parse_patient_need(part)
-                        if mapped and mapped not in needs:  # éviter les doublons
-                            needs.append(mapped)
-                            logger.debug(f"Besoin ajouté: '{part}' -> {mapped}")
-            
+
+            try:
+                for alert in alert_elements:
+                    alert_text = await alert.inner_text()
+                    if "Il nous faut" in alert_text:
+                        # Nettoyer le texte et séparer les besoins multiples
+                        need_text = alert_text.replace("Il nous faut : ", "").replace("Il nous faut: ", "")
+                        need_text = need_text.replace("Il nous faut\u00a0: ", "").strip()  # gérer les espaces insécables
+
+                        # Séparer les besoins multiples par virgules
+                        parts = [part.strip() for part in need_text.split(',') if part.strip()]
+                        logger.debug(f"Besoins parsés: {parts}")
+
+                        for part in parts:
+                            mapped = self._parse_patient_need(part)
+                            if mapped and mapped not in needs:  # éviter les doublons
+                                needs.append(mapped)
+                                logger.debug(f"Besoin ajouté: '{part}' -> {mapped}")
+            finally:
+                for alert in alert_elements:
+                    try:
+                        await alert.dispose()
+                    except Exception:
+                        pass
+
             # Extraire la gravité si disponible
             severity = await self._extract_patient_severity(element)
             
@@ -112,16 +125,23 @@ class PatientScraper:
         try:
             # Chercher des indicateurs de gravité
             severity_indicators = await element.query_selector_all(".badge, .label, .text-danger, .text-warning")
-            
-            for indicator in severity_indicators:
-                text = (await indicator.inner_text()).lower()
-                
-                if any(word in text for word in ["critique", "critical"]):
-                    return PatientSeverity.CRITICAL
-                elif any(word in text for word in ["grave", "severe"]):
-                    return PatientSeverity.SEVERE
-                elif any(word in text for word in ["léger", "light"]):
-                    return PatientSeverity.LIGHT
+
+            try:
+                for indicator in severity_indicators:
+                    text = (await indicator.inner_text()).lower()
+
+                    if any(word in text for word in ["critique", "critical"]):
+                        return PatientSeverity.CRITICAL
+                    elif any(word in text for word in ["grave", "severe"]):
+                        return PatientSeverity.SEVERE
+                    elif any(word in text for word in ["léger", "light"]):
+                        return PatientSeverity.LIGHT
+            finally:
+                for indicator in severity_indicators:
+                    try:
+                        await indicator.dispose()
+                    except Exception:
+                        pass
             
             # Chercher dans le texte général de l'élément
             element_text = (await element.inner_text()).lower()
@@ -190,15 +210,19 @@ class PatientScraper:
     
     
     async def get_patient_count_from_button(self) -> int:
-        """Récupère le nombre de patients depuis le bouton patient"""
+        """Récupère le nombre de patients depuis le bouton patient (via JS, zéro fuite)"""
         try:
-            patient_button = await self.page.query_selector("#patient_button_form")
-            if patient_button:
-                text = await patient_button.inner_text()
+            text = await self.page.evaluate("""
+                () => {
+                    const btn = document.querySelector('#patient_button_form');
+                    return btn ? btn.innerText : null;
+                }
+            """)
+            if text:
                 return extract_number_from_text(text)
         except Exception as e:
             logger.debug(f"Erreur lors de la récupération du nombre de patients: {e}")
-        
+
         return 0
     
     def consolidate_mission_needs(self, patients: List[Patient]) -> dict:
@@ -223,9 +247,10 @@ class PatientScraper:
         return consolidated_needs
     
     async def has_patients(self) -> bool:
-        """Vérifie si la mission actuelle a des patients"""
+        """Vérifie si la mission actuelle a des patients (via JS, zéro fuite)"""
         try:
-            patient_button = await self.page.query_selector("#patient_button_form")
-            return patient_button is not None
+            return await self.page.evaluate(
+                'document.querySelector("#patient_button_form") !== null'
+            )
         except Exception:
             return False

@@ -44,68 +44,69 @@ class VehicleScraper:
     async def get_available_vehicles_for_mission(self, mission: Mission) -> List[Vehicle]:
         """
         Récupère tous les véhicules disponibles pour une mission spécifique.
-        
+
         Args:
             mission: Mission pour laquelle récupérer les véhicules
-            
+
         Returns:
             List[Vehicle]: Liste des véhicules disponibles
         """
         vehicles = []
-        
+
         try:
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.page.goto(mission_url)
             await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
 
-            # Vérifier si la mission est terminée avant de chercher le bouton Conditions
-            mission_complete_selector = ".mission-success"
-            mission_complete = await self.page.query_selector(mission_complete_selector)
-            if mission_complete:
+            # Vérifier si la mission est terminée via JS (évite fuite ElementHandle)
+            is_complete = await self.page.evaluate(
+                'document.querySelector(".mission-success") !== null'
+            )
+            if is_complete:
                 logger.info(f"🏁 Mission {mission.id} terminée - pas de véhicules supplémentaires nécessaires")
-                return vehicles  # Retourner liste vide (pas d'erreur)
-
-            help_button = await self.page.query_selector("#mission_help")
-            if not help_button:
-                logger.warning(f"Bouton 'Conditions' non trouvé pour la mission {mission.id}")
                 return vehicles
 
-            help_href = await help_button.get_attribute("href")
+            # Extraire le href du bouton Conditions via JS (évite fuite ElementHandle)
+            help_href = await self.page.evaluate("""
+                () => {
+                    const btn = document.querySelector('#mission_help');
+                    return btn ? btn.getAttribute('href') : null;
+                }
+            """)
             if not help_href:
-                logger.warning(f"URL 'Conditions' introuvable pour mission {mission.id}")
+                logger.warning(f"Bouton 'Conditions' non trouvé pour la mission {mission.id}")
                 return vehicles
 
             help_url = f"https://www.operateur112.fr{help_href}"
             await self.page.goto(help_url)
             await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
-            
-            # Chercher le lien "Afficher la mission" 
-            back_to_mission_link = await self.page.query_selector("#back_to_mission")
-            if back_to_mission_link:
-                mission_url = await back_to_mission_link.get_attribute("href")
-                if mission_url:
-                    # Naviguer vers la vraie page de la mission
-                    await self.page.goto(f"https://www.operateur112.fr{mission_url}")
-                    await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
-                else:
-                    logger.warning(f"URL de retour à la mission non trouvée pour {mission.id}")
-                    return vehicles
+
+            # Extraire le href du lien retour via JS (évite fuite ElementHandle)
+            back_href = await self.page.evaluate("""
+                () => {
+                    const link = document.querySelector('#back_to_mission');
+                    return link ? link.getAttribute('href') : null;
+                }
+            """)
+            if back_href:
+                await self.page.goto(f"https://www.operateur112.fr{back_href}")
+                await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
             else:
                 logger.warning(f"Bouton 'Afficher la mission' non trouvé pour {mission.id}")
                 return vehicles
-            
-            # Attendre que la liste des véhicules soit chargée (sans charger tous les véhicules)
+
+            # Attendre que la liste des véhicules soit chargée
             table_selector = self._get_vehicle_table_selector(mission.type)
             await self.page.wait_for_selector(table_selector, timeout=10000)
-            
+
             # Récupérer les véhicules visibles (les plus proches sont déjà affichés)
             vehicles = await self._scrape_closest_vehicles_from_table(table_selector)
-            
+
             logger.info(f"Trouvé {len(vehicles)} véhicules proches pour la mission {mission.id}")
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des véhicules: {e}")
-        
+
         return vehicles
     
     async def _load_all_vehicles(self) -> None:
@@ -279,8 +280,12 @@ class VehicleScraper:
             
             # Vérifier la disponibilité via la checkbox
             checkbox = await row.query_selector(".vehicle_checkbox")
-            is_available = checkbox is not None and not await checkbox.is_disabled()
-            
+            try:
+                is_available = checkbox is not None and not await checkbox.is_disabled()
+            finally:
+                if checkbox:
+                    await checkbox.dispose()
+
             # Extraire des informations additionnelles si disponibles
             location = await self._extract_vehicle_location(row)
             fuel_level = await self._extract_fuel_level(row)
@@ -426,73 +431,74 @@ class VehicleScraper:
         """Sélectionne les véhicules spécifiés par leurs IDs"""
         try:
             selected_count = 0
-            
+
             for vehicle_id in vehicle_ids:
                 checkbox_selector = f"#vehicle_element_content_{vehicle_id} .vehicle_checkbox"
-                
+
                 if await self.dom_utils.element_exists(checkbox_selector):
                     checkbox = await self.page.query_selector(checkbox_selector)
-                    
-                    if checkbox and not await checkbox.is_checked():
-                        await checkbox.check()
-                        selected_count += 1
-                        logger.debug(f"Véhicule {vehicle_id} sélectionné")
-                    
+                    try:
+                        if checkbox and not await checkbox.is_checked():
+                            await checkbox.check()
+                            selected_count += 1
+                            logger.debug(f"Véhicule {vehicle_id} sélectionné")
+                    finally:
+                        if checkbox:
+                            await checkbox.dispose()
                 else:
                     logger.warning(f"Checkbox pour véhicule {vehicle_id} non trouvée")
-            
+
             logger.info(f"{selected_count}/{len(vehicle_ids)} véhicules sélectionnés")
             return selected_count > 0
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de la sélection des véhicules: {e}")
             return False
     
     async def deploy_selected_vehicles(self, use_next_button: bool = False) -> bool:
         """Déploie les véhicules sélectionnés"""
+        deploy_button = None
         try:
             if use_next_button:
-                # Utiliser le bouton "Déployer et suivant"
                 deploy_button = await self.page.query_selector("button:has-text('Déployer et suivant')")
             else:
-                # Utiliser le bouton standard de déploiement
                 deploy_button = await self.page.query_selector("#mission_alarm_btn")
-            
+
             if not deploy_button:
                 logger.error("Bouton de déploiement non trouvé")
                 return False
-            
-            # Vérifier si le bouton est activé
+
             is_disabled = await deploy_button.is_disabled()
             if is_disabled:
                 logger.warning("Le bouton de déploiement est désactivé")
                 return False
-            
-            # Cliquer sur le bouton
+
             await deploy_button.click()
             logger.info("Véhicules déployés avec succès")
 
-            # Attendre la confirmation de déploiement (changement DOM au lieu de sleep fixe)
             try:
                 await self.page.wait_for_load_state('networkidle', timeout=5000)
             except Exception:
                 await self.page.wait_for_load_state('domcontentloaded', timeout=3000)
 
             return True
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du déploiement: {e}")
             return False
+        finally:
+            if deploy_button:
+                try:
+                    await deploy_button.dispose()
+                except Exception:
+                    pass
     
     async def get_selected_vehicle_count(self) -> int:
-        """Retourne le nombre de véhicules actuellement sélectionnés"""
+        """Retourne le nombre de véhicules actuellement sélectionnés (via JS, zéro fuite)"""
         try:
-            selected_checkboxes = await self.page.query_selector_all(".vehicle_checkbox:checked")
-            count = len(selected_checkboxes)
-            for cb in selected_checkboxes:
-                await cb.dispose()
-            return count
-
+            return await self.page.evaluate(
+                'document.querySelectorAll(".vehicle_checkbox:checked").length'
+            )
         except Exception as e:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
@@ -529,11 +535,13 @@ class VehicleScraper:
                 logger.info("🎉 Tous les besoins sont déjà satisfaits ! Aucun véhicule supplémentaire nécessaire.")
                 return (-1, 0)  # Code spécial pour indiquer que tous les besoins sont déjà satisfaits
             
-            # Vérifier d'abord si la mission est terminée
+            # Vérifier d'abord si la mission est terminée (JS pour éviter fuite ElementHandle)
             mission_complete_selector = ".mission-success"
-            mission_complete = await self.page.query_selector(mission_complete_selector)
+            is_mission_complete = await self.page.evaluate(
+                'document.querySelector(".mission-success") !== null'
+            )
 
-            if mission_complete:
+            if is_mission_complete:
                 logger.info("🏁 Mission terminée détectée - aucun déploiement supplémentaire nécessaire")
                 return (-2, 0)  # Code spécial pour mission terminée (différent de -1 pour besoins satisfaits)
 
@@ -544,8 +552,10 @@ class VehicleScraper:
                 await self.page.wait_for_selector(table_selector, timeout=10000)
             except Exception as e:
                 # Double vérification si la mission s'est terminée pendant l'attente
-                mission_complete = await self.page.query_selector(mission_complete_selector)
-                if mission_complete:
+                is_complete = await self.page.evaluate(
+                    'document.querySelector(".mission-success") !== null'
+                )
+                if is_complete:
                     logger.info("🏁 Mission terminée pendant l'attente du tableau véhicules")
                     return (-2, 0)  # Code spécial pour mission terminée
                 else:
@@ -603,47 +613,51 @@ class VehicleScraper:
                     
                     if matching_need:
                         need_type, needed_count, already_selected = matching_need
-                        
+
                         # Chercher la checkbox de ce véhicule
                         checkbox = await row.query_selector(".vehicle_checkbox")
-                        
-                        if checkbox and not await checkbox.is_disabled():
-                            # Vérifier si le véhicule tracteur est disponible (pour les remorques)
-                            tractor_available = await self._check_tractor_availability(row)
-                            if not tractor_available:
-                                full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
-                                logger.warning(f"⚠️  {full_caption} ignoré: Véhicule tracteur non disponible")
-                                continue  # Passer au véhicule suivant
-                            
-                            # Sélectionner ce véhicule
-                            await checkbox.check()
-                            
-                            # Mettre à jour le compteur pour le besoin principal
-                            selected_counts[need_type] = already_selected + 1
-                            total_selected += 1
-                            alternatives_used[need_type].append(vehicle_type)
-                            
-                            # Mettre à jour aussi les compteurs pour tous les autres besoins que ce véhicule peut satisfaire
-                            if alternatives_mapping:
-                                for other_need_type in adjusted_vehicle_needs.keys():
-                                    if other_need_type != need_type:  # Pas le besoin déjà traité
-                                        alternatives = alternatives_mapping.get(other_need_type, {})
-                                        primary_alternatives = alternatives.get('primary', [])
-                                        secondary_alternatives = alternatives.get('secondary', [])
-                                        
-                                        if vehicle_type in primary_alternatives or vehicle_type in secondary_alternatives:
-                                            # Ce véhicule peut aussi satisfaire cet autre besoin
-                                            selected_counts[other_need_type] = selected_counts.get(other_need_type, 0) + 1
-                                            alternatives_used[other_need_type].append(vehicle_type)
-                                            logger.debug(f"  🔗 Satisfait aussi le besoin {other_need_type}")
-                            
-                            full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
-                            logger.info(f"✅ Sélectionné: {full_caption} -> Type: {vehicle_type} (pour {need_type})")
 
-                            # Garde-fou: limite le nombre total de véhicules sélectionnés
-                            if total_selected >= max_total_vehicles:
-                                logger.warning(f"⚠️ Limite de sécurité atteinte: {total_selected} véhicules sélectionnés (max: {max_total_vehicles})")
-                                break
+                        try:
+                            if checkbox and not await checkbox.is_disabled():
+                                # Vérifier si le véhicule tracteur est disponible (pour les remorques)
+                                tractor_available = await self._check_tractor_availability(row)
+                                if not tractor_available:
+                                    full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
+                                    logger.warning(f"⚠️  {full_caption} ignoré: Véhicule tracteur non disponible")
+                                    continue  # Passer au véhicule suivant
+
+                                # Sélectionner ce véhicule
+                                await checkbox.check()
+
+                                # Mettre à jour le compteur pour le besoin principal
+                                selected_counts[need_type] = already_selected + 1
+                                total_selected += 1
+                                alternatives_used[need_type].append(vehicle_type)
+
+                                # Mettre à jour aussi les compteurs pour tous les autres besoins que ce véhicule peut satisfaire
+                                if alternatives_mapping:
+                                    for other_need_type in adjusted_vehicle_needs.keys():
+                                        if other_need_type != need_type:  # Pas le besoin déjà traité
+                                            alternatives = alternatives_mapping.get(other_need_type, {})
+                                            primary_alternatives = alternatives.get('primary', [])
+                                            secondary_alternatives = alternatives.get('secondary', [])
+
+                                            if vehicle_type in primary_alternatives or vehicle_type in secondary_alternatives:
+                                                # Ce véhicule peut aussi satisfaire cet autre besoin
+                                                selected_counts[other_need_type] = selected_counts.get(other_need_type, 0) + 1
+                                                alternatives_used[other_need_type].append(vehicle_type)
+                                                logger.debug(f"  🔗 Satisfait aussi le besoin {other_need_type}")
+
+                                full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
+                                logger.info(f"✅ Sélectionné: {full_caption} -> Type: {vehicle_type} (pour {need_type})")
+
+                                # Garde-fou: limite le nombre total de véhicules sélectionnés
+                                if total_selected >= max_total_vehicles:
+                                    logger.warning(f"⚠️ Limite de sécurité atteinte: {total_selected} véhicules sélectionnés (max: {max_total_vehicles})")
+                                    break
+                        finally:
+                            if checkbox:
+                                await checkbox.dispose()
 
                     # Vérifier si tous les besoins ajustés sont satisfaits
                     if all(selected_counts.get(vtype, 0) >= needed 
@@ -670,19 +684,17 @@ class VehicleScraper:
                 
                 # Mettre à jour les compteurs
                 if additional_selected > 0:
-                    # Re-compter les véhicules sélectionnés après le chargement supplémentaire
-                    selected_checkboxes = await self.page.query_selector_all(".vehicle_checkbox:checked")
-                    actual_selected = len(selected_checkboxes)
-                    for cb in selected_checkboxes:
-                        await cb.dispose()
+                    # Re-compter via JS (évite création de handles)
+                    actual_selected = await self.page.evaluate(
+                        'document.querySelectorAll(".vehicle_checkbox:checked").length'
+                    )
                     logger.info(f"✅ Véhicules supplémentaires trouvés: +{additional_selected} (total: {actual_selected})")
-            
+
             # Log du résumé final avec détails des alternatives (besoins originaux + ajustés)
             logger.info("📊 Résumé de la sélection finale:")
-            final_selected = await self.page.query_selector_all(".vehicle_checkbox:checked")
-            final_count = len(final_selected)
-            for fs in final_selected:
-                await fs.dispose()
+            final_count = await self.page.evaluate(
+                'document.querySelectorAll(".vehicle_checkbox:checked").length'
+            )
             
             # Afficher les besoins originaux vs ajustés vs sélectionnés
             for vtype, original_needed in vehicle_needs.items():
@@ -733,209 +745,235 @@ class VehicleScraper:
     async def _get_already_deployed_vehicles(self) -> List[str]:
         """
         Récupère la liste des IDs des véhicules déjà mobilisés.
-        
-        Analyse les tableaux de véhicules déjà présents sur la mission
-        et ceux en route pour éviter leur redéploiement.
-        
+
+        Utilise evaluate() JS pour éviter les fuites d'ElementHandle.
+
         Returns:
             List[str]: Liste des IDs de véhicules à exclure de la sélection
         """
         excluded_vehicle_ids = []
-        excluded_names = []  # Pour le debug
-        
+        excluded_names = []
+
         try:
-            # Récupérer les deux listes en parallèle (requêtes DOM indépendantes)
-            at_mission_rows, driving_rows = await asyncio.gather(
-                self.page.query_selector_all("#mission_vehicle_at_mission tbody tr"),
-                self._get_driving_vehicle_rows()
-            )
+            # Extraire IDs et noms via JS en une seule évaluation (zéro fuite)
+            at_mission_data = await self.page.evaluate("""
+                () => {
+                    const results = [];
+                    const rows = document.querySelectorAll('#mission_vehicle_at_mission tbody tr');
+                    rows.forEach(row => {
+                        const link = row.querySelector('a[vehicle_type_id]');
+                        if (link) {
+                            const href = link.getAttribute('href') || '';
+                            const name = link.textContent.trim();
+                            const parts = href.split('/');
+                            const id = parts.length > 0 ? parts[parts.length - 1] : null;
+                            if (id) results.push({id: id, name: name || ('ID:' + id)});
+                        }
+                    });
+                    return results;
+                }
+            """)
+            for item in at_mission_data:
+                excluded_vehicle_ids.append(item['id'])
+                excluded_names.append(item['name'])
+                logger.debug(f"🚫 Véhicule déjà en mission: {item['name']}")
 
-            # Extraire les infos des véhicules déjà en mission
-            try:
-                for row in at_mission_rows:
-                    try:
-                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                        if vehicle_link:
-                            href = await vehicle_link.get_attribute("href")
-                            vehicle_name = await vehicle_link.inner_text()
-
-                            vehicle_id = href.split("/")[-1] if href and "/" in href else None
-
-                            if vehicle_id:
-                                excluded_vehicle_ids.append(vehicle_id)
-                                display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
-                                excluded_names.append(display_name)
-                                logger.debug(f"🚫 Véhicule déjà en mission: {display_name}")
-                    except Exception as e:
-                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission: {e}")
-                        continue
-            finally:
-                for row in at_mission_rows:
-                    await row.dispose()
-
-            # Extraire les infos des véhicules en route
-            try:
-                for row in driving_rows:
-                    try:
-                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                        if vehicle_link:
-                            href = await vehicle_link.get_attribute("href")
-                            vehicle_name = await vehicle_link.inner_text()
-
-                            vehicle_id = href.split("/")[-1] if href and "/" in href else None
-
-                            if vehicle_id:
-                                excluded_vehicle_ids.append(vehicle_id)
-                                display_name = vehicle_name.strip() if vehicle_name and vehicle_name.strip() else f"ID:{vehicle_id}"
-                                excluded_names.append(display_name)
-                                logger.debug(f"🚫 Véhicule en route: {display_name}")
-                    except Exception as e:
-                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en route: {e}")
-                        continue
-            finally:
-                for row in driving_rows:
-                    await row.dispose()
+            # Véhicules en route via JS
+            driving_data = await self.page.evaluate("""
+                () => {
+                    const results = [];
+                    // Essayer h2_vehicle_driving
+                    const h2 = document.querySelector('#h2_vehicle_driving');
+                    let rows = [];
+                    if (h2) {
+                        rows = document.querySelectorAll('#h2_vehicle_driving ~ table tbody tr, #h2_vehicle_driving + table tbody tr');
+                    }
+                    if (rows.length === 0) {
+                        rows = document.querySelectorAll('#mission_vehicle_driving tbody tr');
+                    }
+                    rows.forEach(row => {
+                        const link = row.querySelector('a[vehicle_type_id]');
+                        if (link) {
+                            const href = link.getAttribute('href') || '';
+                            const name = link.textContent.trim();
+                            const parts = href.split('/');
+                            const id = parts.length > 0 ? parts[parts.length - 1] : null;
+                            if (id) results.push({id: id, name: name || ('ID:' + id)});
+                        }
+                    });
+                    return results;
+                }
+            """)
+            for item in driving_data:
+                excluded_vehicle_ids.append(item['id'])
+                excluded_names.append(item['name'])
+                logger.debug(f"🚫 Véhicule en route: {item['name']}")
 
             if excluded_vehicle_ids:
                 logger.info(f"Trouvé {len(excluded_vehicle_ids)} véhicules à exclure (déjà déployés/en route)")
                 logger.info(f"📋 Liste des véhicules exclus: {', '.join(excluded_names)}")
-            
+
         except Exception as e:
             logger.warning(f"Erreur lors de la récupération des véhicules déployés: {e}")
-        
+
         return excluded_vehicle_ids
     
     async def _get_already_deployed_vehicles_by_type(self) -> dict:
         """
         Comptabilise les véhicules déployés par type de véhicule.
-        
-        Analyse les véhicules déjà présents sur la mission et en route
-        pour déterminer combien de chaque type sont déjà mobilisés,
-        permettant d'ajuster les besoins restants.
-        
+
+        Utilise evaluate() JS pour éviter les fuites d'ElementHandle.
+
         Returns:
             dict: Dictionnaire {type_véhicule: nombre_déployé}
         """
         deployed_by_type = {}
-        
-        try:
-            # Véhicules déjà présents sur la mission (mission_vehicle_at_mission)
-            at_mission_rows = await self.page.query_selector_all("#mission_vehicle_at_mission tbody tr")
-            try:
-                for row in at_mission_rows:
-                    try:
-                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                        if vehicle_link:
-                            vehicle_name = await vehicle_link.inner_text()
-                            if vehicle_name:
-                                vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
-                                if vehicle_type:
-                                    deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
-                    except Exception as e:
-                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en mission (par type): {e}")
-                        continue
-            finally:
-                for row in at_mission_rows:
-                    await row.dispose()
 
-            # Véhicules en route vers la mission (h2_vehicle_driving)
-            driving_rows = await self._get_driving_vehicle_rows()
-            try:
-                for row in driving_rows:
-                    try:
-                        vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                        if vehicle_link:
-                            vehicle_name = await vehicle_link.inner_text()
-                            if vehicle_name:
-                                vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
-                                if vehicle_type:
-                                    deployed_by_type[vehicle_type] = deployed_by_type.get(vehicle_type, 0) + 1
-                                    logger.debug(f"🔢 Véhicule en route: {vehicle_name.strip()} -> Type: {vehicle_type}")
-                    except Exception as e:
-                        logger.debug(f"Erreur lors de l'extraction d'un véhicule en route (par type): {e}")
-                        continue
-            finally:
-                for row in driving_rows:
-                    await row.dispose()
+        try:
+            # Extraire les types via JS en une seule évaluation (évite fuites ElementHandle)
+            at_mission_types = await self.page.evaluate("""
+                () => {
+                    const types = [];
+                    const rows = document.querySelectorAll('#mission_vehicle_at_mission tbody tr');
+                    rows.forEach(row => {
+                        const link = row.querySelector('a[vehicle_type_id]');
+                        if (link) {
+                            const name = link.textContent.trim();
+                            if (name) {
+                                const type = name.split(/\\s+/)[0];
+                                if (type) types.push(type);
+                            }
+                        }
+                    });
+                    return types;
+                }
+            """)
+            for vtype in at_mission_types:
+                deployed_by_type[vtype] = deployed_by_type.get(vtype, 0) + 1
+
+            # Véhicules en route - via JS aussi
+            driving_types = await self._get_driving_vehicle_types_js()
+            for vtype in driving_types:
+                deployed_by_type[vtype] = deployed_by_type.get(vtype, 0) + 1
+                logger.debug(f"🔢 Véhicule en route: Type {vtype}")
 
             if deployed_by_type:
                 logger.info(f"📊 Véhicules déjà déployés par type: {deployed_by_type}")
-            
+
         except Exception as e:
             logger.warning(f"Erreur lors du comptage des véhicules déployés par type: {e}")
-        
+
         return deployed_by_type
     
     async def _get_driving_vehicle_rows(self):
         """
         Utilitaire pour récupérer les lignes des véhicules en cours de déplacement.
-        
-        Utilise le bon sélecteur basé sur l'ID h2_vehicle_driving trouvé dans le DOM.
-        
+
+        ATTENTION: Les ElementHandle retournés doivent être disposés par l'appelant.
+
         Returns:
             List: Liste des éléments <tr> des véhicules en route
         """
         try:
-            # D'abord vérifier si l'en-tête h2_vehicle_driving existe
-            header = await self.page.query_selector("#h2_vehicle_driving")
-            if header:
-                # Chercher le tableau suivant l'en-tête
+            # Vérifier l'existence de l'en-tête via JS (évite fuite ElementHandle)
+            has_header = await self.page.evaluate(
+                'document.querySelector("#h2_vehicle_driving") !== null'
+            )
+            if has_header:
                 driving_rows = await self.page.query_selector_all("#h2_vehicle_driving ~ table tbody tr, #h2_vehicle_driving + table tbody tr")
                 if driving_rows:
                     logger.debug(f"✅ Trouvé {len(driving_rows)} lignes avec le sélecteur h2_vehicle_driving")
                     return driving_rows
-                
-                # Fallback: chercher dans les éléments suivants
-                parent_container = await header.query_selector("xpath=following::table[1]")
-                if parent_container:
-                    driving_rows = await parent_container.query_selector_all("tbody tr")
+
+                # Fallback: chercher via JS le premier table suivant
+                has_following_table = await self.page.evaluate("""
+                    () => {
+                        const h2 = document.querySelector('#h2_vehicle_driving');
+                        if (!h2) return false;
+                        let el = h2.nextElementSibling;
+                        while (el) {
+                            if (el.tagName === 'TABLE') return true;
+                            el = el.nextElementSibling;
+                        }
+                        return false;
+                    }
+                """)
+                if has_following_table:
+                    driving_rows = await self.page.query_selector_all("#h2_vehicle_driving ~ table:first-of-type tbody tr")
                     if driving_rows:
-                        logger.debug(f"✅ Trouvé {len(driving_rows)} lignes avec xpath fallback")
+                        logger.debug(f"✅ Trouvé {len(driving_rows)} lignes avec fallback CSS")
                         return driving_rows
-            
-            # Fallback vers l'ancien sélecteur si le nouveau ne fonctionne pas
+
+            # Fallback vers l'ancien sélecteur
             logger.debug("⚠️ Utilisation du fallback vers mission_vehicle_driving")
             driving_rows = await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
             return driving_rows
-            
+
         except Exception as e:
             logger.debug(f"Erreur avec les nouveaux sélecteurs, utilisation du fallback: {e}")
             return await self.page.query_selector_all("#mission_vehicle_driving tbody tr")
+
+    async def _get_driving_vehicle_types_js(self) -> list:
+        """
+        Récupère les types de véhicules en route entièrement via JS (zéro fuite ElementHandle).
+
+        Returns:
+            list: Liste des types de véhicules en route (ex: ["VSAV", "FPT", "VSAV"])
+        """
+        try:
+            return await self.page.evaluate("""
+                () => {
+                    const types = [];
+                    // Essayer h2_vehicle_driving ~ table
+                    const h2 = document.querySelector('#h2_vehicle_driving');
+                    let rows = [];
+                    if (h2) {
+                        const tables = document.querySelectorAll('#h2_vehicle_driving ~ table tbody tr, #h2_vehicle_driving + table tbody tr');
+                        if (tables.length > 0) {
+                            rows = tables;
+                        }
+                    }
+                    // Fallback vers mission_vehicle_driving
+                    if (rows.length === 0) {
+                        rows = document.querySelectorAll('#mission_vehicle_driving tbody tr');
+                    }
+                    rows.forEach(row => {
+                        const link = row.querySelector('a[vehicle_type_id]');
+                        if (link) {
+                            const name = link.textContent.trim();
+                            if (name) {
+                                const type = name.split(/\\s+/)[0];
+                                if (type) types.push(type);
+                            }
+                        }
+                    });
+                    return types;
+                }
+            """)
+        except Exception as e:
+            logger.debug(f"Erreur _get_driving_vehicle_types_js: {e}")
+            return []
     
     async def _get_vehicles_en_route_only_by_type(self) -> dict:
         """
         Comptabilise uniquement les véhicules EN ROUTE vers la mission par type.
-        
-        Contrairement à _get_already_deployed_vehicles_by_type qui compte aussi
-        les véhicules sur site, cette méthode ne compte que ceux en route qui
-        vont effectivement remplir la fonction demandée.
-        
+
+        Utilise _get_driving_vehicle_types_js() pour zéro fuite d'ElementHandle.
+
         Returns:
             dict: Dictionnaire {type_véhicule: nombre_en_route}
         """
         vehicles_en_route_by_type = {}
-        
+
         try:
-            # Véhicules en route vers la mission (h2_vehicle_driving) UNIQUEMENT
-            driving_rows = await self._get_driving_vehicle_rows()
-            for row in driving_rows:
-                try:
-                    vehicle_link = await row.query_selector("a[vehicle_type_id]")
-                    if vehicle_link:
-                        vehicle_name = await vehicle_link.inner_text()
-                        if vehicle_name:
-                            # Extraire le type : "VCT 1 Mulhouse" -> "VCT"
-                            vehicle_type = vehicle_name.strip().split()[0] if vehicle_name.strip() else None
-                            if vehicle_type:
-                                vehicles_en_route_by_type[vehicle_type] = vehicles_en_route_by_type.get(vehicle_type, 0) + 1
-                                logger.debug(f"🚗 Véhicule en route: {vehicle_name.strip()} -> Type: {vehicle_type}")
-                except Exception as e:
-                    logger.debug(f"Erreur lors de l'extraction d'un véhicule en route (par type): {e}")
-                    continue
-            
+            driving_types = await self._get_driving_vehicle_types_js()
+            for vtype in driving_types:
+                vehicles_en_route_by_type[vtype] = vehicles_en_route_by_type.get(vtype, 0) + 1
+                logger.debug(f"🚗 Véhicule en route: Type {vtype}")
+
         except Exception as e:
             logger.warning(f"Erreur lors du comptage des véhicules en route par type: {e}")
-        
+
         return vehicles_en_route_by_type
     
     def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict, alternatives_mapping: dict = None, alert_override_types: set = None) -> dict:
@@ -1463,43 +1501,45 @@ class VehicleScraper:
         """
         Tentative de sélection d'un véhicule avec toutes les vérifications de sécurité
         """
+        checkbox = None
         try:
-            # Vérification préalable de l'élément DOM
             if not self._validate_dom_element(dom_element, "selection"):
                 return False
-            
-            # Recherche de la checkbox
+
             checkbox = await dom_element.query_selector(".vehicle_checkbox")
             if not checkbox:
                 logger.debug(f"⚠️ Checkbox non trouvée pour {vehicle_caption}")
                 return False
-            
-            # Vérification de l'état de la checkbox
+
             is_checked = await checkbox.is_checked()
             is_disabled = await checkbox.is_disabled()
-            
+
             if is_checked:
                 logger.debug(f"⚠️ Véhicule {vehicle_caption} déjà sélectionné")
                 return False
-            
+
             if is_disabled:
                 logger.debug(f"⚠️ Véhicule {vehicle_caption} désactivé")
                 return False
-            
-            # Vérification de la disponibilité du tracteur
+
             tractor_available = await self._check_tractor_availability(dom_element)
             if not tractor_available:
                 logger.warning(f"⚠️ {vehicle_caption} ignoré: Véhicule tracteur non disponible")
                 return False
-            
-            # Sélection effective
+
             await checkbox.check()
             logger.debug(f"✅ Véhicule {vehicle_caption} sélectionné avec succès")
             return True
-            
+
         except Exception as e:
             logger.warning(f"⚠️ Erreur sélection {vehicle_caption}: {e}")
             return False
+        finally:
+            if checkbox:
+                try:
+                    await checkbox.dispose()
+                except Exception:
+                    pass
             
     
     async def _extract_vehicle_basic_info(self, row, index: int) -> Optional[tuple]:
@@ -1533,35 +1573,29 @@ class VehicleScraper:
     async def _check_tractor_availability(self, vehicle_row) -> bool:
         """
         Vérifie si le véhicule tracteur est disponible pour une remorque.
-        
+
+        Utilise evaluate() JS pour éviter les fuites d'ElementHandle.
+
         Args:
             vehicle_row: L'élément DOM de la ligne du véhicule
-            
+
         Returns:
             bool: True si le véhicule est disponible (pas de remorque ou tracteur disponible)
         """
         try:
-            # Chercher le message d'erreur de tracteur non disponible
-            # Le sélecteur recherche les éléments avec la classe "text-danger" et un nom de classe contenant "vehicle_not_tractive_message"
-            tractor_error_message = await vehicle_row.query_selector('small.text-danger[class*="vehicle_not_tractive_message"]')
-            
-            if tractor_error_message:
-                # Vérifier si le message est affiché (style="display: inline;" ou visible)
-                style = await tractor_error_message.get_attribute('style')
-                if style and 'display: inline' in style:
-                    # Le message d'erreur est affiché, le tracteur n'est pas disponible
-                    return False
-                    
-                # Vérifier aussi via is_visible (au cas où le style serait différent)
-                is_visible = await tractor_error_message.is_visible()
-                if is_visible:
-                    return False
-            
-            # Aucun message d'erreur visible, le véhicule est disponible
-            return True
-            
+            # Vérifier via JS si un message d'erreur tracteur est visible (évite fuite ElementHandle)
+            tractor_unavailable = await vehicle_row.evaluate("""
+                (row) => {
+                    const msg = row.querySelector('small.text-danger[class*="vehicle_not_tractive_message"]');
+                    if (!msg) return false;
+                    const style = msg.getAttribute('style') || '';
+                    if (style.includes('display: inline')) return true;
+                    // Vérifier visibilité via offsetParent
+                    return msg.offsetParent !== null;
+                }
+            """)
+            return not tractor_unavailable
+
         except Exception as e:
             logger.debug(f"Erreur lors de la vérification du tracteur: {e}")
-            # En cas d'erreur, par sécurité, considérer le véhicule comme disponible
-            # pour ne pas bloquer la sélection des véhicules normaux
             return True
