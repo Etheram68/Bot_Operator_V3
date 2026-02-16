@@ -50,7 +50,7 @@
     "USAR": {
       "name": "USAR (Sauvetage Déblaiement)",
       "vehicles": ["VTP(ers)SC", "MaGec", "VDIP", "VEC"],
-      "priority": ["VTP(ers)SC", "MaGec", "VDIP", "VEC"],
+      "priority": ["MaGec", "VDIP", "VEC"],
       "description": "Personnel Urban Search and Rescue / Sauvetage-Déblaiement"
     }
   },

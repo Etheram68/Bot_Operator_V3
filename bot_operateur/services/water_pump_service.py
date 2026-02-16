@@ -128,221 +128,87 @@ class WaterPumpService:
         return vehicles_needed
 
     def find_optimal_water_combination(self, target_water: int, water_vehicles: list) -> Optional[dict]:
-        """Trouve la combinaison optimale de véhicules pour l'eau."""
+        """Trouve la combinaison optimale de véhicules pour l'eau via backtracking.
+
+        Critères d'optimisation (par ordre de priorité):
+        1. Gaspillage minimal (eau excédentaire)
+        2. Nombre minimal de véhicules
+
+        Avec ~9 types de véhicules et un cap de 8 véhicules max,
+        l'espace de recherche reste petit grâce à l'élagage.
+        """
         if not water_vehicles:
             return None
 
+        # Trier par capacité décroissante pour élaguer rapidement
         water_vehicles_desc = sorted(water_vehicles, key=lambda x: x['capacity'], reverse=True)
 
-        best_solution = None
-        min_vehicles_count = float('inf')
-        min_waste_for_min_vehicles = float('inf')
+        logger.debug(f"💧 Backtracking pour {target_water}L avec {len(water_vehicles_desc)} types de véhicules")
 
-        logger.debug(f"💧 Recherche solution optimale pour {target_water}L")
+        best_solution: dict | None = None
+        best_score = (float('inf'), float('inf'))  # (waste, total_vehicles)
+        max_total_vehicles = 8
 
-        greedy_solution = self._greedy_water_solution(target_water, water_vehicles_desc)
-        if greedy_solution:
-            vehicles_count = sum(greedy_solution['vehicles'].values())
-            waste = greedy_solution['total_capacity'] - target_water
+        def backtrack(
+            remaining: int, idx: int, current: dict, total_vehicles: int
+        ) -> None:
+            nonlocal best_solution, best_score
 
-            if vehicles_count < min_vehicles_count or (vehicles_count == min_vehicles_count and waste < min_waste_for_min_vehicles):
-                best_solution = greedy_solution
-                min_vehicles_count = vehicles_count
-                min_waste_for_min_vehicles = waste
+            if remaining <= 0:
+                waste = -remaining
+                score = (waste, total_vehicles)
+                if score < best_score:
+                    best_score = score
+                    best_solution = dict(current)
+                return
 
-            logger.debug(f"💧 Solution gloutonne: {vehicles_count} véhicules, gaspillage: {waste}L")
+            if idx >= len(water_vehicles_desc):
+                return
 
-        if min_vehicles_count > 5:
-            specialized_solution = self._find_large_water_combinations(target_water, water_vehicles_desc)
-            if specialized_solution:
-                vehicles_count = sum(specialized_solution['vehicles'].values())
-                waste = specialized_solution['total_capacity'] - target_water
+            capacity = water_vehicles_desc[idx]['capacity']
+            vtype = water_vehicles_desc[idx]['type']
+            max_count = min(
+                (remaining + capacity - 1) // capacity,
+                max_total_vehicles - total_vehicles
+            )
 
-                if vehicles_count < min_vehicles_count or (vehicles_count == min_vehicles_count and waste < min_waste_for_min_vehicles):
-                    best_solution = specialized_solution
-                    min_vehicles_count = vehicles_count
-                    min_waste_for_min_vehicles = waste
+            for count in range(max_count, -1, -1):
+                new_total = total_vehicles + count
 
-                logger.debug(f"💧 Solution spécialisée: {vehicles_count} véhicules, gaspillage: {waste}L")
+                # Élagage : impossible de battre la meilleure solution en véhicules
+                if new_total > best_score[1] and remaining - count * capacity > 0:
+                    continue
 
-        if best_solution:
-            logger.debug(f"💧 Solution finale: {min_vehicles_count} véhicules, gaspillage: {min_waste_for_min_vehicles}L")
+                if count > 0:
+                    current[vtype] = count
 
-        return best_solution
+                backtrack(
+                    remaining - count * capacity,
+                    idx + 1,
+                    current,
+                    new_total
+                )
 
-    def _greedy_water_solution(self, target_water: int, water_vehicles_desc: list) -> Optional[dict]:
-        """Approche gloutonne améliorée : optimiser le nombre de véhicules puis le gaspillage."""
-        best_solution = None
-        min_vehicles = float('inf')
-        min_waste_for_min_vehicles = float('inf')
+                if count > 0:
+                    del current[vtype]
 
-        for max_vehicles in range(1, 21):
-            solution = self._solve_water_with_limit(target_water, water_vehicles_desc, max_vehicles)
-
-            if solution:
-                total_vehicles = sum(solution.values())
-                total_capacity = sum(qty * next(v['capacity'] for v in water_vehicles_desc if v['type'] == vtype)
-                                   for vtype, qty in solution.items())
-
-                if total_capacity >= target_water:
-                    waste = total_capacity - target_water
-
-                    if total_vehicles < min_vehicles:
-                        min_vehicles = total_vehicles
-                        min_waste_for_min_vehicles = waste
-                        best_solution = solution
-                    elif total_vehicles == min_vehicles and waste < min_waste_for_min_vehicles:
-                        min_waste_for_min_vehicles = waste
-                        best_solution = solution
-
-        if not best_solution:
-            best_solution = self._solve_water_basic(target_water, water_vehicles_desc)
+        backtrack(target_water, 0, {}, 0)
 
         if best_solution:
-            total_capacity = sum(qty * next(v['capacity'] for v in water_vehicles_desc if v['type'] == vtype)
-                               for vtype, qty in best_solution.items())
+            total_capacity = sum(
+                next(v['capacity'] for v in water_vehicles_desc if v['type'] == vtype) * count
+                for vtype, count in best_solution.items()
+            )
+            logger.debug(
+                f"💧 Solution backtracking: {sum(best_solution.values())} véhicules, "
+                f"gaspillage: {total_capacity - target_water}L"
+            )
             return {
                 'vehicles': best_solution,
                 'total_capacity': total_capacity
             }
 
         return None
-
-    @staticmethod
-    def _solve_water_with_limit(target_water: int, water_vehicles_desc: list, max_vehicles: int) -> Optional[dict]:
-        """Résout le problème d'eau avec une limite de véhicules."""
-        vehicles = {}
-        remaining = target_water
-        used_vehicles = 0
-
-        for vehicle in water_vehicles_desc:
-            if used_vehicles >= max_vehicles or remaining <= 0:
-                break
-
-            vehicle_type = vehicle['type']
-            capacity = vehicle['capacity']
-
-            needed = (remaining + capacity - 1) // capacity
-            can_take = min(needed, max_vehicles - used_vehicles)
-
-            if can_take > 0:
-                vehicles[vehicle_type] = can_take
-                remaining -= can_take * capacity
-                used_vehicles += can_take
-
-        if remaining > 0 and used_vehicles < max_vehicles:
-            for vehicle in reversed(water_vehicles_desc):
-                if used_vehicles >= max_vehicles or remaining <= 0:
-                    break
-
-                vehicle_type = vehicle['type']
-                capacity = vehicle['capacity']
-                current_qty = vehicles.get(vehicle_type, 0)
-
-                needed = (remaining + capacity - 1) // capacity
-                can_add = min(needed, max_vehicles - used_vehicles)
-
-                if can_add > 0:
-                    vehicles[vehicle_type] = current_qty + can_add
-                    remaining -= can_add * capacity
-                    used_vehicles += can_add
-
-        total_capacity = sum(qty * next(v['capacity'] for v in water_vehicles_desc if v['type'] == vtype)
-                           for vtype, qty in vehicles.items())
-
-        return vehicles if total_capacity >= target_water else None
-
-    @staticmethod
-    def _solve_water_basic(target_water: int, water_vehicles_desc: list) -> Optional[dict]:
-        """Solution de base sans limite de véhicules."""
-        vehicles = {}
-        remaining = target_water
-
-        for vehicle in water_vehicles_desc:
-            if remaining <= 0:
-                break
-
-            vehicle_type = vehicle['type']
-            capacity = vehicle['capacity']
-
-            needed_count = (remaining + capacity - 1) // capacity
-
-            if needed_count > 0:
-                vehicles[vehicle_type] = needed_count
-                remaining -= needed_count * capacity
-
-        if remaining > 0:
-            return None
-
-        return vehicles
-
-    def _find_large_water_combinations(self, target_water: int, water_vehicles_desc: list) -> Optional[dict]:
-        """Trouve des combinaisons spécialisées pour de gros besoins en eau."""
-        large_vehicles = [v for v in water_vehicles_desc if v['capacity'] >= 8000]
-
-        if len(large_vehicles) < 2:
-            return None
-
-        best_combination = None
-        min_vehicles = float('inf')
-        min_waste = float('inf')
-
-        for count_first in range(1, 5):
-            first_vehicle = large_vehicles[0]
-            capacity_first = count_first * first_vehicle['capacity']
-
-            if capacity_first >= target_water:
-                waste = capacity_first - target_water
-                if count_first < min_vehicles or (count_first == min_vehicles and waste < min_waste):
-                    best_combination = {
-                        'vehicles': {first_vehicle['type']: count_first},
-                        'total_capacity': capacity_first
-                    }
-                    min_vehicles = count_first
-                    min_waste = waste
-                continue
-
-            remaining_after_first = target_water - capacity_first
-
-            for second_vehicle in large_vehicles[1:]:
-                needed_second = (remaining_after_first + second_vehicle['capacity'] - 1) // second_vehicle['capacity']
-
-                if needed_second > 4:
-                    continue
-
-                total_vehicles = count_first + needed_second
-                if total_vehicles >= min_vehicles and total_vehicles > 6:
-                    continue
-
-                total_capacity = capacity_first + needed_second * second_vehicle['capacity']
-
-                if total_capacity >= target_water:
-                    waste = total_capacity - target_water
-
-                    if total_vehicles < min_vehicles or (total_vehicles == min_vehicles and waste < min_waste):
-                        best_combination = {
-                            'vehicles': {
-                                first_vehicle['type']: count_first,
-                                second_vehicle['type']: needed_second
-                            },
-                            'total_capacity': total_capacity
-                        }
-                        min_vehicles = total_vehicles
-                        min_waste = waste
-
-        return best_combination
-
-    @staticmethod
-    def calculate_combination_capacity(combination: dict, water_vehicles: list) -> int:
-        """Calcule la capacité totale d'une combinaison de véhicules."""
-        total_capacity = 0
-
-        for vehicle_type, count in combination.items():
-            vehicle_info = next((v for v in water_vehicles if v['type'] == vehicle_type), None)
-            if vehicle_info:
-                total_capacity += vehicle_info['capacity'] * count
-
-        return total_capacity
 
     async def _estimate_current_water_capacity(self, vehicle_specs: dict) -> int:
         """Estime la capacité d'eau totale actuellement en route vers la mission."""
