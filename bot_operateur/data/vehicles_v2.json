@@ -440,6 +440,10 @@
       "EQUIPE_CYNOPHILE_SC": {
         "primary": ["VEC"],
         "secondary": []
+      },
+      "VTP(ers)SC": {
+        "primary": ["VTP(ers)SC"],
+        "secondary": ["MaGec", "VDIP", "VEC"]
       }
     },
 
@@ -561,6 +565,18 @@
     },
     "AMBULANCE": {
       "crew_size": 2
+    },
+    "VTP(ers)SC": {
+      "crew_size": 9
+    },
+    "MaGec": {
+      "crew_size": 6
+    },
+    "VDIP": {
+      "crew_size": 4
+    },
+    "VEC": {
+      "crew_size": 4
     }
   },
 

@@ -12,7 +12,7 @@
       "description": "Personnel spécialisé dans les interventions subaquatiques"
     },
     "SAV": {
-      "name": "Sauvetage Aquatique", 
+      "name": "Sauvetage Aquatique",
       "vehicles": ["VPL"],
       "priority": ["VPL"],
       "description": "Personnel spécialisé dans le sauvetage aquatique"
@@ -35,35 +35,23 @@
       "priority": ["SMUR(A)", "AMBULANCE", "HELICOPTER"],
       "description": "Médecin urgentiste"
     },
-    "INF": {
-      "name": "Infirmier",
-      "vehicles": ["AMBULANCE"],
-      "priority": ["AMBULANCE"],
-      "description": "Infirmier spécialisé"
-    },
-    "CHEF": {
-      "name": "Chef d'intervention",
-      "vehicles": ["VPC", "CHEF_DE_GROUPE"],
-      "priority": ["CHEF_DE_GROUPE", "VPC"],
-      "description": "Chef d'intervention ou responsable secteur"
-    },
-    "PSY": {
-      "name": "Psychologue",
-      "vehicles": ["VPC", "AMBULANCE"],
-      "priority": ["VPC", "AMBULANCE"],
-      "description": "Psychologue d'intervention"
-    },
     "RAD": {
-      "name": "Radioprotection",
+      "name": "Radiologie",
       "vehicles": ["VIRT"],
       "priority": ["VIRT"],
-      "description": "Personnel de radioprotection"
+      "description": "Personnel de Radiologie"
     },
     "OPJ": {
       "name": "Officier de Police Judiciaire",
       "vehicles": ["VB"],
       "priority": ["VB"],
       "description": "Officier de police judiciaire pour enquêtes et procédures"
+    },
+    "USAR": {
+      "name": "USAR (Sauvetage Déblaiement)",
+      "vehicles": ["VTP(ers)SC", "MaGec", "VDIP", "VEC"],
+      "priority": ["VTP(ers)SC", "MaGec", "VDIP", "VEC"],
+      "description": "Personnel Urban Search and Rescue / Sauvetage-Déblaiement"
     }
   },
 
@@ -77,7 +65,7 @@
     },
     "fuel_sources": {
       "keywords": ["carburant", "essence", "diesel", "fuel"],
-      "type": "fuel_l", 
+      "type": "fuel_l",
       "description": "Besoins en carburant"
     },
     "personnel_pompiers": {
@@ -110,8 +98,26 @@
   "personnel_vehicle_mapping": {
     "_description": "Mapping des types de personnel générique vers les véhicules appropriés",
     "pompiers": {
-      "vehicles": ["FPT", "FPT(SR)", "CCR(SR)", "CCF(M)", "CCF(S)", "FS", "VPC", "VTP(ers)", "VPI"],
-      "priority": ["VTP(ers)", "FPT", "CCR(SR)", "CCF(M)", "FPT(SR)", "FS", "VPI"],
+      "vehicles": [
+        "FPT",
+        "FPT(SR)",
+        "CCR(SR)",
+        "CCF(M)",
+        "CCF(S)",
+        "FS",
+        "VPC",
+        "VTP(ers)",
+        "VPI"
+      ],
+      "priority": [
+        "VTP(ers)",
+        "FPT",
+        "CCR(SR)",
+        "CCF(M)",
+        "FPT(SR)",
+        "FS",
+        "VPI"
+      ],
       "description": "Personnel pompier standard"
     },
     "policiers": {
@@ -137,10 +143,14 @@
     "BLS_CSL": ["BLS"],
     "FPT": ["FPT_VIM"],
     "FPT_SR": ["FPT", "VSR"],
-    "FPT_BEA": ["FPT", "BEA"], 
+    "FPT_BEA": ["FPT", "BEA"],
     "FPT_SR_BEA": ["FPT", "VSR", "BEA", "FPT_SR", "FPT_BEA"],
     "CARS_POLICE_VR": ["CARS_POLICE", "VR_CRS"],
-    "CARS_POLICE_PATROUILLE_VR": ["CARS_POLICE", "CARS_POLICE_PATROUILLE", "VR_CRS"],
+    "CARS_POLICE_PATROUILLE_VR": [
+      "CARS_POLICE",
+      "CARS_POLICE_PATROUILLE",
+      "VR_CRS"
+    ],
     "CHEF_DE_GROUPE": ["VLHR"]
   },
 

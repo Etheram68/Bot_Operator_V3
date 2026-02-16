@@ -1484,8 +1484,6 @@ class MissionManager:
             logger.warning(f"👨‍💼 Aucun type de véhicule défini pour le personnel spécialisé '{personnel_code}' dans la configuration")
             return vehicles_needed
         
-        # Appliquer la logique de fallback par capacité (comme pour personnel générique)
-        OPTIMIZATION_THRESHOLD = self.settings.optimization_threshold  # Seuil pour optimisation véhicules
         personnel_name = personnel_config.get("name", personnel_code)
         
         # Créer la liste des véhicules avec leurs capacités
@@ -1547,32 +1545,109 @@ class MissionManager:
                 logger.info(f"   - Personnel fourni: {total_personnel}, Excédent: {excess}")
                 return vehicles_needed
         
-        # STRATÉGIE SECONDAIRE: Combinaison multiple avec seuil OPTIMIZATION_THRESHOLD
-        # Utiliser le véhicule prioritaire avec le meilleur ratio
-        best_vehicle = specialized_vehicles[0]  # Premier = plus prioritaire
+        # STRATÉGIE SECONDAIRE: Backtracking pour combinaison optimale
+        best_combination = self._backtrack_optimal_personnel_vehicles(
+            specialized_vehicles, personnel_needed
+        )
+
+        if best_combination:
+            vehicles_needed = best_combination
+            total_personnel = sum(
+                next(v['crew_size'] for v in specialized_vehicles if v['type'] == vtype) * count
+                for vtype, count in best_combination.items()
+            )
+            excess = total_personnel - personnel_needed
+            total_count = sum(best_combination.values())
+
+            logger.info(f"👨‍💼 Solution optimale (backtracking) pour {personnel_needed} {personnel_name}:")
+            for vtype, count in best_combination.items():
+                crew = next(v['crew_size'] for v in specialized_vehicles if v['type'] == vtype)
+                logger.info(f"   - {count}x {vtype} ({crew} spécialistes chacun)")
+            logger.info(f"   - Personnel fourni: {total_personnel}, Excédent: {excess}, Véhicules: {total_count}")
+
+            return vehicles_needed
+
+        # FALLBACK: véhicule avec le plus de personnel (capacité maximale)
+        best_vehicle = max(specialized_vehicles, key=lambda v: v['crew_size'])
         vehicles_count = max(1, (personnel_needed + best_vehicle['crew_size'] - 1) // best_vehicle['crew_size'])
-        
-        # Vérifier le seuil OPTIMIZATION_THRESHOLD
-        if vehicles_count > OPTIMIZATION_THRESHOLD:
-            # Chercher un véhicule avec plus de capacité même si moins prioritaire
-            for vehicle in specialized_vehicles:
-                alternative_count = max(1, (personnel_needed + vehicle['crew_size'] - 1) // vehicle['crew_size'])
-                if alternative_count <= OPTIMIZATION_THRESHOLD:
-                    vehicles_count = alternative_count
-                    best_vehicle = vehicle
-                    logger.info(f"👨‍💼 Utilisation de {vehicle['type']} pour éviter {vehicles_count} véhicules (seuil: {OPTIMIZATION_THRESHOLD})")
-                    break
-        
         vehicles_needed = {best_vehicle['type']: vehicles_count}
         total_personnel = best_vehicle['crew_size'] * vehicles_count
         excess = total_personnel - personnel_needed
-        
-        logger.info(f"👨‍💼 Solution trouvée pour {personnel_needed} {personnel_name}:")
-        logger.info(f"   - {vehicles_count}x {best_vehicle['type']} ({best_vehicle['crew_size']} spécialistes chacun)")
+
+        logger.info(f"👨‍💼 Fallback capacité max pour {personnel_needed} {personnel_name}:")
+        logger.info(f"   - {vehicles_count}x {best_vehicle['type']} ({best_vehicle['crew_size']} spécialistes)")
         logger.info(f"   - Personnel fourni: {total_personnel}, Excédent: {excess}")
-        
+
         return vehicles_needed
-    
+
+    def _backtrack_optimal_personnel_vehicles(
+        self, specialized_vehicles: list, personnel_needed: int
+    ) -> dict | None:
+        """
+        Backtracking pour trouver la combinaison optimale de véhicules couvrant le personnel.
+
+        Critères d'optimisation (par ordre de priorité):
+        1. Excédent minimal de personnel
+        2. Nombre minimal de véhicules
+        3. Priorité des types de véhicules (index bas = prioritaire)
+
+        Avec 3-4 types et des quantités faibles (<20), l'espace de recherche reste petit.
+
+        Returns:
+            dict {vehicle_type: count} ou None si aucune solution trouvée
+        """
+        best_solution: dict | None = None
+        best_score = (float('inf'), float('inf'), float('inf'))
+        max_total_vehicles = self.settings.optimization_threshold * 2
+
+        def backtrack(
+            remaining: int, idx: int, current: dict,
+            total_vehicles: int, priority_sum: float
+        ) -> None:
+            nonlocal best_solution, best_score
+
+            if remaining <= 0:
+                excess = -remaining
+                score = (excess, total_vehicles, priority_sum)
+                if score < best_score:
+                    best_score = score
+                    best_solution = dict(current)
+                return
+
+            if idx >= len(specialized_vehicles):
+                return
+
+            vehicle = specialized_vehicles[idx]
+            crew = vehicle['crew_size']
+            max_count = min(
+                (remaining + crew - 1) // crew,
+                max_total_vehicles - total_vehicles
+            )
+
+            for count in range(max_count, -1, -1):
+                new_total = total_vehicles + count
+
+                # Élagage : impossible de battre la meilleure solution en véhicules
+                if new_total > best_score[1] and remaining - count * crew > 0:
+                    continue
+
+                if count > 0:
+                    current[vehicle['type']] = count
+
+                backtrack(
+                    remaining - count * crew,
+                    idx + 1,
+                    current,
+                    new_total,
+                    priority_sum + count * vehicle['priority_index']
+                )
+
+                if count > 0:
+                    del current[vehicle['type']]
+
+        backtrack(personnel_needed, 0, {}, 0, 0.0)
+        return best_solution
+
     async def _log_unrecognized_missing_pattern(self, missing_text: str, mission: 'Mission') -> None:
         """Enregistre un pattern 'Il nous manque' non reconnu dans unmatched_labels.jsonl."""
         self._log_unmatched_label(
