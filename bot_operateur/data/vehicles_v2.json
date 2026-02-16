@@ -444,6 +444,22 @@
       "VTP(ers)SC": {
         "primary": ["VTP(ers)SC"],
         "secondary": ["MaGec", "VDIP", "VEC"]
+      },
+      "MaGec_CONSTRAINED": {
+        "primary": ["MaGec"],
+        "secondary": []
+      },
+      "VDIP_CONSTRAINED": {
+        "primary": ["VDIP"],
+        "secondary": []
+      },
+      "VEC_CONSTRAINED": {
+        "primary": ["VEC"],
+        "secondary": []
+      },
+      "VTP(ers)SC_CONSTRAINED": {
+        "primary": ["VTP(ers)SC"],
+        "secondary": []
       }
     },
 

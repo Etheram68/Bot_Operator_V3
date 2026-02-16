@@ -33,32 +33,47 @@ class WaterPumpService:
 
         return vehicle_needs
 
-    async def find_water_vehicle_with_fallback(self, water_needed_l: int, vehicle_specs: dict) -> Optional[dict]:
-        """Trouve le véhicule d'eau optimal et ses alternatives par capacité croissante."""
+    async def find_water_vehicle_with_fallback(self, water_needed_l: int, vehicle_specs: dict) -> Optional[list]:
+        """Trouve les véhicules d'eau optimaux et leurs alternatives.
+
+        Retourne une liste de dict (un par type de véhicule dans la combinaison).
+        """
         vehicles_needed = await self.calculate_water_vehicles(water_needed_l, vehicle_specs)
 
         if not vehicles_needed:
             return None
 
-        primary_vehicle = list(vehicles_needed.keys())[0]
-        primary_quantity = vehicles_needed[primary_vehicle]
+        vehicle_list = []
+        all_types_in_combo = set(vehicles_needed.keys())
 
-        alternatives = self.generate_water_alternatives(water_needed_l, vehicle_specs, primary_vehicle)
+        for vehicle_type, quantity in vehicles_needed.items():
+            # Alternatives = autres véhicules d'eau excluant ceux de la combinaison
+            alternatives = self.generate_water_alternatives(
+                water_needed_l, vehicle_specs, exclude_types=all_types_in_combo
+            )
+            vehicle_list.append({
+                'primary': vehicle_type,
+                'quantity': quantity,
+                'alternatives': alternatives,
+                'need_type': 'water'
+            })
 
-        return {
-            'primary': primary_vehicle,
-            'quantity': primary_quantity,
-            'alternatives': alternatives,
-            'need_type': 'water'
-        }
+        return vehicle_list
 
     @staticmethod
-    def generate_water_alternatives(water_needed_l: int, vehicle_specs: dict, exclude_primary: str) -> list:
+    def generate_water_alternatives(
+        water_needed_l: int, vehicle_specs: dict,
+        exclude_primary: str = "", exclude_types: set = None
+    ) -> list:
         """Génère une liste d'alternatives par capacité croissante pour l'eau."""
+        excluded = exclude_types or set()
+        if exclude_primary:
+            excluded = excluded | {exclude_primary}
+
         water_vehicles = []
 
         for vehicle_type, specs in vehicle_specs.items():
-            if vehicle_type == exclude_primary:
+            if vehicle_type in excluded:
                 continue
 
             water_capacity = specs.get('water_capacity_l', 0)
@@ -131,8 +146,8 @@ class WaterPumpService:
         """Trouve la combinaison optimale de véhicules pour l'eau via backtracking.
 
         Critères d'optimisation (par ordre de priorité):
-        1. Gaspillage minimal (eau excédentaire)
-        2. Nombre minimal de véhicules
+        1. Nombre minimal de véhicules
+        2. Gaspillage minimal (eau excédentaire)
 
         Avec ~9 types de véhicules et un cap de 8 véhicules max,
         l'espace de recherche reste petit grâce à l'élagage.
@@ -146,7 +161,7 @@ class WaterPumpService:
         logger.debug(f"💧 Backtracking pour {target_water}L avec {len(water_vehicles_desc)} types de véhicules")
 
         best_solution: dict | None = None
-        best_score = (float('inf'), float('inf'))  # (waste, total_vehicles)
+        best_score = (float('inf'), float('inf'))  # (total_vehicles, waste)
         max_total_vehicles = 8
 
         def backtrack(
@@ -156,7 +171,7 @@ class WaterPumpService:
 
             if remaining <= 0:
                 waste = -remaining
-                score = (waste, total_vehicles)
+                score = (total_vehicles, waste)
                 if score < best_score:
                     best_score = score
                     best_solution = dict(current)
@@ -175,8 +190,8 @@ class WaterPumpService:
             for count in range(max_count, -1, -1):
                 new_total = total_vehicles + count
 
-                # Élagage : impossible de battre la meilleure solution en véhicules
-                if new_total > best_score[1] and remaining - count * capacity > 0:
+                # Élagage : déjà plus de véhicules que la meilleure solution
+                if new_total > best_score[0] and remaining - count * capacity > 0:
                     continue
 
                 if count > 0:

@@ -921,11 +921,9 @@ class MissionManager:
             for need_type, needed_quantity in other_needs.items():
                 vehicle_info = await self._find_vehicles_for_need_with_fallback(need_type, needed_quantity, vehicle_specs)
                 if vehicle_info:
-                    # Si c'est une liste (personnel générique), ajouter tous les éléments
                     if isinstance(vehicle_info, list):
                         vehicles_info.extend(vehicle_info)
                     else:
-                        # Si c'est un dict (eau, personnel spécialisé), ajouter directement
                         vehicles_info.append(vehicle_info)
             
         except Exception as e:
@@ -943,18 +941,17 @@ class MissionManager:
             vehicle_specs: Spécifications des véhicules
             
         Returns:
-            dict ou list: Pour l'eau/personnel spécialisé: dict {primary, quantity, alternatives, need_type}
-                         Pour personnel générique: list de dict (peut être plusieurs véhicules)
+            list: Liste de dict {primary, quantity, alternatives, need_type}
         """
         if need_type == 'water_l':
             return await self.water_pump_service.find_water_vehicle_with_fallback(needed_quantity, vehicle_specs)
         elif need_type.startswith('personnel_'):
             personnel_type = need_type.replace('personnel_', '')
             if personnel_type.isupper() and len(personnel_type) <= 4:
-                # Personnel spécialisé - retourne un dict
+                # Personnel spécialisé
                 return self._find_specialized_personnel_vehicle_with_fallback(personnel_type, needed_quantity, vehicle_specs)
             else:
-                # Personnel générique - retourne une liste
+                # Personnel générique
                 return await self._find_personnel_vehicle_with_fallback(personnel_type, needed_quantity, vehicle_specs)
         
         return None
@@ -994,37 +991,41 @@ class MissionManager:
         
         return vehicle_list
     
-    def _find_specialized_personnel_vehicle_with_fallback(self, personnel_code: str, needed_quantity: int, vehicle_specs: dict) -> dict:
+    def _find_specialized_personnel_vehicle_with_fallback(self, personnel_code: str, needed_quantity: int, vehicle_specs: dict) -> list:
         """
-        Trouve le véhicule de personnel spécialisé optimal et ses alternatives par capacité croissante.
-        
+        Trouve les véhicules de personnel spécialisé optimaux et leurs alternatives.
+
+        Retourne une liste de dict (un par type de véhicule dans la combinaison backtracking).
+
         Args:
-            personnel_code: Code du personnel spécialisé (PLG, SAV, GRI, etc.)
+            personnel_code: Code du personnel spécialisé (PLG, SAV, GRI, USAR, etc.)
             needed_quantity: Nombre de personnel nécessaire
             vehicle_specs: Spécifications des véhicules
-            
+
         Returns:
-            dict: {primary: str, quantity: int, alternatives: list, need_type: str}
+            list: [{primary: str, quantity: int, alternatives: list, need_type: str}, ...]
         """
-        # Calculer le véhicule optimal comme avant
         vehicles_needed = self._calculate_specialized_personnel_vehicles(personnel_code, needed_quantity, vehicle_specs)
-        
+
         if not vehicles_needed:
             return None
-        
-        # Prendre le premier véhicule comme primaire
-        primary_vehicle = list(vehicles_needed.keys())[0]
-        primary_quantity = vehicles_needed[primary_vehicle]
-        
-        # Générer les alternatives par capacité croissante (pour personnel spécialisé c'est plus simple)
-        alternatives = self._generate_specialized_personnel_alternatives(personnel_code, needed_quantity, vehicle_specs, primary_vehicle)
-        
-        return {
-            'primary': primary_vehicle,
-            'quantity': primary_quantity,
-            'alternatives': alternatives,
-            'need_type': f'personnel_{personnel_code}'
-        }
+
+        vehicle_list = []
+        all_types_in_combo = set(vehicles_needed.keys())
+
+        for vehicle_type, quantity in vehicles_needed.items():
+            alternatives = self._generate_specialized_personnel_alternatives(
+                personnel_code, needed_quantity, vehicle_specs,
+                exclude_types=all_types_in_combo
+            )
+            vehicle_list.append({
+                'primary': vehicle_type,
+                'quantity': quantity,
+                'alternatives': alternatives,
+                'need_type': f'personnel_{personnel_code}'
+            })
+
+        return vehicle_list
     
     def _generate_personnel_alternatives(self, personnel_type: str, needed_quantity: int, vehicle_specs: dict, exclude_primary: str) -> list:
         """
@@ -1076,53 +1077,53 @@ class MissionManager:
             logger.error(f"Erreur lors de la génération des alternatives personnel: {e}")
             return []
     
-    def _generate_specialized_personnel_alternatives(self, personnel_code: str, needed_quantity: int, vehicle_specs: dict, exclude_primary: str) -> list:
+    def _generate_specialized_personnel_alternatives(
+        self, personnel_code: str, needed_quantity: int, vehicle_specs: dict,
+        exclude_primary: str = "", exclude_types: set = None
+    ) -> list:
         """
-        Génère une liste d'alternatives par capacité croissante pour le personnel spécialisé.
-        
-        Pour le personnel spécialisé, il n'y a généralement qu'un type de véhicule (ex: PLG -> VPL).
-        Donc les alternatives sont limitées.
-        
+        Génère une liste d'alternatives par priorité pour le personnel spécialisé.
+
         Args:
-            personnel_code: Code du personnel spécialisé (PLG, SAV, etc.)
+            personnel_code: Code du personnel spécialisé (PLG, SAV, USAR, etc.)
             needed_quantity: Nombre de personnel nécessaire
             vehicle_specs: Spécifications des véhicules
-            exclude_primary: Véhicule primaire à exclure
-            
+            exclude_primary: Véhicule primaire à exclure (rétro-compat)
+            exclude_types: Set de types à exclure (combinaison backtracking)
+
         Returns:
-            list: Liste de véhicules ordonés par capacité croissante
+            list: Liste de véhicules ordonnés par priorité
         """
         try:
+            excluded = exclude_types or set()
+            if exclude_primary:
+                excluded = excluded | {exclude_primary}
+
             from ..models.requirement_parser import RequirementParser
             parser = RequirementParser()
             config = parser.missing_config
-            
+
             personnel_mapping = config.get('personnel_mapping', {})
             if personnel_code not in personnel_mapping:
                 return []
-            
-            # Obtenir les véhicules possibles pour ce personnel spécialisé
+
             possible_vehicles = personnel_mapping[personnel_code].get('vehicles', [])
-            
-            # Pour le personnel spécialisé, il n'y a souvent qu'un seul type de véhicule
-            # Donc pas beaucoup d'alternatives possibles
-            alternatives = [v for v in possible_vehicles if v != exclude_primary]
-            
+
+            alternatives = [v for v in possible_vehicles if v not in excluded]
+
             # Trier par priorité si définie
             priority_vehicles = personnel_mapping[personnel_code].get('priority', [])
             if priority_vehicles:
-                # Réorganiser selon la priorité
                 ordered_alternatives = []
                 for priority_vehicle in priority_vehicles:
                     if priority_vehicle in alternatives:
                         ordered_alternatives.append(priority_vehicle)
                         alternatives.remove(priority_vehicle)
-                # Ajouter les véhicules restants
                 ordered_alternatives.extend(alternatives)
                 alternatives = ordered_alternatives
-            
+
             return alternatives
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de la génération des alternatives personnel spécialisé: {e}")
             return []
