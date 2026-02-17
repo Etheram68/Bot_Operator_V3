@@ -796,7 +796,7 @@ class VehicleScraper:
                     const h2 = document.querySelector('#h2_vehicle_driving');
                     let rows = [];
                     if (h2) {
-                        rows = document.querySelectorAll('#h2_vehicle_driving ~ table tbody tr, #h2_vehicle_driving + table tbody tr');
+                        rows = document.querySelectorAll('#h2_vehicle_driving + table tbody tr');
                     }
                     if (rows.length === 0) {
                         rows = document.querySelectorAll('#mission_vehicle_driving tbody tr');
@@ -890,7 +890,7 @@ class VehicleScraper:
                 'document.querySelector("#h2_vehicle_driving") !== null'
             )
             if has_header:
-                driving_rows = await self.page.query_selector_all("#h2_vehicle_driving ~ table tbody tr, #h2_vehicle_driving + table tbody tr")
+                driving_rows = await self.page.query_selector_all("#h2_vehicle_driving + table tbody tr")
                 if driving_rows:
                     logger.debug(f"✅ Trouvé {len(driving_rows)} lignes avec le sélecteur h2_vehicle_driving")
                     return driving_rows
@@ -909,7 +909,7 @@ class VehicleScraper:
                     }
                 """)
                 if has_following_table:
-                    driving_rows = await self.page.query_selector_all("#h2_vehicle_driving ~ table:first-of-type tbody tr")
+                    driving_rows = await self.page.query_selector_all("#h2_vehicle_driving + table tbody tr")
                     if driving_rows:
                         logger.debug(f"✅ Trouvé {len(driving_rows)} lignes avec fallback CSS")
                         return driving_rows
@@ -934,11 +934,11 @@ class VehicleScraper:
             return await self.page.evaluate("""
                 () => {
                     const types = [];
-                    // Essayer h2_vehicle_driving ~ table
+                    // Essayer h2_vehicle_driving + table
                     const h2 = document.querySelector('#h2_vehicle_driving');
                     let rows = [];
                     if (h2) {
-                        const tables = document.querySelectorAll('#h2_vehicle_driving ~ table tbody tr, #h2_vehicle_driving + table tbody tr');
+                        const tables = document.querySelectorAll('#h2_vehicle_driving + table tbody tr');
                         if (tables.length > 0) {
                             rows = tables;
                         }
