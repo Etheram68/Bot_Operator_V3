@@ -516,18 +516,22 @@ class VehicleScraper:
         try:
             # D'abord, compter les véhicules déjà déployés par type
             deployed_by_type = await self._get_already_deployed_vehicles_by_type()
-            
+
+            # Récupérer les véhicules en route uniquement (pour les besoins d'alerte)
+            en_route_by_type = await self._get_vehicles_en_route_only_by_type()
+
             # Ajuster les besoins en fonction des véhicules déjà déployés
-            # Mais ignorer l'ajustement pour les types avec override d'alerte
+            # Pour les types d'alerte: seuls les véhicules en route comptent
+            # (l'alerte a déjà pris en compte ceux sur place)
             alert_override_types = alert_override_types or set()
             constrained_vehicles = constrained_vehicles or set()
             constrained_alternatives = constrained_alternatives or {}
-            
+
             if constrained_vehicles:
                 logger.info(f"🔒 Véhicules avec contraintes de capacité: {list(constrained_vehicles)}")
             if constrained_alternatives:
                 logger.info(f"🔄 Alternatives par capacité disponibles: {constrained_alternatives}")
-            adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type, alternatives_mapping, alert_override_types)
+            adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type, alternatives_mapping, alert_override_types, en_route_by_type)
             
             # Si tous les besoins sont déjà satisfaits, ne rien faire
             if not adjusted_vehicle_needs:
@@ -697,7 +701,22 @@ class VehicleScraper:
             
             # Afficher les besoins originaux vs ajustés vs sélectionnés
             for vtype, original_needed in vehicle_needs.items():
-                already_deployed = deployed_by_type.get(vtype, 0)
+                # Pour les types d'alerte: seuls les en route comptent comme "déjà couverts"
+                if vtype in alert_override_types:
+                    base_type = vtype.replace('_CONSTRAINED', '')
+                    already_covered = en_route_by_type.get(base_type, 0)
+                    if alternatives_mapping and vtype in alternatives_mapping:
+                        for alt_type in alternatives_mapping[vtype].get('primary', []):
+                            if alt_type != base_type:
+                                already_covered += en_route_by_type.get(alt_type, 0)
+                    already_deployed = already_covered
+                else:
+                    already_deployed = deployed_by_type.get(vtype, 0)
+                    # Inclure les alternatives déployées dans le comptage
+                    if alternatives_mapping and vtype in alternatives_mapping:
+                        for alt_type in alternatives_mapping[vtype].get('primary', []):
+                            if alt_type != vtype:
+                                already_deployed += deployed_by_type.get(alt_type, 0)
                 adjusted_needed = adjusted_vehicle_needs.get(vtype, 0)
                 selected = selected_counts.get(vtype, 0)
                 total_satisfied = already_deployed + selected
@@ -967,29 +986,55 @@ class VehicleScraper:
 
         return vehicles_en_route_by_type
     
-    def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict, alternatives_mapping: dict = None, alert_override_types: set = None) -> dict:
+    def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict, alternatives_mapping: dict = None, alert_override_types: set = None, en_route_by_type: dict = None) -> dict:
         """
         Ajuste les besoins en véhicules selon les déploiements existants.
-        
+
         Soustrait des besoins originaux les véhicules déjà déployés,
         en tenant compte des alternatives possibles (ex: un VSAV peut
         remplacer une AMBULANCE).
-        
+
+        Pour les types d'alerte: seuls les véhicules EN ROUTE comptent,
+        car l'alerte a déjà pris en compte les véhicules sur place.
+
         Args:
             original_needs: Besoins originaux par type de véhicule
-            deployed_by_type: Véhicules déjà déployés par type
+            deployed_by_type: Véhicules déjà déployés par type (sur place + en route)
             alternatives_mapping: Mapping des véhicules alternatifs possibles
-            
+            alert_override_types: Types de véhicules issus de l'alerte du jeu
+            en_route_by_type: Véhicules en route uniquement par type
+
         Returns:
             dict: Besoins ajustés restant à satisfaire
         """
         adjusted_needs = {}
         alert_override_types = alert_override_types or set()
-        
+        en_route_by_type = en_route_by_type or {}
+
         for vehicle_type, needed_count in original_needs.items():
-            # Si ce type est dans l'override d'alerte, ne pas ajuster (garder le besoin complet)
+            # Pour les types d'alerte: l'alerte a déjà compté les véhicules sur place.
+            # Seuls les véhicules EN ROUTE peuvent encore satisfaire le besoin.
             if vehicle_type in alert_override_types:
-                adjusted_needs[vehicle_type] = needed_count
+                en_route_count = 0
+                # Compter le type exact en route
+                base_type = vehicle_type.replace('_CONSTRAINED', '')
+                en_route_count += en_route_by_type.get(base_type, 0)
+                # Compter les alternatives en route
+                if alternatives_mapping and vehicle_type in alternatives_mapping:
+                    for alt_type in alternatives_mapping[vehicle_type].get('primary', []):
+                        if alt_type != base_type:
+                            en_route_count += en_route_by_type.get(alt_type, 0)
+                    if en_route_count < needed_count:
+                        for alt_type in alternatives_mapping[vehicle_type].get('secondary', []):
+                            if alt_type != base_type:
+                                en_route_count += en_route_by_type.get(alt_type, 0)
+
+                remaining_need = max(0, needed_count - en_route_count)
+                if remaining_need > 0:
+                    adjusted_needs[vehicle_type] = remaining_need
+                    logger.info(f"🔔 {vehicle_type} (alerte): besoin {needed_count} - {en_route_count} en route = restant {remaining_need}")
+                else:
+                    logger.info(f"✅ {vehicle_type} (alerte): besoin {needed_count} déjà satisfait par {en_route_count} véhicules en route")
                 continue
             
             # Compter les véhicules déployés qui peuvent satisfaire ce besoin
