@@ -510,7 +510,6 @@ class VehicleScraper:
             tuple[int, int]: (nombre de véhicules sélectionnés, nombre de véhicules manquants)
         """
         total_selected = 0
-        vehicle_rows = []  # Initialiser pour le finally
         # Garde-fou: limite le nombre max de véhicules sélectionnables par appel
         max_total_vehicles = sum(vehicle_needs.values()) + 10  # marge de 10
 
@@ -562,46 +561,42 @@ class VehicleScraper:
                     # Vraie erreur de timeout
                     raise e
             
-            # Récupérer les lignes de véhicules visibles (triées par proximité)
-            vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")
-
-            if not vehicle_rows:
-                logger.warning("Aucune ligne de véhicule trouvée")
-                total_missing = sum(adjusted_vehicle_needs.values())
-                return (0, total_missing)
-
-            logger.info(f"Sélection parmi {len(vehicle_rows)} véhicules visibles (triés par proximité)")
-
             # Préparer les compteurs avec gestion d'alternatives (utiliser adjusted_vehicle_needs)
             selected_counts = {}
             alternatives_used = {}  # Track quelles alternatives ont été utilisées
-            
+
             # Initialiser les compteurs pour les besoins ajustés
             for req_type in adjusted_vehicle_needs.keys():
                 selected_counts[req_type] = 0
                 alternatives_used[req_type] = []
-            
+
             # Optimisation: Extraire TOUTES les infos véhicules en 1 seul appel JS (au lieu de N round-trips)
+            # On récupère le rowId (ID DOM) pour éviter toute désynchronisation d'index
             js_selector = f"{table_selector} tr[id^='vehicle_element_content_']"
             all_vehicle_data = await self.page.evaluate("""
                 (selector) => {
                     const rows = document.querySelectorAll(selector);
-                    return Array.from(rows).map((row, i) => {
+                    return Array.from(rows).map((row) => {
+                        const rowId = row.getAttribute('id');
                         const caption = row.getAttribute('vehicle_caption');
-                        if (!caption) return null;
+                        if (!rowId || !caption) return null;
                         const parts = caption.trim().split(/\\s+/);
                         const type = parts.length > 0 ? parts[0] : null;
                         if (!type) return null;
-                        return { index: i, caption: caption, type: type };
+                        return { rowId: rowId, caption: caption, type: type };
                     });
                 }
             """, js_selector)
 
-            # Mapper les données JS vers les ElementHandles correspondants
-            vehicle_infos = []
-            for data in all_vehicle_data:
-                if data is not None and data['index'] < len(vehicle_rows):
-                    vehicle_infos.append((vehicle_rows[data['index']], data['type'], data['caption']))
+            # Construire les tuples (row_id, type, caption) pour la priorisation
+            vehicle_infos = [(d['rowId'], d['type'], d['caption']) for d in all_vehicle_data if d is not None]
+
+            if not vehicle_infos:
+                logger.warning("Aucune ligne de véhicule trouvée")
+                total_missing = sum(adjusted_vehicle_needs.values())
+                return (0, total_missing)
+
+            logger.info(f"Sélection parmi {len(vehicle_infos)} véhicules visibles (triés par proximité)")
 
             logger.debug(f"📋 {len(vehicle_infos)} véhicules analysés via JS bulk")
             
@@ -611,27 +606,26 @@ class VehicleScraper:
             # Parcourir les véhicules triés par priorité
             for vehicle_info in prioritized_vehicle_infos:
                 try:
-                    row, vehicle_type, vehicle_caption = vehicle_info
+                    row_id, vehicle_type, vehicle_caption = vehicle_info
                     if not vehicle_type:
                         continue
-                    
+
                     # Chercher si ce véhicule peut satisfaire un besoin (utiliser adjusted_vehicle_needs)
                     matching_need = self._find_matching_need(vehicle_type, adjusted_vehicle_needs, selected_counts, alternatives_mapping, mission, constrained_vehicles, constrained_alternatives)
-                    
+
                     if matching_need:
                         need_type, needed_count, already_selected = matching_need
 
-                        # Chercher la checkbox de ce véhicule
-                        checkbox = await row.query_selector(".vehicle_checkbox")
+                        # Chercher la checkbox via l'ID DOM (pas d'index → pas de décalage)
+                        checkbox = await self.page.query_selector(f"#{row_id} .vehicle_checkbox")
 
                         try:
                             if checkbox and not await checkbox.is_disabled():
-                                # Vérifier si le véhicule tracteur est disponible (pour les remorques)
-                                tractor_available = await self._check_tractor_availability(row)
+                                # Vérifier tracteur via JS pur avec l'ID de la ligne
+                                tractor_available = await self._check_tractor_availability_by_id(row_id)
                                 if not tractor_available:
-                                    full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
-                                    logger.warning(f"⚠️  {full_caption} ignoré: Véhicule tracteur non disponible")
-                                    continue  # Passer au véhicule suivant
+                                    logger.warning(f"⚠️  {vehicle_caption} ignoré: Véhicule tracteur non disponible")
+                                    continue
 
                                 # Sélectionner ce véhicule
                                 await checkbox.check()
@@ -644,19 +638,17 @@ class VehicleScraper:
                                 # Mettre à jour aussi les compteurs pour tous les autres besoins que ce véhicule peut satisfaire
                                 if alternatives_mapping:
                                     for other_need_type in adjusted_vehicle_needs.keys():
-                                        if other_need_type != need_type:  # Pas le besoin déjà traité
+                                        if other_need_type != need_type:
                                             alternatives = alternatives_mapping.get(other_need_type, {})
                                             primary_alternatives = alternatives.get('primary', [])
                                             secondary_alternatives = alternatives.get('secondary', [])
 
                                             if vehicle_type in primary_alternatives or vehicle_type in secondary_alternatives:
-                                                # Ce véhicule peut aussi satisfaire cet autre besoin
                                                 selected_counts[other_need_type] = selected_counts.get(other_need_type, 0) + 1
                                                 alternatives_used[other_need_type].append(vehicle_type)
                                                 logger.debug(f"  🔗 Satisfait aussi le besoin {other_need_type}")
 
-                                full_caption = await row.get_attribute("vehicle_caption") or "Inconnu"
-                                logger.info(f"✅ Sélectionné: {full_caption} -> Type: {vehicle_type} (pour {need_type})")
+                                logger.info(f"✅ Sélectionné: {vehicle_caption} -> Type: {vehicle_type} (pour {need_type})")
 
                                 # Garde-fou: limite le nombre total de véhicules sélectionnés
                                 if total_selected >= max_total_vehicles:
@@ -667,11 +659,11 @@ class VehicleScraper:
                                 await checkbox.dispose()
 
                     # Vérifier si tous les besoins ajustés sont satisfaits
-                    if all(selected_counts.get(vtype, 0) >= needed 
+                    if all(selected_counts.get(vtype, 0) >= needed
                            for vtype, needed in adjusted_vehicle_needs.items()):
                         logger.info("🎯 Tous les besoins en véhicules sont satisfaits")
                         break
-                        
+
                 except Exception as e:
                     logger.warning(f"Erreur lors de la sélection d'un véhicule: {e}")
                     continue
@@ -740,14 +732,6 @@ class VehicleScraper:
             logger.error(f"Erreur lors de la sélection des véhicules proches: {e}")
             total_missing = sum(vehicle_needs.values()) if vehicle_needs else 0
             return (0, total_missing)
-        finally:
-            # Disposer les ElementHandle des lignes de véhicules
-            if vehicle_rows:
-                for row in vehicle_rows:
-                    try:
-                        await row.dispose()
-                    except Exception:
-                        pass
     
     async def _get_already_deployed_vehicles(self) -> List[str]:
         """
@@ -1229,16 +1213,17 @@ class VehicleScraper:
             all_vehicle_data = await self.page.evaluate("""
                 (selector) => {
                     const rows = document.querySelectorAll(selector);
-                    return Array.from(rows).map((row, i) => {
+                    return Array.from(rows).map((row) => {
+                        const rowId = row.getAttribute('id');
                         const caption = row.getAttribute('vehicle_caption');
-                        if (!caption) return null;
+                        if (!rowId || !caption) return null;
                         const parts = caption.trim().split(/\\s+/);
                         const type = parts.length > 0 ? parts[0] : null;
                         if (!type) return null;
                         const checkbox = row.querySelector('.vehicle_checkbox');
                         const isDisabled = checkbox ? checkbox.disabled : true;
                         const isChecked = checkbox ? checkbox.checked : false;
-                        return { index: i, caption: caption, type: type, hasCheckbox: !!checkbox, isDisabled: isDisabled, isChecked: isChecked };
+                        return { rowId: rowId, caption: caption, type: type, hasCheckbox: !!checkbox, isDisabled: isDisabled, isChecked: isChecked };
                     });
                 }
             """, selector_complet)
@@ -1267,20 +1252,11 @@ class VehicleScraper:
 
             logger.info(f"📋 {len(candidate_indices)} véhicules candidats sur {len(valid_vehicle_data)} (pré-filtrés via JS)")
 
-            # ÉTAPE 4: Récupérer les handles DOM uniquement pour les candidats
-            all_vehicle_rows = await self.page.query_selector_all(selector_complet)
-
-            if not all_vehicle_rows:
-                logger.warning("❌ Aucune ligne DOM trouvée")
-                return 0
-
-            # ÉTAPE 5: Parcours des candidats pré-filtrés seulement
+            # ÉTAPE 4: Parcours des candidats pré-filtrés, sélection par ID DOM
             for vdata in candidate_indices:
+                row_element = None
                 try:
-                    idx = vdata['index']
-                    if idx >= len(all_vehicle_rows):
-                        continue
-
+                    row_id = vdata['rowId']
                     vehicle_caption = vdata['caption']
                     vehicle_type = vdata['type']
 
@@ -1288,8 +1264,14 @@ class VehicleScraper:
                     if not matching_need_type:
                         continue
 
+                    # Récupérer l'élément DOM par son ID (pas d'index → pas de décalage)
+                    row_element = await self.page.query_selector(f"#{row_id}")
+                    if not row_element:
+                        logger.debug(f"⚠️ Ligne DOM {row_id} introuvable")
+                        continue
+
                     # Sélection via ElementHandle (nécessaire pour checkbox.check())
-                    selection_success = await self._attempt_vehicle_selection(all_vehicle_rows[idx], vehicle_caption, matching_need_type)
+                    selection_success = await self._attempt_vehicle_selection(row_element, vehicle_caption, matching_need_type)
 
                     if selection_success:
                         additional_selected += 1
@@ -1308,10 +1290,16 @@ class VehicleScraper:
                     if additional_selected >= max_additional:
                         logger.warning(f"⚠️ Limite de sécurité atteinte: {additional_selected} véhicules supplémentaires (max: {max_additional})")
                         break
-                        
+
                 except Exception as vehicle_error:
-                    logger.warning(f"⚠️ Erreur lors du traitement du véhicule {vdata.get('index', '?')}: {vehicle_error}")
+                    logger.warning(f"⚠️ Erreur lors du traitement du véhicule {vdata.get('rowId', '?')}: {vehicle_error}")
                     continue
+                finally:
+                    if row_element:
+                        try:
+                            await row_element.dispose()
+                        except Exception:
+                            pass
 
             # ÉTAPE 6: Rapport final
             if working_unsatisfied_needs:
@@ -1339,16 +1327,7 @@ class VehicleScraper:
             logger.debug(f"  - Traceback complet: {traceback.format_exc()}")
 
             return 0
-        finally:
-            # Disposer les ElementHandle des lignes de véhicules
-            if 'all_vehicle_rows' in locals() and all_vehicle_rows:
-                for row in all_vehicle_rows:
-                    try:
-                        await row.dispose()
-                    except Exception:
-                        pass
-            
-            
+
     def _validate_dom_element(self, element, index: int) -> bool:
         """
         Validation stricte qu'un objet est bien un élément Playwright DOM
@@ -1614,4 +1593,23 @@ class VehicleScraper:
 
         except Exception as e:
             logger.debug(f"Erreur lors de la vérification du tracteur: {e}")
+            return True
+
+    async def _check_tractor_availability_by_id(self, row_id: str) -> bool:
+        """Vérifie tracteur via JS pur avec l'ID de la ligne (zéro ElementHandle)."""
+        try:
+            tractor_unavailable = await self.page.evaluate("""
+                (rowId) => {
+                    const row = document.getElementById(rowId);
+                    if (!row) return false;
+                    const msg = row.querySelector('small.text-danger[class*="vehicle_not_tractive_message"]');
+                    if (!msg) return false;
+                    const style = msg.getAttribute('style') || '';
+                    if (style.includes('display: inline')) return true;
+                    return msg.offsetParent !== null;
+                }
+            """, row_id)
+            return not tractor_unavailable
+        except Exception as e:
+            logger.debug(f"Erreur vérification tracteur par ID {row_id}: {e}")
             return True

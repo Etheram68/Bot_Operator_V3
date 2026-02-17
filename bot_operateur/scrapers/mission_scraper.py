@@ -489,7 +489,8 @@ class MissionScraper:
             # NOUVEAU: Extraction structurée par <tr> pour relier véhicule + quantité
             structured_requirements = await self._extract_requirements_from_table_rows()
             if structured_requirements:
-                requirements = structured_requirements
+                # Appliquer la conversion personnel → véhicules (ex: 10 Spécialistes IMP → 2 VIMP)
+                requirements = self.requirement_parser._convert_personnel_to_vehicle_requirements(structured_requirements)
                 logger.debug(f"Trouvé {len(requirements)} exigences via extraction structurée <tr>")
                 return requirements
 
