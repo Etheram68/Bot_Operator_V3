@@ -86,7 +86,7 @@
         "secondary": ["CENOVI"]
       },
       "DRAGON": {
-        "primary": ["Dragon", "HeliSMUR"],
+        "primary": ["Dragon"],
         "secondary": []
       },
       "HELICOPTER": {

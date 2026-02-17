@@ -144,6 +144,7 @@ async def run_continuous_mode(bot: OperateurBot, cycles: int = -1, max_missions:
                 "Protocol error",
                 "Connection refused",
                 "Session expired",
+                "Browser degraded",
             ])
 
             if is_browser_crash:

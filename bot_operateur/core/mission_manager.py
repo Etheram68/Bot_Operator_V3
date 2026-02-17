@@ -44,6 +44,10 @@ class MissionManager:
             "smart_optimized": SmartStrategyOptimized(),
         }
 
+        # Compteur de timeouts consécutifs pour détecter la dégradation navigateur
+        self._consecutive_timeouts = 0
+        self._max_consecutive_timeouts = 5
+
 
     async def initialize(self):
         """Initialisation asynchrone - doit être appelée après la création"""
@@ -1730,13 +1734,20 @@ class MissionManager:
                 try:
                     success = await asyncio.wait_for(
                         self.deploy_vehicles_for_mission_optimized(mission),
-                        timeout=30
+                        timeout=60
                     )
                 except asyncio.TimeoutError:
-                    logger.warning(f"⏱️ Timeout déploiement mission {mission.id} (30s) - skip")
+                    self._consecutive_timeouts += 1
+                    logger.warning(f"⏱️ Timeout déploiement mission {mission.id} (60s) - skip ({self._consecutive_timeouts}/{self._max_consecutive_timeouts} consécutifs)")
+
+                    # Trop de timeouts consécutifs = navigateur dégradé → forcer redémarrage
+                    if self._consecutive_timeouts >= self._max_consecutive_timeouts:
+                        logger.error(f"🔄 {self._consecutive_timeouts} timeouts consécutifs détectés - navigateur dégradé, redémarrage forcé")
+                        raise RuntimeError(f"Browser degraded - {self._consecutive_timeouts} consecutive timeouts - needs recovery")
                     success = False
 
                 if success:
+                    self._consecutive_timeouts = 0  # Reset sur succès
                     stats["deployed"] += 1
                     deployed_count += 1
                 else:
@@ -1765,19 +1776,24 @@ class MissionManager:
                     try:
                         success = await asyncio.wait_for(
                             self.deploy_vehicles_for_mission(mission),
-                            timeout=15  # Timeout de 15s max pour le retry
+                            timeout=30  # Timeout de 30s max pour le retry
                         )
-                        
+
                         if success:
+                            self._consecutive_timeouts = 0  # Reset sur succès
                             stats["deployed"] += 1
                             stats["failed"] -= 1
                             deployed_count += 1
                             logger.info(f"✅ Retry réussi pour mission {mission.id}")
                         else:
                             logger.info(f"❌ Retry échoué pour mission {mission.id} - abandon définitif")
-                            
+
                     except asyncio.TimeoutError:
-                        logger.warning(f"⏱️ Timeout retry pour mission {mission.id} - abandon pour vitesse")
+                        self._consecutive_timeouts += 1
+                        logger.warning(f"⏱️ Timeout retry pour mission {mission.id} ({self._consecutive_timeouts}/{self._max_consecutive_timeouts} consécutifs)")
+                        if self._consecutive_timeouts >= self._max_consecutive_timeouts:
+                            logger.error(f"🔄 {self._consecutive_timeouts} timeouts consécutifs - navigateur dégradé, redémarrage forcé")
+                            raise RuntimeError(f"Browser degraded - {self._consecutive_timeouts} consecutive timeouts - needs recovery")
                         continue
                     except Exception as e:
                         logger.warning(f"❌ Erreur retry mission {mission.id}: {e} - abandon")

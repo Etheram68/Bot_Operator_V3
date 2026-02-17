@@ -581,22 +581,29 @@ class VehicleScraper:
                 selected_counts[req_type] = 0
                 alternatives_used[req_type] = []
             
-            # Optimisation: Extraire les informations de base des véhicules en parallèle
-            logger.debug("🚀 Extraction parallèle des informations véhicules...")
-            vehicle_info_tasks = []
-            for i, row in enumerate(vehicle_rows):
-                task = self._extract_vehicle_basic_info(row, i)
-                vehicle_info_tasks.append(task)
-            
-            # Exécuter l'extraction en parallèle par lots de 10 pour éviter la surcharge
-            batch_size = 10
+            # Optimisation: Extraire TOUTES les infos véhicules en 1 seul appel JS (au lieu de N round-trips)
+            js_selector = f"{table_selector} tr[id^='vehicle_element_content_']"
+            all_vehicle_data = await self.page.evaluate("""
+                (selector) => {
+                    const rows = document.querySelectorAll(selector);
+                    return Array.from(rows).map((row, i) => {
+                        const caption = row.getAttribute('vehicle_caption');
+                        if (!caption) return null;
+                        const parts = caption.trim().split(/\\s+/);
+                        const type = parts.length > 0 ? parts[0] : null;
+                        if (!type) return null;
+                        return { index: i, caption: caption, type: type };
+                    });
+                }
+            """, js_selector)
+
+            # Mapper les données JS vers les ElementHandles correspondants
             vehicle_infos = []
-            for i in range(0, len(vehicle_info_tasks), batch_size):
-                batch = vehicle_info_tasks[i:i+batch_size]
-                batch_results = await asyncio.gather(*batch, return_exceptions=True)
-                vehicle_infos.extend([r for r in batch_results if r is not None and not isinstance(r, Exception)])
-            
-            logger.debug(f"📋 {len(vehicle_infos)} véhicules analysés en parallèle")
+            for data in all_vehicle_data:
+                if data is not None and data['index'] < len(vehicle_rows):
+                    vehicle_infos.append((vehicle_rows[data['index']], data['type'], data['caption']))
+
+            logger.debug(f"📋 {len(vehicle_infos)} véhicules analysés via JS bulk")
             
             # Trier les véhicules par priorité (primary avant secondary)
             prioritized_vehicle_infos = self._prioritize_vehicles_by_alternatives(vehicle_infos, adjusted_vehicle_needs, alternatives_mapping)
@@ -1217,87 +1224,96 @@ class VehicleScraper:
             # ÉTAPE 1: Chargement des véhicules (attend l'arrivée des lignes AJAX)
             await self._load_all_vehicles()
 
-            # ÉTAPE 2: Récupération sécurisée des lignes de véhicules
-            logger.debug(f"🔍 Utilisation du sélecteur: {selector_complet}")
-            all_vehicle_rows = await self.page.query_selector_all(selector_complet)
-            logger.info(f"Véhicules après chargement: {count_before} -> {len(all_vehicle_rows)}")
-            
-            if not all_vehicle_rows:
-                logger.warning("❌ Aucune ligne de véhicule trouvée après chargement supplémentaire")
+            # ÉTAPE 2: Extraction bulk JS de TOUS les véhicules (1 appel au lieu de N round-trips)
+            logger.debug(f"🔍 Extraction bulk JS avec sélecteur: {selector_complet}")
+            all_vehicle_data = await self.page.evaluate("""
+                (selector) => {
+                    const rows = document.querySelectorAll(selector);
+                    return Array.from(rows).map((row, i) => {
+                        const caption = row.getAttribute('vehicle_caption');
+                        if (!caption) return null;
+                        const parts = caption.trim().split(/\\s+/);
+                        const type = parts.length > 0 ? parts[0] : null;
+                        if (!type) return null;
+                        const checkbox = row.querySelector('.vehicle_checkbox');
+                        const isDisabled = checkbox ? checkbox.disabled : true;
+                        const isChecked = checkbox ? checkbox.checked : false;
+                        return { index: i, caption: caption, type: type, hasCheckbox: !!checkbox, isDisabled: isDisabled, isChecked: isChecked };
+                    });
+                }
+            """, selector_complet)
+
+            # Filtrer les résultats valides
+            valid_vehicle_data = [d for d in all_vehicle_data if d is not None]
+            logger.info(f"Véhicules après chargement: {count_before} -> {len(all_vehicle_data)} ({len(valid_vehicle_data)} valides)")
+
+            if not valid_vehicle_data:
+                logger.warning("❌ Aucun véhicule valide trouvé après chargement supplémentaire")
                 return 0
-            
-            logger.info(f"🔍 {len(all_vehicle_rows)} véhicules au total disponibles")
-            
-            # ÉTAPE 3: Validation stricte des éléments DOM récupérés
-            valid_vehicle_rows = []
-            for i, row_element in enumerate(all_vehicle_rows):
-                if self._validate_dom_element(row_element, i):
-                    valid_vehicle_rows.append(row_element)
-            
-            logger.debug(f"✅ {len(valid_vehicle_rows)} éléments DOM valides sur {len(all_vehicle_rows)}")
-            
-            if not valid_vehicle_rows:
-                logger.error("❌ Aucun élément DOM valide trouvé")
-                return 0
-            
-            # ÉTAPE 4: Préparation sécurisée du mapping d'alternatives (COPIE ISOLÉE)
+
+            # ÉTAPE 3: Récupérer les ElementHandles UNIQUEMENT pour les véhicules qui matchent un besoin
             safe_alternatives = self._create_safe_alternatives_mapping(alternatives_mapping, mission)
-            
-            # ÉTAPE 5: Compteur de besoins (COPIE ISOLÉE pour éviter modification concurrente)
             working_unsatisfied_needs = unsatisfied_needs.copy()
-            # Garde-fou: limite le nombre max de véhicules sélectionnables
             max_additional = sum(unsatisfied_needs.values()) + 5
 
-            # ÉTAPE 6: Parcours des véhicules avec validation à chaque étape
-            for i, dom_row_element in enumerate(valid_vehicle_rows):
+            # Pré-filtrer via Python : ne garder que les véhicules potentiellement utiles
+            candidate_indices = []
+            for vdata in valid_vehicle_data:
+                if vdata['isDisabled'] or vdata['isChecked']:
+                    continue
+                match = self._find_need_match_safe(vdata['type'], working_unsatisfied_needs, safe_alternatives)
+                if match:
+                    candidate_indices.append(vdata)
+
+            logger.info(f"📋 {len(candidate_indices)} véhicules candidats sur {len(valid_vehicle_data)} (pré-filtrés via JS)")
+
+            # ÉTAPE 4: Récupérer les handles DOM uniquement pour les candidats
+            all_vehicle_rows = await self.page.query_selector_all(selector_complet)
+
+            if not all_vehicle_rows:
+                logger.warning("❌ Aucune ligne DOM trouvée")
+                return 0
+
+            # ÉTAPE 5: Parcours des candidats pré-filtrés seulement
+            for vdata in candidate_indices:
                 try:
-                    # Vérification supplémentaire avant traitement
-                    if not self._validate_dom_element(dom_row_element, i):
+                    idx = vdata['index']
+                    if idx >= len(all_vehicle_rows):
                         continue
-                    
-                    # Extraction sécurisée des informations véhicule
-                    vehicle_data = await self._safe_extract_vehicle_data(dom_row_element, i)
-                    if not vehicle_data:
-                        continue
-                    
-                    vehicle_caption, vehicle_type = vehicle_data
-                    logger.debug(f"🚗 Analyse du véhicule {i}: {vehicle_caption} (type: {vehicle_type})")
-                    
-                    # Recherche de correspondance avec besoins SANS utiliser les objets DOM
+
+                    vehicle_caption = vdata['caption']
+                    vehicle_type = vdata['type']
+
                     matching_need_type = self._find_need_match_safe(vehicle_type, working_unsatisfied_needs, safe_alternatives)
-                    
-                    if matching_need_type:
-                        # Tentative de sélection du véhicule
-                        selection_success = await self._attempt_vehicle_selection(dom_row_element, vehicle_caption, matching_need_type)
-                        
-                        if selection_success:
-                            # Mise à jour des compteurs (OBJETS PYTHON UNIQUEMENT)
-                            additional_selected += 1
-                            working_unsatisfied_needs[matching_need_type] -= 1
-                            selected_counts[matching_need_type] = selected_counts.get(matching_need_type, 0) + 1
-                            
-                            logger.info(f"🆕 Véhicule sélectionné: {vehicle_caption} -> {vehicle_type} (pour {matching_need_type})")
-                            
-                            # Nettoyage des besoins satisfaits
-                            if working_unsatisfied_needs[matching_need_type] <= 0:
-                                del working_unsatisfied_needs[matching_need_type]
-                    
-                    # Arrêt si tous les besoins sont satisfaits
+                    if not matching_need_type:
+                        continue
+
+                    # Sélection via ElementHandle (nécessaire pour checkbox.check())
+                    selection_success = await self._attempt_vehicle_selection(all_vehicle_rows[idx], vehicle_caption, matching_need_type)
+
+                    if selection_success:
+                        additional_selected += 1
+                        working_unsatisfied_needs[matching_need_type] -= 1
+                        selected_counts[matching_need_type] = selected_counts.get(matching_need_type, 0) + 1
+
+                        logger.info(f"🆕 Véhicule sélectionné: {vehicle_caption} -> {vehicle_type} (pour {matching_need_type})")
+
+                        if working_unsatisfied_needs[matching_need_type] <= 0:
+                            del working_unsatisfied_needs[matching_need_type]
+
                     if not working_unsatisfied_needs:
                         logger.info("🎯 Tous les besoins supplémentaires sont satisfaits")
                         break
 
-                    # Garde-fou: limite le nombre de véhicules supplémentaires
                     if additional_selected >= max_additional:
                         logger.warning(f"⚠️ Limite de sécurité atteinte: {additional_selected} véhicules supplémentaires (max: {max_additional})")
                         break
                         
                 except Exception as vehicle_error:
-                    logger.warning(f"⚠️ Erreur lors du traitement du véhicule {i}: {vehicle_error}")
-                    logger.debug(f"    Type de l'élément problématique: {type(dom_row_element)}")
+                    logger.warning(f"⚠️ Erreur lors du traitement du véhicule {vdata.get('index', '?')}: {vehicle_error}")
                     continue
-            
-            # ÉTAPE 7: Rapport final
+
+            # ÉTAPE 6: Rapport final
             if working_unsatisfied_needs:
                 logger.warning(f"⚠️ Besoins restants après chargement complet: {working_unsatisfied_needs}")
             
