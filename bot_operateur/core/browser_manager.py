@@ -194,8 +194,8 @@ class BrowserManager:
         async def _navigate():
             try:
                 logger.debug(f"Navigation rapide vers: {url}")
-                # OPTIMISATION: Toujours utiliser fast_timeout pour une navigation rapide
-                timeout = self.settings.fast_timeout * 1000 if hasattr(self.settings, 'fast_timeout') else 15000
+                # page_load_timeout pour goto(), fast_timeout est réservé aux éléments DOM
+                timeout = self.settings.page_load_timeout * 1000
                 await self.page.goto(url, timeout=timeout)
 
                 if wait_for_load:

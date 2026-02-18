@@ -142,6 +142,15 @@ class MissionManager:
                     mission.water_to_pump = other_info['water_to_pump']
                     logger.info(f"💧 Eau à pomper: {mission.water_to_pump}L")
 
+                req_metadata = details.get('requirements_metadata', {})
+                if req_metadata.get('water_needed_l'):
+                    mission.water_needed_l = req_metadata['water_needed_l']
+                    logger.info(f"💧 Eau nécessaire (transport): {mission.water_needed_l}L")
+
+                if other_info.get('required_formations'):
+                    mission.required_formations = other_info['required_formations']
+                    logger.info(f"🎓 Formations requises: {mission.required_formations}")
+
                 if details.get('title'):
                     mission.title = details['title']
                     logger.debug(f"Titre mis à jour: '{mission.title}'")
@@ -325,6 +334,27 @@ class MissionManager:
 
             # Optimiser les pompes selon le volume d'eau à pomper
             vehicle_needs = self.water_pump_service.optimize_pump_needs(vehicle_needs, mission)
+
+            # Optimiser le transport d'eau et les formations si la stratégie expose le parser
+            if hasattr(strategy, 'parser') and strategy.parser:
+                _vehicle_specs = strategy.parser.vehicles_mapping.get('vehicle_specs', {})
+                _vehicle_mapping_all = strategy.parser.vehicles_mapping.get('vehicle_mapping', {})
+                _flat_mapping: dict = {}
+                for _cat in _vehicle_mapping_all.values():
+                    _flat_mapping.update(_cat)
+
+                # Compenser le déficit en eau de transport
+                if mission.water_needed_l:
+                    vehicle_needs = self.water_pump_service.optimize_water_transport_needs(
+                        vehicle_needs, mission, _vehicle_specs, _flat_mapping
+                    )
+
+                # Compenser les formations manquantes
+                if mission.required_formations:
+                    _personnel_mapping = self.missing_needs_config.get('personnel_mapping', {})
+                    vehicle_needs = self.water_pump_service.optimize_formation_needs(
+                        vehicle_needs, mission, _personnel_mapping, _vehicle_specs
+                    )
 
             # Traiter les résultats d'alertes de véhicules manquants
             try:

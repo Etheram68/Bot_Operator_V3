@@ -249,9 +249,11 @@ class MissionScraper:
                 if h1_element:
                     title_complete = await h1_element.inner_text()
 
+            requirements_list, requirements_metadata = await self._scrape_requirements_from_current_page()
             details = {
                 'patients': patients,
-                'requirements': await self._scrape_requirements_from_current_page(),
+                'requirements': requirements_list,
+                'requirements_metadata': requirements_metadata,
                 'credits': None,  # Les crédits sont déjà récupérés dans _extract_mission_from_element
                 'title': title_complete,  # Titre complet récupéré depuis la page de mission
                 'other_info': await self._extract_other_info_from_tables()
@@ -492,18 +494,24 @@ class MissionScraper:
             logger.error(f"Erreur lors de l'extraction du texte des colonnes: {e}")
             return ""
 
-    async def _scrape_requirements_from_current_page(self) -> List[MissionRequirement]:
-        """Scrape les exigences depuis la page courante avec parser intelligent"""
+    async def _scrape_requirements_from_current_page(self) -> tuple[List[MissionRequirement], Dict]:
+        """Scrape les exigences depuis la page courante avec parser intelligent.
+
+        Returns:
+            (requirements, metadata) où metadata peut contenir 'water_needed_l'
+        """
         requirements = []
+        metadata: Dict = {}
 
         try:
             # NOUVEAU: Extraction structurée par <tr> pour relier véhicule + quantité
-            structured_requirements = await self._extract_requirements_from_table_rows()
+            structured_requirements, req_metadata = await self._extract_requirements_from_table_rows()
+            metadata.update(req_metadata)
             if structured_requirements:
                 # Appliquer la conversion personnel → véhicules (ex: 10 Spécialistes IMP → 2 VIMP)
                 requirements = self.requirement_parser._convert_personnel_to_vehicle_requirements(structured_requirements)
                 logger.debug(f"Trouvé {len(requirements)} exigences via extraction structurée <tr>")
-                return requirements
+                return requirements, metadata
 
             # Fallback : Extraire le texte spécifiquement de la seconde colonne des besoins
             requirements_text = await self._extract_requirements_text_from_columns()
@@ -542,7 +550,7 @@ class MissionScraper:
         except Exception as e:
             logger.error(f"Erreur lors du scraping des exigences: {e}")
 
-        return requirements
+        return requirements, metadata
 
     def _parse_requirement_text(self, text: str) -> Optional[MissionRequirement]:
         """Parse le texte d'exigence vers un MissionRequirement"""
@@ -562,9 +570,14 @@ class MissionScraper:
 
         return None
 
-    async def _extract_requirements_from_table_rows(self) -> List[MissionRequirement]:
-        """Extraction structurée des exigences basée sur les <tr> pour relier véhicule + quantité"""
+    async def _extract_requirements_from_table_rows(self) -> tuple[List[MissionRequirement], Dict]:
+        """Extraction structurée des exigences basée sur les <tr> pour relier véhicule + quantité.
+
+        Returns:
+            (requirements, metadata) où metadata peut contenir 'water_needed_l'
+        """
         requirements = []
+        metadata: Dict = {}
 
         try:
             # Chercher toutes les tables et identifier celle des exigences
@@ -615,7 +628,10 @@ class MissionScraper:
                             logger.debug(f"Ligne extraite: '{label_clean}' -> '{value_clean}'")
 
                             if "Eau nécessaire" in label_clean:
-                                logger.debug(f"Ignoré indicateur de ressource: {label_clean}")
+                                clean_value = re.sub(r'[^\d]', '', value_clean)
+                                if clean_value:
+                                    metadata['water_needed_l'] = int(clean_value)
+                                    logger.debug(f"💧 Eau nécessaire détectée: {metadata['water_needed_l']}L")
                                 continue
 
                             try:
@@ -659,7 +675,7 @@ class MissionScraper:
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction structurée <tr>: {e}")
 
-        return requirements
+        return requirements, metadata
 
     async def _extract_other_info_from_tables(self) -> Dict:
         """Extraction des données du tableau 'Autre information' (eau à pomper, etc.)"""
@@ -704,6 +720,11 @@ class MissionScraper:
                                 if clean_value:
                                     result['water_to_pump'] = int(clean_value)
                                     logger.debug(f"Eau à pomper détectée: {result['water_to_pump']}L")
+                            elif "formation" in label:
+                                formations = self._parse_formations_text(value)
+                                if formations:
+                                    result['required_formations'] = formations
+                                    logger.debug(f"Formations requises: {formations}")
                     finally:
                         for c in cells:
                             await c.dispose()
@@ -716,6 +737,20 @@ class MissionScraper:
             logger.warning(f"Erreur lors de l'extraction 'Autre information': {e}")
 
         return result
+
+    def _parse_formations_text(self, text: str) -> Dict[str, int]:
+        """Parse le texte des formations requises.
+
+        Format attendu: "2x PLG (Plongeur)\n3x SAV (Sauvetage Aquatique)"
+        Retourne: {'PLG': 2, 'SAV': 3}
+        """
+        formations: Dict[str, int] = {}
+        pattern = re.compile(r'(\d+)x\s+([A-Z]{2,6})\s*(?:\([^)]+\))?', re.MULTILINE)
+        for match in pattern.finditer(text):
+            count = int(match.group(1))
+            code = match.group(2)
+            formations[code] = formations.get(code, 0) + count
+        return formations
 
     def _log_unmatched_label(self, label: str, quantity: int, mission_id: str) -> None:
         """Log un label non reconnu pour analyse future (auto-learning)."""

@@ -48,6 +48,8 @@ class Mission(BaseModel):
     requirements: List[MissionRequirement] = Field(default_factory=list)
     max_prisoners: Optional[int] = Field(default=None, description="Nombre max de prisonniers")
     water_to_pump: Optional[int] = Field(default=None, description="Volume d'eau à pomper en litres")
+    water_needed_l: Optional[int] = Field(default=None, description="Volume d'eau à transporter pour la mission (litres)")
+    required_formations: Dict[str, int] = Field(default_factory=dict, description="Formations requises {code: count} (ex: {'PLG': 2, 'SAV': 3})")
 
     # Patients
     patients: List[Patient] = Field(default_factory=list)
