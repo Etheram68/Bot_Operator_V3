@@ -298,29 +298,39 @@ class MissionManager:
             else:
                 logger.debug(f"Réutilisation de la session existante pour mission {mission.id}")
 
-            # Calculer les besoins en véhicules selon la stratégie
-            vehicle_needs = await strategy.get_vehicle_needs(mission)
+            # Calculer les besoins, prisonniers et alertes en parallèle (lectures DOM indépendantes)
+            vehicle_needs_result, prisoner_count_result, alert_result = await asyncio.gather(
+                strategy.get_vehicle_needs(mission),
+                self.transport_service.extract_prisoner_count_from_mission_info(),
+                self._extract_missing_vehicles_from_alert(mission),
+                return_exceptions=True
+            )
+
+            vehicle_needs = vehicle_needs_result if not isinstance(vehicle_needs_result, Exception) else {}
+            if isinstance(vehicle_needs_result, Exception):
+                logger.warning(f"⚠️ Erreur lors du calcul des besoins stratégie: {vehicle_needs_result}")
 
             logger.info(f"📋 Besoins identifiés par stratégie: {vehicle_needs}")
 
-            # Enrichir automatiquement les besoins avec les véhicules police pour les prisonniers
-            try:
-                prisoner_count = await self.transport_service.extract_prisoner_count_from_mission_info()
-                if prisoner_count > 0:
-                    # Ajouter autant de CARS_POLICE que de prisonniers
-                    current_police_need = vehicle_needs.get('CARS_POLICE', 0)
-                    vehicle_needs['CARS_POLICE'] = current_police_need + prisoner_count
-                    logger.info(f"🚔 {prisoner_count} prisonnier(s) détecté(s) → ajout de {prisoner_count} CARS_POLICE aux besoins")
-                    logger.info(f"📋 Besoins enrichis avec prisonniers: {vehicle_needs}")
-            except Exception as e:
-                logger.warning(f"⚠️ Erreur lors de l'enrichissement des besoins pour prisonniers: {e}")
+            prisoner_count = 0
+            if isinstance(prisoner_count_result, Exception):
+                logger.warning(f"⚠️ Erreur lors de l'enrichissement des besoins pour prisonniers: {prisoner_count_result}")
+            else:
+                prisoner_count = prisoner_count_result
+            if prisoner_count > 0:
+                current_police_need = vehicle_needs.get('CARS_POLICE', 0)
+                vehicle_needs['CARS_POLICE'] = current_police_need + prisoner_count
+                logger.info(f"🚔 {prisoner_count} prisonnier(s) détecté(s) → ajout de {prisoner_count} CARS_POLICE aux besoins")
+                logger.info(f"📋 Besoins enrichis avec prisonniers: {vehicle_needs}")
 
             # Optimiser les pompes selon le volume d'eau à pomper
             vehicle_needs = self.water_pump_service.optimize_pump_needs(vehicle_needs, mission)
 
-            # Vérifier les véhicules manquants depuis l'alerte MÊME SI la stratégie ne trouve rien
+            # Traiter les résultats d'alertes de véhicules manquants
             try:
-                missing_vehicles_needs, constrained_alternatives_from_alert, alert_other_needs = await self._extract_missing_vehicles_from_alert(mission)
+                if isinstance(alert_result, Exception):
+                    raise alert_result
+                missing_vehicles_needs, constrained_alternatives_from_alert, alert_other_needs = alert_result
 
                 # Recouper les véhicules manquants avec les besoins existants
                 alert_override_types = set()

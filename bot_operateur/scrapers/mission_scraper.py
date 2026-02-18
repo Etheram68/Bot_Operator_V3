@@ -1,3 +1,4 @@
+import asyncio
 import re
 import json
 from typing import List, Optional, Dict
@@ -56,10 +57,16 @@ class MissionScraper:
             MissionType.SECURITY: "#mission_list_sicherheitswache",
         }
 
-        for mission_type, selector in mission_panels.items():
-            panel_missions = await self._scrape_missions_from_panel(selector, mission_type)
-            missions.extend(panel_missions)
-            logger.debug(f"Trouvé {len(panel_missions)} missions {mission_type.value}")
+        results = await asyncio.gather(
+            *[self._scrape_missions_from_panel(sel, mt) for mt, sel in mission_panels.items()],
+            return_exceptions=True
+        )
+        for mt, result in zip(mission_panels.keys(), results):
+            if isinstance(result, list):
+                missions.extend(result)
+                logger.debug(f"Trouvé {len(result)} missions {mt.value}")
+            elif isinstance(result, Exception):
+                logger.warning(f"Erreur lors du scraping du panel {mt.value}: {result}")
 
         logger.info(f"Total des missions récupérées: {len(missions)}")
         return missions
@@ -76,15 +83,22 @@ class MissionScraper:
             # Récupérer tous les éléments de mission
             mission_elements = await self.page.query_selector_all(f"{panel_selector} .panel-heading")
 
+            sem = asyncio.Semaphore(8)
+
+            async def extract_safe(element, _sem=sem, _mt=mission_type):
+                async with _sem:
+                    return await self._extract_mission_from_element(element, _mt)
+
             try:
-                for element in mission_elements:
-                    try:
-                        mission = await self._extract_mission_from_element(element, mission_type)
-                        if mission:
-                            missions.append(mission)
-                    except Exception as e:
-                        logger.warning(f"Erreur lors de l'extraction d'une mission: {e}")
-                        continue
+                results = await asyncio.gather(
+                    *[extract_safe(el) for el in mission_elements],
+                    return_exceptions=True
+                )
+                for result in results:
+                    if isinstance(result, Mission):
+                        missions.append(result)
+                    elif isinstance(result, Exception):
+                        logger.warning(f"Erreur lors de l'extraction d'une mission: {result}")
             finally:
                 for element in mission_elements:
                     await element.dispose()

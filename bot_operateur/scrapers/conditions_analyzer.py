@@ -1,3 +1,4 @@
+import asyncio
 import re
 import json
 from typing import List, Dict
@@ -36,15 +37,22 @@ class ConditionsAnalyzer:
             await self.page.goto(help_url)
             await self.page.wait_for_load_state('domcontentloaded', timeout=10000)
 
-            # Extraction et analyse du contenu
+            # Extraction et analyse du contenu (5 lectures DOM en parallèle sur la même page)
+            raw_text, structured_req, new_patterns, vehicle_mentions, contextual = await asyncio.gather(
+                self._extract_full_text(),
+                self._extract_structured_requirements(),
+                self._discover_new_patterns(),
+                self._discover_vehicle_mentions(),
+                self._extract_contextual_information(),
+            )
             analysis_data = {
                 'mission_id': mission_id,
                 'conditions_url': help_url,
-                'raw_text': await self._extract_full_text(),
-                'structured_requirements': await self._extract_structured_requirements(),
-                'new_patterns': await self._discover_new_patterns(),
-                'vehicle_mentions': await self._discover_vehicle_mentions(),
-                'contextual_info': await self._extract_contextual_information()
+                'raw_text': raw_text,
+                'structured_requirements': structured_req,
+                'new_patterns': new_patterns,
+                'vehicle_mentions': vehicle_mentions,
+                'contextual_info': contextual,
             }
 
             logger.info(f"Analyse complétée pour mission {mission_id}")
