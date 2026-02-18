@@ -1,5 +1,4 @@
 import re
-import asyncio
 from typing import List, Optional
 from playwright.async_api import Page
 from loguru import logger
@@ -140,31 +139,30 @@ class VehicleScraper:
                 logger.info("Clic sur le bouton de chargement des véhicules supplémentaires...")
 
                 # Attendre que de nouveaux véhicules apparaissent dans le DOM (AJAX)
-                max_wait = 10  # secondes max
-                for i in range(max_wait * 2):  # check toutes les 0.5s
-                    await asyncio.sleep(0.5)
+                try:
+                    await self.page.wait_for_function(
+                        f"() => document.querySelectorAll('#vehicle_show_table_all tr[id^=\"vehicle_element_content_\"]').length > {count_before}",
+                        timeout=10000
+                    )
                     count_after = await self.page.evaluate(count_js)
-                    if count_after > count_before:
-                        logger.info(f"Véhicules chargés: {count_before} -> {count_after} ({count_after - count_before:+d})")
-                        break
-                else:
-                    count_after = await self.page.evaluate(count_js)
-                    if count_after > count_before:
-                        logger.info(f"Véhicules chargés: {count_before} -> {count_after} ({count_after - count_before:+d})")
-                    else:
-                        logger.warning(f"Le nombre de véhicules n'a pas changé après {max_wait}s ({count_before})")
+                    logger.info(f"Véhicules chargés: {count_before} -> {count_after} ({count_after - count_before:+d})")
+                except Exception:
+                    logger.warning(f"Le nombre de véhicules n'a pas changé après 10s ({count_before})")
             else:
                 logger.warning("Aucun bouton de chargement de véhicules trouvé - tous les véhicules sont peut-être déjà affichés")
 
                 # Tenter d'exécuter le JavaScript de chargement directement
                 try:
                     await self.page.evaluate("if(typeof(vehicle_load_all) === 'function') vehicle_load_all()")
-                    for i in range(10):
-                        await asyncio.sleep(0.5)
+                    try:
+                        await self.page.wait_for_function(
+                            f"() => document.querySelectorAll('#vehicle_show_table_all tr[id^=\"vehicle_element_content_\"]').length > {count_before}",
+                            timeout=5000
+                        )
                         count_after = await self.page.evaluate(count_js)
-                        if count_after > count_before:
-                            logger.info(f"Chargement JS réussi: {count_before} -> {count_after} ({count_after - count_before:+d})")
-                            break
+                        logger.info(f"Chargement JS réussi: {count_before} -> {count_after} ({count_after - count_before:+d})")
+                    except Exception:
+                        pass
                 except Exception as js_error:
                     logger.debug(f"Chargement JS non disponible: {js_error}")
 

@@ -320,7 +320,7 @@ class MissionManager:
 
             # Vérifier les véhicules manquants depuis l'alerte MÊME SI la stratégie ne trouve rien
             try:
-                missing_vehicles_needs, constrained_alternatives_from_alert = await self._extract_missing_vehicles_from_alert(mission)
+                missing_vehicles_needs, constrained_alternatives_from_alert, alert_other_needs = await self._extract_missing_vehicles_from_alert(mission)
 
                 # Recouper les véhicules manquants avec les besoins existants
                 alert_override_types = set()
@@ -402,8 +402,6 @@ class MissionManager:
                 logger.info("🚑 Mission de transport de patient détectée - utilisation des ambulances privées")
                 # Remplacer le mapping AMBULANCE par AMBULANCE_TRANSPORT
                 if "AMBULANCE" in alternatives_mapping:
-                    # Sauvegarder le mapping original et le remplacer
-                    original_ambulance_mapping = alternatives_mapping["AMBULANCE"]
                     if "AMBULANCE_TRANSPORT" in alternatives_mapping:
                         alternatives_mapping["AMBULANCE"] = alternatives_mapping["AMBULANCE_TRANSPORT"]
                         logger.debug(f"Mapping AMBULANCE remplacé par AMBULANCE_TRANSPORT: {alternatives_mapping['AMBULANCE']}")
@@ -471,7 +469,9 @@ class MissionManager:
                 return False
 
             # Vérifier si trop de personnel spécialisé manque selon le seuil PERSONNEL_THRESHOLD
-            specialized_personnel_missing = await self._count_missing_specialized_personnel(mission)
+            specialized_personnel_missing = self._count_missing_specialized_personnel(
+                alert_other_needs if 'alert_other_needs' in locals() else {}
+            )
             if specialized_personnel_missing > self.settings.personnel_threshold:
                 logger.warning(f"🚫 Mission {mission.id} - trop de personnel spécialisé manquant ({specialized_personnel_missing} > {self.settings.personnel_threshold}). Mission critique, passage à la suivante.")
                 return False
@@ -503,7 +503,7 @@ class MissionManager:
             logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
             return False
 
-    async def _extract_missing_vehicles_from_alert(self, mission: 'Mission') -> tuple[dict, dict]:
+    async def _extract_missing_vehicles_from_alert(self, mission: 'Mission') -> tuple[dict, dict, dict]:
         """
         Extrait les véhicules manquants depuis la div alert-missing-vehicles.
 
@@ -513,12 +513,14 @@ class MissionManager:
         ajoute les besoins même si véhicules sur site (table mission_vehicle_at_mission).
 
         Returns:
-            tuple[dict, dict]:
+            tuple[dict, dict, dict]:
                 - Besoins supplémentaires {type_véhicule: quantité}
                 - Alternatives par véhicule contraint {type_véhicule: [alternatives]}
+                - Besoins non-véhicules {type: quantité} (eau, personnel, etc.)
         """
         missing_vehicles_needs = {}
         constrained_alternatives_map = {}
+        other_needs = {}
 
         try:
             # Chercher la div d'alerte des véhicules manquants
@@ -526,7 +528,7 @@ class MissionManager:
 
             if not missing_alert:
                 logger.debug("Aucune alerte de véhicules manquants trouvée")
-                return missing_vehicles_needs, constrained_alternatives_map
+                return missing_vehicles_needs, constrained_alternatives_map, other_needs
 
             # Récupérer seulement les véhicules EN ROUTE pour filtrage (pas ceux sur site)
             # Car les véhicules sur site peuvent remplir d'autres fonctions
@@ -642,7 +644,7 @@ class MissionManager:
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des véhicules manquants: {e}")
 
-        return missing_vehicles_needs, constrained_alternatives_map
+        return missing_vehicles_needs, constrained_alternatives_map, other_needs
 
     async def _extract_other_missing_needs_from_alert(self, mission: 'Mission') -> dict:
         """
@@ -872,7 +874,7 @@ class MissionManager:
 
         return personnel_needs
 
-    async def _count_missing_specialized_personnel(self, mission: 'Mission') -> int:
+    def _count_missing_specialized_personnel(self, other_needs: dict) -> int:
         """
         Compte le nombre total de personnel spécialisé manquant.
 
@@ -880,34 +882,23 @@ class MissionManager:
         (tout sauf pompiers/policiers génériques)
 
         Args:
-            mission: Mission concernée
+            other_needs: Besoins non-véhicules déjà extraits {type: quantité}
 
         Returns:
             int: Nombre total de spécialistes manquants
         """
         specialized_missing_count = 0
+        specialized_personnel_codes = {
+            'PLG', 'SAV', 'GRI', 'CYN', 'MED', 'INF', 'CHEF', 'PSY', 'RAD', 'OPJ'
+        }
 
-        try:
-            # Extraire les besoins en personnel depuis les alertes
-            other_needs = await self._extract_other_missing_needs_from_alert(mission)
+        for need_type, quantity in other_needs.items():
+            if need_type in specialized_personnel_codes:
+                specialized_missing_count += quantity
+                logger.debug(f"Personnel spécialisé manquant: {quantity}x {need_type}")
 
-            # Liste des codes de personnel spécialisé (excluant générique)
-            specialized_personnel_codes = {
-                'PLG', 'SAV', 'GRI', 'CYN', 'MED', 'INF', 'CHEF', 'PSY', 'RAD', 'OPJ'
-            }
-
-            # Compter uniquement le personnel spécialisé
-            for need_type, quantity in other_needs.items():
-                # Vérifier si c'est du personnel spécialisé (code direct)
-                if need_type in specialized_personnel_codes:
-                    specialized_missing_count += quantity
-                    logger.debug(f"Personnel spécialisé manquant: {quantity}x {need_type}")
-
-            if specialized_missing_count > 0:
-                logger.info(f"🔬 Total personnel spécialisé manquant: {specialized_missing_count}")
-
-        except Exception as e:
-            logger.error(f"Erreur lors du comptage du personnel spécialisé manquant: {e}")
+        if specialized_missing_count > 0:
+            logger.info(f"🔬 Total personnel spécialisé manquant: {specialized_missing_count}")
 
         return specialized_missing_count
 
