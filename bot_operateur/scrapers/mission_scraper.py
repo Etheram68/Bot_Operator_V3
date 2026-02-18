@@ -11,8 +11,6 @@ from ..models.label_matcher import LabelMatcher
 from ..models.keyword_parser import KeywordParser
 from ..utils.dom_utils import DOMUtils
 from ..utils.text_utils import extract_number_from_text
-from ..utils.exceptions import ExceptionContext, MissionParsingError
-from ..config.constants import DEFAULT_ELEMENT_TIMEOUT_MS, SELECTORS
 from ..utils.simple_cache import cache_result
 from .conditions_analyzer import ConditionsAnalyzer
 from .patient_scraper import PatientScraper
@@ -21,10 +19,10 @@ from .patient_scraper import PatientScraper
 class MissionScraper:
     """
     Scraper spécialisé pour l'extraction des missions d'urgence.
-    
+
     Gère la récupération des missions depuis l'interface web,
     l'extraction de leurs détails (patients, exigences) et leur analyse.
-    
+
     Attributes:
         page: Page web Playwright
         dom_utils: Utilitaires pour la manipulation du DOM
@@ -32,7 +30,7 @@ class MissionScraper:
         conditions_analyzer: Analyseur des conditions de mission
         patient_scraper: Scraper pour les informations patients
     """
-    
+
     def __init__(self, page: Page):
         self.page = page
         self.dom_utils = DOMUtils(page)
@@ -41,40 +39,40 @@ class MissionScraper:
         self.keyword_parser = KeywordParser(self.label_matcher)
         self.conditions_analyzer = ConditionsAnalyzer(page)
         self.patient_scraper = PatientScraper(page)
-    
+
     @cache_result(ttl=30, key_func=lambda self: "all_missions")  # Cache 30s pour missions actives
     async def get_all_missions(self) -> List[Mission]:
         """
         Récupère toutes les missions disponibles de tous les types.
-        
+
         Returns:
             List[Mission]: Liste de toutes les missions trouvées
         """
         missions = []
-        
+
         mission_panels = {
             MissionType.NORMAL: "#mission_list",
-            MissionType.TRANSPORT: "#mission_list_krankentransporte", 
+            MissionType.TRANSPORT: "#mission_list_krankentransporte",
             MissionType.SECURITY: "#mission_list_sicherheitswache",
         }
-        
+
         for mission_type, selector in mission_panels.items():
             panel_missions = await self._scrape_missions_from_panel(selector, mission_type)
             missions.extend(panel_missions)
             logger.debug(f"Trouvé {len(panel_missions)} missions {mission_type.value}")
-        
+
         logger.info(f"Total des missions récupérées: {len(missions)}")
         return missions
-    
+
     async def _scrape_missions_from_panel(self, panel_selector: str, mission_type: MissionType) -> List[Mission]:
         """Scrape les missions d'un panneau spécifique"""
         missions = []
-        
+
         try:
             # Vérifier si le panneau existe
             if not await self.dom_utils.element_exists(panel_selector):
                 return missions
-            
+
             # Récupérer tous les éléments de mission
             mission_elements = await self.page.query_selector_all(f"{panel_selector} .panel-heading")
 
@@ -93,9 +91,9 @@ class MissionScraper:
 
         except Exception as e:
             logger.error(f"Erreur lors du scraping du panneau {panel_selector}: {e}")
-        
+
         return missions
-    
+
     async def _extract_mission_from_element(self, element, mission_type: MissionType) -> Optional[Mission]:
         """Extrait les informations d'une mission depuis un élément DOM"""
         try:
@@ -103,9 +101,9 @@ class MissionScraper:
             heading_id = await element.get_attribute("id")
             if not heading_id:
                 return None
-                
+
             mission_id = heading_id.replace("mission_panel_heading_", "")
-            
+
             # Récupérer l'élément parent qui contient tous les attributs nécessaires
             parent_element = await element.evaluate_handle("(el) => el.closest('[data-sortable-by]')")
             if not parent_element:
@@ -173,29 +171,29 @@ class MissionScraper:
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction de la mission: {e}")
             return None
-    
+
     def _extract_location_from_title(self, title: str) -> Optional[str]:
         """Extrait la localisation du titre de la mission (méthode legacy)"""
         # Pattern pour extraire le code postal et la ville
         pattern = r'(\d{5}\s+[A-Za-zÀ-ÿ\s-]+)$'
         match = re.search(pattern, title)
         return match.group(1) if match else None
-    
+
     def _extract_location_from_search_attribute(self, search_attribute: str, caption: str) -> Optional[str]:
         """Extrait la localisation en soustrayant le caption du search_attribute"""
         if not search_attribute or not caption:
             return None
-        
+
         # Retirer le caption du début de search_attribute pour obtenir la localisation
         # Ex: "Feu de chambre 84 Rue de Mulhouse, 68350 Brunstatt-Didenheim" - "Feu de chambre" = "84 Rue de Mulhouse, 68350 Brunstatt-Didenheim"
         location = search_attribute.replace(caption, "").strip()
-        
+
         # Nettoyer les espaces en début/fin et les caractères inutiles
         location = re.sub(r'^[,\s\-]+', '', location)  # Enlever virgules/espaces/tirets en début
         location = re.sub(r'[,\s\-]+$', '', location)  # Enlever virgules/espaces/tirets en fin
-        
+
         return location if location else None
-    
+
     async def get_mission_details(self, mission: 'Mission', skip_mission_navigation: bool = False) -> Optional[Dict]:
         """Récupère les détails complets d'une mission depuis la page des conditions
 
@@ -229,14 +227,14 @@ class MissionScraper:
 
             logger.debug(f"Navigation vers les conditions: {help_url}")
             await self.page.goto(help_url, timeout=15000)
-            
+
             # Récupérer le titre complet seulement si absent ou vide dans l'objet Mission
             title_complete = mission.title
             if not title_complete or not title_complete.strip():
                 h1_element = await self.page.query_selector("h1")
                 if h1_element:
                     title_complete = await h1_element.inner_text()
-            
+
             details = {
                 'patients': patients,
                 'requirements': await self._scrape_requirements_from_current_page(),
@@ -244,21 +242,21 @@ class MissionScraper:
                 'title': title_complete,  # Titre complet récupéré depuis la page de mission
                 'other_info': await self._extract_other_info_from_tables()
             }
-            
+
             return details
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des détails de la mission {mission.id} : {e}")
             return None
-    
+
     async def _scrape_patients(self) -> List[Patient]:
         """Scrape les informations des patients"""
         patients = []
-        
+
         try:
             # Vérifier s'il y a une vue complète des patients (patient_full_view)
             patient_full_view = await self.page.query_selector("#patient_full_view")
-            
+
             if patient_full_view:
                 logger.debug("Vue complète des patients détectée")
                 # Récupérer les détails des patients depuis la vue complète
@@ -277,7 +275,7 @@ class MissionScraper:
                 finally:
                     for el in patient_elements:
                         await el.dispose()
-            
+
             else:
                 # Fallback : vérifier s'il y a un formulaire de patients
                 patient_form = await self.page.query_selector("#patient_button_form")
@@ -287,7 +285,7 @@ class MissionScraper:
                     patient_count_text = await patient_form.inner_text()
                     patient_count = extract_number_from_text(patient_count_text)
                     logger.debug(f"Nombre de patients détecté: {patient_count}")
-                    
+
                     # Récupérer les détails des patients depuis n'importe où sur la page
                     patient_elements = await self.page.query_selector_all(".mission_patient")
 
@@ -302,7 +300,7 @@ class MissionScraper:
                     finally:
                         for el in patient_elements:
                             await el.dispose()
-                    
+
                     # Si pas de détails mais on a un compte, créer des patients génériques
                     if not patients and patient_count > 0:
                         logger.debug(f"Création de {patient_count} patients génériques")
@@ -314,28 +312,28 @@ class MissionScraper:
                             ))
                 else:
                     logger.debug("Aucun patient détecté sur cette mission")
-            
+
             logger.info(f"Total de {len(patients)} patients extraits")
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du scraping des patients: {e}")
-        
+
         return patients
-    
+
     async def _scrape_patients_from_help_page(self) -> List[Patient]:
         """Scrape les informations des patients depuis la page d'aide/conditions"""
         patients = []
-        
+
         try:
             # Chercher des informations sur les patients dans le texte de la page
             page_text = await self.page.inner_text("body")
-            
+
             # Extraire le nombre de patients depuis le texte
             patient_count = self._extract_patient_count_from_text(page_text)
-            
+
             # Chercher des indications spéciales pour les patients
             special_needs = self._extract_patient_special_needs_from_text(page_text)
-            
+
             # Créer des patients selon les informations trouvées
             for i in range(patient_count):
                 patient = Patient(
@@ -344,13 +342,12 @@ class MissionScraper:
                     needs=special_needs if special_needs else ["AMBULANCE"]
                 )
                 patients.append(patient)
-            
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du scraping des patients depuis la page d'aide: {e}")
-        
+
         return patients
-    
+
     def _extract_patient_count_from_text(self, text: str) -> int:
         """Extrait le nombre de patients depuis le texte de la page"""
         # Patterns pour trouver le nombre de patients
@@ -362,25 +359,25 @@ class MissionScraper:
             r'Patients?\s*:\s*(\d+)',
             r'Victimes?\s*:\s*(\d+)',
         ]
-        
+
         for pattern in patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 return int(match.group(1))
-        
+
         # Si aucun pattern ne correspond, regarder s'il y a mention d'ambulances
         ambulance_matches = re.findall(r'(\d+)\s+ambulances?', text, re.IGNORECASE)
         if ambulance_matches:
             # Le nombre d'ambulances peut indiquer le nombre de patients
             return int(ambulance_matches[0])
-        
+
         return 0
-    
+
     def _extract_patient_special_needs_from_text(self, text: str) -> List[str]:
         """Extrait les besoins spéciaux des patients depuis le texte"""
         needs = []
         text_lower = text.lower()
-        
+
         # Mapping des mots-clés vers les besoins
         need_keywords = {
             'hélicoptère': "HELICOPTER",
@@ -397,19 +394,19 @@ class MissionScraper:
             'enfant': "PEDIATRIC",
             'directeur des secours': "RESCUE_DIRECTOR",
         }
-        
+
         for keyword, need in need_keywords.items():
             if keyword in text_lower and need not in needs:
                 needs.append(need)
-        
+
         # Toujours inclure ambulance de base si aucun besoin spécial
         if not needs:
             needs.append("AMBULANCE")
         elif "AMBULANCE" not in needs:
             needs.insert(0, "AMBULANCE")  # Ambulance en premier
-        
+
         return needs
-    
+
     async def _extract_requirements_text_from_columns(self) -> str:
         """Extrait le texte des besoins uniquement depuis la seconde colonne col-md-4"""
         try:
@@ -476,11 +473,11 @@ class MissionScraper:
 
             logger.warning("Aucune seconde colonne col-md-4 trouvée avec des besoins")
             return ""
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction du texte des colonnes: {e}")
             return ""
-    
+
     async def _scrape_requirements_from_current_page(self) -> List[MissionRequirement]:
         """Scrape les exigences depuis la page courante avec parser intelligent"""
         requirements = []
@@ -532,23 +529,23 @@ class MissionScraper:
             logger.error(f"Erreur lors du scraping des exigences: {e}")
 
         return requirements
-    
+
     def _parse_requirement_text(self, text: str) -> Optional[MissionRequirement]:
         """Parse le texte d'exigence vers un MissionRequirement"""
         # Pattern pour extraire "X Nom du véhicule"
         pattern = r'(\d+)\s+(.+?)(?:\s|$)'
         match = re.match(pattern, text.strip())
-        
+
         if match:
             quantity = int(match.group(1))
             vehicle_type = match.group(2).strip()
-            
+
             return MissionRequirement(
                 vehicle_type=vehicle_type,
                 quantity=quantity,
                 optional=False
             )
-        
+
         return None
 
     async def _extract_requirements_from_table_rows(self) -> List[MissionRequirement]:
@@ -732,41 +729,41 @@ class MissionScraper:
         except Exception as e:
             logger.error(f"Erreur lors de l'analyse des conditions de la mission {mission_id}: {e}")
             return None
-    
-    async def enrich_knowledge_base(self, mission_ids: List[str], 
-                                   needs_labels_path: str = None, 
+
+    async def enrich_knowledge_base(self, mission_ids: List[str],
+                                   needs_labels_path: str = None,
                                    vehicles_path: str = None) -> Dict:
         """Analyse plusieurs missions pour enrichir la base de connaissances"""
         if not needs_labels_path:
             needs_labels_path = "bot_operateur/data/needs_labels_v2.json"
         if not vehicles_path:
             vehicles_path = "bot_operateur/data/vehicles_v2.json"
-        
+
         analysis_results = []
         successful_analyses = 0
-        
+
         for mission_id in mission_ids:
             try:
                 logger.info(f"Analyse de la mission {mission_id}...")
                 analysis_result = await self.conditions_analyzer.analyze_mission_conditions(mission_id)
-                
+
                 if analysis_result:
                     analysis_results.append(analysis_result)
                     successful_analyses += 1
                     logger.debug(f"Mission {mission_id} analysée avec succès")
                 else:
                     logger.warning(f"Aucune donnée extraite de la mission {mission_id}")
-                    
+
             except Exception as e:
                 logger.error(f"Erreur lors de l'analyse de la mission {mission_id}: {e}")
                 continue
-        
+
         if analysis_results:
             logger.info(f"Enrichissement de la base de connaissances avec {len(analysis_results)} analyses...")
             await self.conditions_analyzer.enrich_json_files(
                 analysis_results, needs_labels_path, vehicles_path
             )
-        
+
         return {
             'total_missions': len(mission_ids),
             'successful_analyses': successful_analyses,

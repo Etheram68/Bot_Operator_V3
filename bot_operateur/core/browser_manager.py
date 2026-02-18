@@ -24,7 +24,7 @@ class SessionExpiredError(RuntimeError):
 
 class BrowserManager:
     """Gestionnaire du navigateur Playwright avec gestion robuste des erreurs"""
-    
+
     def __init__(self, settings: Settings):
         self.settings = settings
         self.playwright: Optional[Playwright] = None
@@ -35,11 +35,11 @@ class BrowserManager:
         self._dom_ops: Optional[DOMOperationsBase] = None
         self._smart_nav: Optional[SmartNavigation] = None
         self._last_cache_cleanup: float = 0
-        
+
     async def start(self) -> None:
         """Démarre le navigateur et initialise une page"""
         logger.info("Démarrage du navigateur...")
-        
+
         try:
             # Nettoyage du cache si nécessaire avant démarrage
             self._cleanup_cache_if_needed()
@@ -78,7 +78,6 @@ class BrowserManager:
             if storage_file.exists():
                 try:
                     import json
-                    from datetime import datetime
 
                     with open(storage_file, 'r') as f:
                         storage_data = json.load(f)
@@ -110,33 +109,33 @@ class BrowserManager:
                 user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 storage_state=storage_state
             )
-            
+
             # Création de la page
             self.page = await self.context.new_page()
-            
+
             # Configuration des timeouts
             self.page.set_default_timeout(self.settings.element_wait_timeout * 1000)
             self.page.set_default_navigation_timeout(self.settings.page_load_timeout * 1000)
-            
+
             # Initialiser les opérations DOM et navigation intelligente
             self._dom_ops = DOMOperationsBase(self.page, self.settings.element_wait_timeout * 1000)
             self._smart_nav = SmartNavigation(self.page)
-            
+
             logger.info("Navigateur démarré avec succès")
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du démarrage du navigateur: {e}")
             await self.cleanup()
             raise
-    
+
     async def stop(self) -> None:
         """Arrête proprement le navigateur"""
         await self.cleanup()
-    
+
     async def cleanup(self) -> None:
         """Nettoie les ressources du navigateur"""
         logger.info("Nettoyage des ressources du navigateur...")
-        
+
         # Fermer la page en premier (plus rapide)
         if self.page:
             try:
@@ -147,7 +146,7 @@ class BrowserManager:
                 self.page = None
                 self._dom_ops = None  # Nettoyer la référence DOM
                 self._smart_nav = None  # Nettoyer la navigation intelligente
-                
+
         # Sauvegarder l'état du cache avant fermeture
         if self.context:
             try:
@@ -166,7 +165,7 @@ class BrowserManager:
                 logger.warning(f"Timeout/erreur fermeture contexte: {e}")
             finally:
                 self.context = None
-                
+
         # Fermer le navigateur
         if self.browser:
             try:
@@ -175,7 +174,7 @@ class BrowserManager:
                 logger.warning(f"Timeout/erreur fermeture navigateur: {e}")
             finally:
                 self.browser = None
-                
+
         # Arrêter Playwright
         if self.playwright:
             try:
@@ -184,9 +183,9 @@ class BrowserManager:
                 logger.warning(f"Timeout/erreur arrêt Playwright: {e}")
             finally:
                 self.playwright = None
-                
+
         logger.info("Nettoyage du navigateur terminé")
-    
+
     async def navigate_to(self, url: str, wait_for_load: bool = True, fast_navigation: bool = True) -> None:
         """Navigue vers une URL avec navigation rapide optimisée par défaut"""
         if not self.page:
@@ -246,50 +245,50 @@ class BrowserManager:
             return True
 
         return await self._smart_nav.navigate_if_needed(url, force)
-    
+
     async def wait_for_selector(self, selector: str, timeout: Optional[int] = None) -> bool:
         """Attend qu'un sélecteur soit présent avec timeout"""
         if not self.page:
             raise RuntimeError("Le navigateur n'est pas initialisé")
-        
+
         try:
             await self.page.wait_for_selector(
-                selector, 
+                selector,
                 timeout=(timeout or self.settings.element_wait_timeout) * 1000
             )
             return True
         except Exception as e:
             logger.warning(f"Sélecteur '{selector}' non trouvé: {e}")
             return False
-    
+
     async def safe_click(self, selector: str, timeout: Optional[int] = None) -> bool:
         """Clique sur un élément de façon sécurisée"""
         if not self._dom_ops:
             raise RuntimeError("Le navigateur n'est pas initialisé")
         return await self._dom_ops.safe_click(selector, timeout)
-    
+
     async def safe_fill(self, selector: str, value: str, timeout: Optional[int] = None) -> bool:
         """Remplit un champ de façon sécurisée"""
         if not self._dom_ops:
             raise RuntimeError("Le navigateur n'est pas initialisé")
         return await self._dom_ops.safe_fill(selector, value, timeout)
-    
+
     async def get_page_title(self) -> Optional[str]:
         """Retourne le titre de la page courante"""
         if not self.page:
             return None
-        
+
         try:
             return await self.page.title()
         except Exception as e:
             logger.warning(f"Impossible de récupérer le titre: {e}")
             return None
-    
+
     async def take_screenshot(self, path: Optional[str] = None) -> Optional[bytes]:
         """Prend une capture d'écran"""
         if not self.page:
             return None
-        
+
         try:
             if path:
                 await self.page.screenshot(path=path)
@@ -299,7 +298,7 @@ class BrowserManager:
         except Exception as e:
             logger.error(f"Erreur lors de la capture d'écran: {e}")
             return None
-    
+
     def is_ready(self) -> bool:
         """Vérifie si le navigateur est prêt"""
         return self.page is not None and not self.page.is_closed()

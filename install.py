@@ -2,7 +2,6 @@
 """
 Script d'installation automatique pour Bot Opérateur 112 v3
 """
-import os
 import sys
 import subprocess
 import shutil

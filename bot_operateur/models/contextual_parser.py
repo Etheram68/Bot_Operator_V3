@@ -7,7 +7,6 @@ permettant une analyse précise des vrais besoins vs indicateurs.
 
 import re
 from typing import List, Tuple, Pattern
-from loguru import logger
 
 
 class ContextualParser:
@@ -29,11 +28,11 @@ class ContextualParser:
     def find_matches_with_context(self, text: str, patterns: List[Pattern]) -> List[Tuple[int, bool, str]]:
         """
         Trouve les correspondances avec leur contexte pour un type de besoin.
-        
+
         Args:
             text: Texte de mission nettoyé (avec lignes préservées)
             patterns: Liste des patterns regex compilés
-            
+
         Returns:
             Liste de tuples (quantité, optionnel, contexte_ligne)
         """
@@ -62,39 +61,39 @@ class ContextualParser:
                 context = self._extract_line_context_optimized(match.start(), lines, line_starts)
 
                 matches.append((quantity, optional, context))
-        
+
         # Fallback si aucun match avec quantité explicite
         if not matches:
             matches = self._handle_fallback_matches(text, patterns)
-        
+
         return matches
-    
+
     def _extract_line_context(self, text: str, match_position: int) -> str:
         """Extrait le contexte de la ligne où se trouve le match."""
         lines = text.split('\n')
         line_start = 0
-        
+
         for line in lines:
             line_end = line_start + len(line)
             if line_start <= match_position <= line_end:
                 return line.strip()
             line_start = line_end + 1  # +1 pour le \n
-        
+
         return ""
-    
+
     def _handle_fallback_matches(self, text: str, patterns: List[Pattern]) -> List[Tuple[int, bool, str]]:
         """Gère les cas où aucune quantité explicite n'est trouvée."""
         matches = []
-        
+
         for pattern in patterns:
             match = pattern.search(text)
             if match:
                 context = self._extract_line_context(text, match.start())
                 matches.append((1, False, context))
                 break
-        
+
         return matches
-    
+
     def _extract_quantity_optimized(self, text: str, match: re.Match, lines: List[str], line_starts: List[int]) -> int:
         """Version optimisée d'extraction de quantité avec lignes pré-calculées."""
         # Trouver la ligne du match plus efficacement
@@ -185,6 +184,6 @@ class ContextualParser:
             "optionnel", "facultatif", "si possible", "si nécessaire",
             "éventuellement", "possiblement", "peut être requis"
         ]
-        
+
         match_lower = match_text.lower()
         return any(indicator in match_lower for indicator in optional_indicators)

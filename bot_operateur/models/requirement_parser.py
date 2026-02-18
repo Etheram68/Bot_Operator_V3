@@ -1,6 +1,5 @@
-import json
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from pathlib import Path
 from loguru import logger
 
@@ -8,9 +7,8 @@ from .mission import MissionRequirement
 from .probability_detector import ProbabilityDetector
 from .contextual_parser import ContextualParser
 from .text_cleaner import TextCleaner
-from ..utils.cache_manager import get_cached_json
-from ..utils.regex_factory import get_regex_factory, compile_many_regex, precompile_patterns
-from ..utils.object_pool import get_pool_manager, create_pool, PooledResource
+from ..utils.regex_factory import compile_many_regex, precompile_patterns
+from ..utils.object_pool import create_pool
 from ..config.constants import PERFORMANCE_CONFIG, CRITICAL_VEHICLE_TYPES
 
 
@@ -70,37 +68,37 @@ class RequirementParser:
         if RequirementParser._text_cleaner is None:
             RequirementParser._text_cleaner = TextCleaner()
         return RequirementParser._text_cleaner
-        
+
     def _load_needs_labels(self, path: str = None) -> Dict:
         """Charge le fichier de mapping des labels de besoins avec cache"""
         if path is None:
             path = Path(__file__).parent.parent / "data" / "needs_labels_v2.json"
-        
+
         # Utiliser le cache manager
         from ..utils.cache_manager import get_cached_json
-        
+
         data = get_cached_json(str(path))
         if data is None:
             logger.error(f"Erreur lors du chargement de {path}")
             return {}
-        
+
         return data
-    
+
     def _load_vehicles_mapping(self, path: str = None) -> Dict:
         """Charge le fichier de mapping des véhicules avec cache"""
         if path is None:
             path = Path(__file__).parent.parent / "data" / "vehicles_v2.json"
-        
+
         # Utiliser le cache manager
         from ..utils.cache_manager import get_cached_json
-        
+
         data = get_cached_json(str(path))
         if data is None:
             logger.error(f"Erreur lors du chargement de {path}")
             return {}
-        
+
         return data
-    
+
     def _load_missing_config(self, path: str = None) -> Dict:
         """Charge le fichier de configuration des besoins manquants (avec cache)"""
         from ..utils.cache_manager import get_cached_json
@@ -114,7 +112,7 @@ class RequirementParser:
             return {}
 
         return data
-    
+
     def _compile_patterns(self) -> Dict[str, List[re.Pattern]]:
         """Compile toutes les regex pour optimiser les performances avec factory optimisée"""
         if not self.needs_labels.get("vehicle_requirements"):
@@ -125,7 +123,6 @@ class RequirementParser:
             self._initialize_pools()
 
         # Utiliser la factory de regex optimisée
-        regex_factory = get_regex_factory()
         regex_flags = re.IGNORECASE | re.MULTILINE
 
         # Collecter tous les patterns pour compilation en batch
@@ -135,7 +132,6 @@ class RequirementParser:
         for requirement_type, patterns in self.needs_labels["vehicle_requirements"].items():
             for pattern in patterns:
                 optimized_pattern = self._optimize_pattern(pattern)
-                cache_key = f"{optimized_pattern}_{regex_flags}"
                 all_patterns.append(optimized_pattern)
                 pattern_to_type[optimized_pattern] = requirement_type
 
@@ -171,8 +167,6 @@ class RequirementParser:
             return
 
         try:
-            pool_manager = get_pool_manager()
-
             # Pool pour les MissionRequirement
             def create_mission_requirement():
                 return MissionRequirement(vehicle_type="", quantity=1, optional=False)
@@ -282,24 +276,24 @@ class RequirementParser:
     def parse_mission_text(self, mission_text: str) -> List[MissionRequirement]:
         """
         Analyse intelligente du texte de mission pour extraire les exigences.
-        
+
         Utilise des patterns regex avancés pour détecter les besoins en véhicules,
         distinguer les exigences des indicateurs de ressources et gérer les
         probabilités vs demandes concrètes.
-        
+
         Args:
             mission_text: Texte brut de la mission à analyser
-            
+
         Returns:
             List[MissionRequirement]: Liste des exigences extraites
         """
         requirements = []
-        
+
         if not mission_text or not self.compiled_patterns:
             return requirements
-        
+
         cleaned_text = self.text_cleaner.clean_mission_text(mission_text)
-        
+
         for requirement_type, patterns in self.compiled_patterns.items():
             matches = self.contextual_parser.find_matches_with_context(cleaned_text, patterns)
             for quantity, optional, match_context in matches:
@@ -314,14 +308,14 @@ class RequirementParser:
                 )
                 requirements.append(requirement)
                 logger.debug(f"✅ Ajouté besoin: {requirement_type} x{quantity} ({'optionnel' if optional else 'requis'})")
-        
+
         requirements = self._convert_personnel_to_vehicle_requirements(requirements)
         requirements = self._deduplicate_overlapping_requirements(requirements)
         requirements = self._post_process_requirements(requirements)
-        
+
         logger.debug(f"Extrait {len(requirements)} exigences du texte de mission")
         return requirements
-    
+
     def _deduplicate_overlapping_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
         """
         Supprime les doublons quand un pattern spécifique et un pattern générique matchent le même texte.
@@ -375,7 +369,6 @@ class RequirementParser:
             if len(family_requirements) > 1:  # Plusieurs requirements de la même famille
                 # Trouver la quantité maximale
                 max_quantity = max(req.quantity for req in family_requirements)
-                max_requirement = next(req for req in family_requirements if req.quantity == max_quantity)
 
                 # Marquer les autres pour suppression
                 for i, req in zip(family_indices, family_requirements):
@@ -426,33 +419,33 @@ class RequirementParser:
             logger.debug(f"🧹 Déduplication terminée sans changement (temps: {processing_time:.2f}s)")
 
         return deduplicated
-    
+
     def _post_process_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
         """Post-traite les exigences pour optimiser et consolider"""
         if not requirements:
             return requirements
-        
+
         # Regrouper par type de véhicule
         vehicle_groups = {}
         for req in requirements:
             if req.vehicle_type not in vehicle_groups:
                 vehicle_groups[req.vehicle_type] = []
             vehicle_groups[req.vehicle_type].append(req)
-        
+
         # Consolider chaque groupe
         consolidated = []
         for vehicle_type, reqs in vehicle_groups.items():
             # Déduplicater les quantités identiques (éviter les doublons de patterns)
             unique_reqs = []
             seen_quantities = set()
-            
+
             for req in reqs:
                 if req.quantity not in seen_quantities:
                     unique_reqs.append(req)
                     seen_quantities.add(req.quantity)
                 else:
                     logger.debug(f"🔄 Dédoublonné {vehicle_type}: quantité {req.quantity} déjà vue")
-            
+
             # AMÉLIORATION: Prendre le maximum au lieu de sommer pour éviter les sur-déploiements
             # Cas typiques: "FPT: 8", "FPT_SR: 9", "FPT_BEA: 10" → prendre max(8,9,10) = 10
             if len(unique_reqs) > 1:
@@ -463,36 +456,36 @@ class RequirementParser:
                 total_quantity = unique_reqs[0].quantity
 
             is_optional = all(req.optional for req in unique_reqs)
-            
+
             consolidated.append(MissionRequirement(
                 vehicle_type=vehicle_type,
                 quantity=total_quantity,
                 optional=is_optional
             ))
-        
+
         return consolidated
-    
+
     def _convert_personnel_to_vehicle_requirements(self, requirements: List[MissionRequirement]) -> List[MissionRequirement]:
         """Convertit les exigences de personnel vers exigences de véhicules selon crew_size"""
         converted_requirements = []
-        
+
         # Types de véhicules spécialisés qui ont des exigences de personnel
         personnel_vehicles = {'VIMP'}
-        
+
         vehicle_specs = self.vehicles_mapping.get('vehicle_specs', {})
-        
+
         for req in requirements:
             # Vérifier si c'est un véhicule spécialisé avec personnel
             if req.vehicle_type in personnel_vehicles:
                 # Récupérer la taille d'équipe depuis vehicle_specs
                 crew_size = vehicle_specs.get(req.vehicle_type, {}).get('crew_size')
-                
+
                 if crew_size and crew_size > 1:
                     # Calculer le nombre de véhicules nécessaires
                     vehicles_needed = max(1, (req.quantity + crew_size - 1) // crew_size)  # Arrondi supérieur
-                    
+
                     logger.debug(f"🔄 Conversion personnel: {req.vehicle_type} {req.quantity} spécialistes → {vehicles_needed} véhicules (crew_size: {crew_size})")
-                    
+
                     # Créer la nouvelle exigence de véhicule
                     converted_req = MissionRequirement(
                         vehicle_type=req.vehicle_type,  # Même type de véhicule
@@ -506,48 +499,48 @@ class RequirementParser:
             else:
                 # Pas un véhicule spécialisé, garder l'exigence originale
                 converted_requirements.append(req)
-        
+
         return converted_requirements
-    
+
     def get_vehicle_alternatives(self, vehicle_type: str) -> List[str]:
         """Retourne les alternatives possibles pour un type de véhicule selon la hiérarchie primary/secondary"""
         alternatives = []
-        
+
         # D'abord chercher dans le vehicle_mapping (priorité aux primary puis secondary)
         vehicle_mapping = self.vehicles_mapping.get('vehicle_mapping', {})
         found_in_mapping = False
-        
+
         # Parcourir toutes les catégories (fire_rescue, medical, police, etc.)
         for category_name, category_mapping in vehicle_mapping.items():
             if vehicle_type in category_mapping:
                 mapping_info = category_mapping[vehicle_type]
-                
+
                 # Ajouter d'abord les véhicules primary
                 primary_vehicles = mapping_info.get('primary', [])
                 alternatives.extend(primary_vehicles)
-                
+
                 # Puis les véhicules secondary
                 secondary_vehicles = mapping_info.get('secondary', [])
                 alternatives.extend(secondary_vehicles)
-                
+
                 found_in_mapping = True
                 logger.debug(f"Alternatives pour {vehicle_type}: primary={primary_vehicles}, secondary={secondary_vehicles}")
                 break
-        
+
         # Si pas trouvé dans vehicle_mapping, chercher dans fallback_strategy (compatibilité)
         if not found_in_mapping:
             fallback_strategy = self.vehicles_mapping.get("fallback_strategy", {})
             if vehicle_type in fallback_strategy:
                 fallback = fallback_strategy[vehicle_type]
-                
+
                 if "priority_order" in fallback:
                     alternatives.extend(fallback["priority_order"])
-                
+
                 if "if_unavailable" in fallback:
                     for alt_type in fallback["if_unavailable"]:
                         alt_vehicles = self._map_requirement_to_vehicles(alt_type)
                         alternatives.extend(alt_vehicles)
-        
+
         # Supprimer les doublons en gardant l'ordre de priorité
         seen = set()
         unique_alternatives = []
@@ -555,26 +548,26 @@ class RequirementParser:
             if alt not in seen:
                 seen.add(alt)
                 unique_alternatives.append(alt)
-        
+
         return unique_alternatives
 
     def analyze_mission_complexity(self, requirements: List[MissionRequirement]) -> Dict[str, any]:
         """Analyse la complexité d'une mission basée sur ses exigences"""
         if not requirements:
             return {"complexity": "simple", "score": 0, "categories": []}
-        
+
         # Calculer le score de complexité
         complexity_score = 0
         categories = set()
-        
+
         for req in requirements:
             complexity_score += req.quantity
-            
+
             # Identifier la catégorie du véhicule
             category = self._identify_vehicle_category(req.vehicle_type)
             if category:
                 categories.add(category)
-        
+
         # Déterminer le niveau de complexité
         if complexity_score <= 3:
             complexity_level = "simple"
@@ -584,7 +577,7 @@ class RequirementParser:
             complexity_level = "complex"
         else:
             complexity_level = "major_incident"
-        
+
         return {
             "complexity": complexity_level,
             "score": complexity_score,
@@ -592,31 +585,31 @@ class RequirementParser:
             "total_vehicles": complexity_score,
             "unique_types": len(set(req.vehicle_type for req in requirements))
         }
-    
+
     def _map_requirement_to_vehicles(self, requirement_type: str) -> List[str]:
         """Mappe un type de besoin vers les véhicules réels"""
         if not self.vehicles_mapping.get("vehicle_mapping"):
             return [requirement_type]  # Fallback
-        
+
         # Chercher dans toutes les catégories
         vehicle_types = []
-        
+
         for category, mappings in self.vehicles_mapping["vehicle_mapping"].items():
             if requirement_type in mappings:
                 mapping = mappings[requirement_type]
-                
+
                 # Prioriser les véhicules primaires
                 if "primary" in mapping:
                     vehicle_types.extend(mapping["primary"])
-                
+
                 # Ajouter les secondaires si nécessaire
                 if "secondary" in mapping and not vehicle_types:
                     vehicle_types.extend(mapping["secondary"])
-        
+
         # Si pas de mapping trouvé, essayer une correspondance directe
         if not vehicle_types:
             vehicle_types = [requirement_type]
-        
+
         # Supprimer les doublons tout en préservant l'ordre
         seen = set()
         unique_types = []
@@ -624,17 +617,17 @@ class RequirementParser:
             if vtype not in seen:
                 seen.add(vtype)
                 unique_types.append(vtype)
-        
+
         return unique_types
-    
+
     def _identify_vehicle_category(self, vehicle_type: str) -> Optional[str]:
         """Identifie la catégorie d'un véhicule"""
         if not self.vehicles_mapping.get("vehicle_mapping"):
             return None
-        
+
         for category, mappings in self.vehicles_mapping["vehicle_mapping"].items():
             for req_type, mapping in mappings.items():
                 if vehicle_type in mapping.get("primary", []) or vehicle_type in mapping.get("secondary", []):
                     return category
-        
+
         return None

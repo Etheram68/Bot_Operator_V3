@@ -5,7 +5,7 @@ Factory optimisée pour la création et mise en cache de patterns regex.
 import re
 import threading
 import time
-from typing import Dict, List, Pattern, Optional, Set
+from typing import Dict, List, Pattern, Optional
 from dataclasses import dataclass
 from loguru import logger
 

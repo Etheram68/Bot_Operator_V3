@@ -7,32 +7,31 @@ from loguru import logger
 from ..models.vehicle import Vehicle, VehicleStatus
 from ..models.mission import Mission, MissionType
 from ..utils.dom_utils import DOMUtils
-from ..utils.simple_cache import cache_result
 
 
 class VehicleScraper:
     """
     Scraper spécialisé pour la gestion des véhicules d'urgence.
-    
+
     Permet d'extraire les informations des véhicules disponibles,
     de les sélectionner et de les déployer sur les missions.
-    
+
     Attributes:
         page: Page web Playwright
         dom_utils: Utilitaires pour la manipulation du DOM
     """
-    
+
     def __init__(self, page: Page):
         self.page = page
         self.dom_utils = DOMUtils(page)
-    
+
     def _get_vehicle_table_selector(self, mission_type: MissionType) -> str:
         """
         Retourne le sélecteur CSS du tableau de véhicules approprié.
-        
+
         Args:
             mission_type: Type de mission (transport ou autre)
-            
+
         Returns:
             str: Sélecteur CSS du tableau de véhicules
         """
@@ -40,7 +39,7 @@ class VehicleScraper:
             return "#vehicle_show_table_body_rett"
         else:
             return "#vehicle_show_table_all"
-    
+
     async def get_available_vehicles_for_mission(self, mission: Mission) -> List[Vehicle]:
         """
         Récupère tous les véhicules disponibles pour une mission spécifique.
@@ -108,7 +107,7 @@ class VehicleScraper:
             logger.error(f"Erreur lors de la récupération des véhicules: {e}")
 
         return vehicles
-    
+
     async def _load_all_vehicles(self) -> None:
         """
         Charge tous les véhicules manquants depuis le serveur.
@@ -171,19 +170,19 @@ class VehicleScraper:
 
         except Exception as e:
             logger.warning(f"Erreur lors du chargement des véhicules manquants: {e}")
-    
+
     async def _scrape_vehicles_from_table(self) -> List[Vehicle]:
         """
         Extrait tous les véhicules depuis le tableau principal.
-        
+
         Analyse toutes les lignes du tableau des véhicules disponibles
         et extrait leurs informations complètes.
-        
+
         Returns:
             List[Vehicle]: Liste complète des véhicules extraits du tableau
         """
         vehicles = []
-        
+
         try:
             # Récupérer toutes les lignes de véhicules
             vehicle_rows = await self.page.query_selector_all("#vehicle_show_table_all tr[id^='vehicle_element_content_']")
@@ -203,25 +202,25 @@ class VehicleScraper:
 
         except Exception as e:
             logger.error(f"Erreur lors du scraping du tableau des véhicules: {e}")
-        
+
         return vehicles
-    
+
     async def _scrape_closest_vehicles_from_table(self, table_selector: str) -> List[Vehicle]:
         """
         Extrait uniquement les véhicules visibles les plus proches.
-        
+
         Récupère seulement les véhicules déjà affichés dans le tableau
         sans déclencher le chargement des véhicules plus éloignés.
         Cette approche optimise les performances en priorisant la proximité.
-        
+
         Args:
             table_selector: Sélecteur CSS du tableau de véhicules à analyser
-            
+
         Returns:
             List[Vehicle]: Liste des véhicules les plus proches disponibles
         """
         vehicles = []
-        
+
         try:
             # Récupérer les lignes de véhicules visibles (les plus proches sont affichés en premier)
             vehicle_rows = await self.page.query_selector_all(f"{table_selector} tr[id^='vehicle_element_content_']")
@@ -243,19 +242,19 @@ class VehicleScraper:
 
         except Exception as e:
             logger.error(f"Erreur lors du scraping des véhicules proches: {e}")
-        
+
         return vehicles
-    
+
     async def _extract_vehicle_from_row(self, row) -> Optional[Vehicle]:
         """
         Extrait les informations complètes d'un véhicule depuis une ligne.
-        
+
         Analyse une ligne du tableau HTML pour extraire l'ID, le type,
         la disponibilité et les informations complémentaires d'un véhicule.
-        
+
         Args:
             row: Élément HTML représentant une ligne du tableau de véhicules
-            
+
         Returns:
             Optional[Vehicle]: Objet Vehicle avec toutes les informations
                               extraites, ou None si l'extraction échoue
@@ -265,19 +264,19 @@ class VehicleScraper:
             row_id = await row.get_attribute("id")
             if not row_id:
                 return None
-                
+
             vehicle_id = row_id.replace("vehicle_element_content_", "")
-            
+
             # Extraire le nom du véhicule
             vehicle_caption = await row.get_attribute("vehicle_caption")
             if not vehicle_caption:
                 return None
-            
+
             # Extraire le type depuis vehicle_caption : "FS 1 Brunstatt" -> "FS"
             vehicle_type = vehicle_caption.split()[0] if vehicle_caption else None
             if not vehicle_type:
                 return None
-            
+
             # Vérifier la disponibilité via la checkbox
             checkbox = await row.query_selector(".vehicle_checkbox")
             try:
@@ -290,7 +289,7 @@ class VehicleScraper:
             location = await self._extract_vehicle_location(row)
             fuel_level = await self._extract_fuel_level(row)
             condition = await self._extract_vehicle_condition(row)
-            
+
             vehicle = Vehicle(
                 id=vehicle_id,
                 caption=vehicle_caption,
@@ -300,24 +299,24 @@ class VehicleScraper:
                 fuel_level=fuel_level,
                 condition=condition
             )
-            
+
             logger.debug(f"Véhicule extrait: {vehicle.caption} -> Type: {vehicle.type}")
             return vehicle
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction du véhicule: {e}")
             return None
-    
+
     async def _extract_vehicle_location(self, row) -> Optional[str]:
         """
         Extrait la localisation géographique du véhicule.
-        
+
         Recherche dans les cellules de la ligne une information de localisation
         au format code postal + nom de ville (ex: "68100 Mulhouse").
-        
+
         Args:
             row: Élément HTML représentant une ligne du tableau de véhicules
-            
+
         Returns:
             Optional[str]: Localisation du véhicule ou None si non trouvée
         """
@@ -337,20 +336,20 @@ class VehicleScraper:
 
         except Exception as e:
             logger.debug(f"Erreur lors de l'extraction de la localisation: {e}")
-        
+
         return None
-    
+
     async def _extract_fuel_level(self, row) -> Optional[int]:
         """
         Extrait le niveau de carburant du véhicule en pourcentage.
-        
+
         Recherche les indicateurs visuels de niveau de carburant (barres
         de progression, attributs aria-valuenow, styles CSS avec width)
         pour déterminer le niveau actuel.
-        
+
         Args:
             row: Élément HTML représentant une ligne du tableau de véhicules
-            
+
         Returns:
             Optional[int]: Niveau de carburant en pourcentage (0-100)
                           ou 100 par défaut si non trouvé
@@ -378,19 +377,19 @@ class VehicleScraper:
 
         except Exception as e:
             logger.debug(f"Erreur lors de l'extraction du niveau de carburant: {e}")
-        
+
         return 100  # Par défaut
-    
+
     async def _extract_vehicle_condition(self, row) -> Optional[str]:
         """
         Extrait l'état de condition du véhicule.
-        
+
         Recherche les badges ou indicateurs d'état pour déterminer
         la condition générale du véhicule (excellent, bon, moyen, etc.).
-        
+
         Args:
             row: Élément HTML représentant une ligne du tableau de véhicules
-            
+
         Returns:
             Optional[str]: État du véhicule en anglais standardisé
                           (excellent, good, average, poor, maintenance, repair)
@@ -424,9 +423,9 @@ class VehicleScraper:
 
         except Exception as e:
             logger.debug(f"Erreur lors de l'extraction de l'état: {e}")
-        
+
         return "excellent"  # Par défaut
-    
+
     async def select_vehicles(self, vehicle_ids: List[str]) -> bool:
         """Sélectionne les véhicules spécifiés par leurs IDs"""
         try:
@@ -454,7 +453,7 @@ class VehicleScraper:
         except Exception as e:
             logger.error(f"Erreur lors de la sélection des véhicules: {e}")
             return False
-    
+
     async def deploy_selected_vehicles(self, use_next_button: bool = False) -> bool:
         """Déploie les véhicules sélectionnés"""
         deploy_button = None
@@ -477,9 +476,9 @@ class VehicleScraper:
             logger.info("Véhicules déployés avec succès")
 
             try:
-                await self.page.wait_for_load_state('networkidle', timeout=5000)
+                await self.page.wait_for_load_state('domcontentloaded', timeout=5000)
             except Exception:
-                await self.page.wait_for_load_state('domcontentloaded', timeout=3000)
+                pass
 
             return True
 
@@ -492,7 +491,7 @@ class VehicleScraper:
                     await deploy_button.dispose()
                 except Exception:
                     pass
-    
+
     async def get_selected_vehicle_count(self) -> int:
         """Retourne le nombre de véhicules actuellement sélectionnés (via JS, zéro fuite)"""
         try:
@@ -502,7 +501,7 @@ class VehicleScraper:
         except Exception as e:
             logger.error(f"Erreur lors du comptage des véhicules sélectionnés: {e}")
             return 0
-    
+
     async def vehicle_needs(self, vehicle_needs: dict, alternatives_mapping: dict = None, mission_type: MissionType = None, mission: 'Mission' = None, alert_override_types: set = None, constrained_vehicles: set = None, constrained_alternatives: dict = None) -> tuple[int, int]:
         """Sélectionne les véhicules les plus proches par type en utilisant le système d'alternatives
 
@@ -532,14 +531,13 @@ class VehicleScraper:
             if constrained_alternatives:
                 logger.info(f"🔄 Alternatives par capacité disponibles: {constrained_alternatives}")
             adjusted_vehicle_needs = self._adjust_vehicle_needs(vehicle_needs, deployed_by_type, alternatives_mapping, alert_override_types, en_route_by_type)
-            
+
             # Si tous les besoins sont déjà satisfaits, ne rien faire
             if not adjusted_vehicle_needs:
                 logger.info("🎉 Tous les besoins sont déjà satisfaits ! Aucun véhicule supplémentaire nécessaire.")
                 return (-1, 0)  # Code spécial pour indiquer que tous les besoins sont déjà satisfaits
-            
+
             # Vérifier d'abord si la mission est terminée (JS pour éviter fuite ElementHandle)
-            mission_complete_selector = ".mission-success"
             is_mission_complete = await self.page.evaluate(
                 'document.querySelector(".mission-success") !== null'
             )
@@ -564,7 +562,7 @@ class VehicleScraper:
                 else:
                     # Vraie erreur de timeout
                     raise e
-            
+
             # Préparer les compteurs avec gestion d'alternatives (utiliser adjusted_vehicle_needs)
             selected_counts = {}
             alternatives_used = {}  # Track quelles alternatives ont été utilisées
@@ -603,7 +601,7 @@ class VehicleScraper:
             logger.info(f"Sélection parmi {len(vehicle_infos)} véhicules visibles (triés par proximité)")
 
             logger.debug(f"📋 {len(vehicle_infos)} véhicules analysés via JS bulk")
-            
+
             # Trier les véhicules par priorité (primary avant secondary)
             prioritized_vehicle_infos = self._prioritize_vehicles_by_alternatives(vehicle_infos, adjusted_vehicle_needs, alternatives_mapping)
 
@@ -671,20 +669,20 @@ class VehicleScraper:
                 except Exception as e:
                     logger.warning(f"Erreur lors de la sélection d'un véhicule: {e}")
                     continue
-            
+
             # Vérifier si tous les besoins ajustés sont satisfaits
             unsatisfied_needs = {}
             for vtype, needed in adjusted_vehicle_needs.items():
                 selected = selected_counts.get(vtype, 0)
                 if selected < needed:
                     unsatisfied_needs[vtype] = needed - selected
-            
+
             # Si des besoins ne sont pas satisfaits, essayer de charger plus de véhicules
             if unsatisfied_needs:
                 logger.warning(f"⚠️ Besoins non satisfaits: {unsatisfied_needs}. Tentative de chargement de véhicules supplémentaires...")
                 additional_selected = await self._load_and_select_additional_vehicles(unsatisfied_needs, selected_counts, alternatives_mapping, table_selector, mission)
                 total_selected += additional_selected
-                
+
                 # Mettre à jour les compteurs
                 if additional_selected > 0:
                     # Re-compter via JS (évite création de handles)
@@ -698,7 +696,7 @@ class VehicleScraper:
             final_count = await self.page.evaluate(
                 'document.querySelectorAll(".vehicle_checkbox:checked").length'
             )
-            
+
             # Afficher les besoins originaux vs ajustés vs sélectionnés
             for vtype, original_needed in vehicle_needs.items():
                 # Pour les types d'alerte: seuls les en route comptent comme "déjà couverts"
@@ -720,29 +718,29 @@ class VehicleScraper:
                 adjusted_needed = adjusted_vehicle_needs.get(vtype, 0)
                 selected = selected_counts.get(vtype, 0)
                 total_satisfied = already_deployed + selected
-                
+
                 status = "✅" if total_satisfied >= original_needed else "❌"
                 used_alternatives = alternatives_used.get(vtype, [])
                 alternatives_str = f" (via: {', '.join(set(used_alternatives))})" if used_alternatives else ""
-                
+
                 if already_deployed > 0:
                     logger.info(f"  {status} {vtype}: {total_satisfied}/{original_needed} (déjà: {already_deployed}, ajouté: {selected}){alternatives_str}")
                 else:
                     logger.info(f"  {status} {vtype}: {selected}/{original_needed}{alternatives_str}")
-            
+
             # Calculer le nombre de véhicules manquants (basé sur les besoins ajustés)
             total_missing = 0
             for vtype, adjusted_needed in adjusted_vehicle_needs.items():
                 selected = selected_counts.get(vtype, 0)
                 missing = max(0, adjusted_needed - selected)
                 total_missing += missing
-                
+
             # Log détaillé pour debug
-            logger.debug(f"📊 Debug comptage:")
+            logger.debug("📊 Debug comptage:")
             logger.debug(f"   • Besoins ajustés: {adjusted_vehicle_needs}")
             logger.debug(f"   • Véhicules sélectionnés: {selected_counts}")
             logger.debug(f"   • Manquants calculés: {total_missing}")
-            
+
             logger.info(f"📊 Résumé final: {final_count} sélectionnés, {total_missing} manquants")
 
             return (final_count, total_missing)
@@ -751,7 +749,7 @@ class VehicleScraper:
             logger.error(f"Erreur lors de la sélection des véhicules proches: {e}")
             total_missing = sum(vehicle_needs.values()) if vehicle_needs else 0
             return (0, total_missing)
-    
+
     async def _get_already_deployed_vehicles(self) -> List[str]:
         """
         Récupère la liste des IDs des véhicules déjà mobilisés.
@@ -827,7 +825,7 @@ class VehicleScraper:
             logger.warning(f"Erreur lors de la récupération des véhicules déployés: {e}")
 
         return excluded_vehicle_ids
-    
+
     async def _get_already_deployed_vehicles_by_type(self) -> dict:
         """
         Comptabilise les véhicules déployés par type de véhicule.
@@ -874,7 +872,7 @@ class VehicleScraper:
             logger.warning(f"Erreur lors du comptage des véhicules déployés par type: {e}")
 
         return deployed_by_type
-    
+
     async def _get_driving_vehicle_rows(self):
         """
         Utilitaire pour récupérer les lignes des véhicules en cours de déplacement.
@@ -963,7 +961,7 @@ class VehicleScraper:
         except Exception as e:
             logger.debug(f"Erreur _get_driving_vehicle_types_js: {e}")
             return []
-    
+
     async def _get_vehicles_en_route_only_by_type(self) -> dict:
         """
         Comptabilise uniquement les véhicules EN ROUTE vers la mission par type.
@@ -985,7 +983,7 @@ class VehicleScraper:
             logger.warning(f"Erreur lors du comptage des véhicules en route par type: {e}")
 
         return vehicles_en_route_by_type
-    
+
     def _adjust_vehicle_needs(self, original_needs: dict, deployed_by_type: dict, alternatives_mapping: dict = None, alert_override_types: set = None, en_route_by_type: dict = None) -> dict:
         """
         Ajuste les besoins en véhicules selon les déploiements existants.
@@ -1036,13 +1034,13 @@ class VehicleScraper:
                 else:
                     logger.info(f"✅ {vehicle_type} (alerte): besoin {needed_count} déjà satisfait par {en_route_count} véhicules en route")
                 continue
-            
+
             # Compter les véhicules déployés qui peuvent satisfaire ce besoin
             already_deployed = 0
-            
+
             # D'abord vérifier le type exact
             already_deployed += deployed_by_type.get(vehicle_type, 0)
-            
+
             # Ensuite vérifier les alternatives si disponibles
             if alternatives_mapping and vehicle_type in alternatives_mapping:
                 # D'abord compter les véhicules primaires déployés
@@ -1051,50 +1049,50 @@ class VehicleScraper:
                 for alt_type in alternatives:
                     if alt_type != vehicle_type:  # éviter de compter deux fois le même type
                         primary_deployed += deployed_by_type.get(alt_type, 0)
-                
+
                 already_deployed = primary_deployed
-                    
+
                 # Vérifier aussi les alternatives secondaires seulement si les primaires ne suffisent pas
                 if already_deployed < needed_count:
                     alternatives = alternatives_mapping[vehicle_type].get('secondary', [])
                     for alt_type in alternatives:
                         already_deployed += deployed_by_type.get(alt_type, 0)
-            
+
             remaining_need = max(0, needed_count - already_deployed)
-            
+
             if remaining_need > 0:
                 adjusted_needs[vehicle_type] = remaining_need
                 logger.debug(f"🎯 {vehicle_type}: besoin {needed_count} - déployé {already_deployed} = restant {remaining_need}")
             else:
                 logger.debug(f"✅ {vehicle_type}: besoin {needed_count} déjà satisfait par {already_deployed} véhicules déployés")
-        
+
         if adjusted_needs:
             logger.info(f"🔄 Besoins ajustés: {adjusted_needs}")
         else:
             logger.info("🎉 Tous les besoins sont déjà satisfaits par les véhicules déployés !")
-        
+
         return adjusted_needs
-    
+
     def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, mission: 'Mission' = None, constrained_vehicles: set = None, constrained_alternatives: dict = None):
         """
         Détermine si un véhicule peut satisfaire un besoin spécifique.
-        
+
         Vérifie d'abord une correspondance directe, puis explore les
         alternatives primaires et secondaires. Adapte le mapping pour
         les transferts interhospitaliers.
-        
+
         Args:
             vehicle_type: Type du véhicule candidat
             vehicle_needs: Besoins restants par type de véhicule
             selected_counts: Nombre de véhicules déjà sélectionnés par type
             alternatives_mapping: Mapping des alternatives possibles
             mission: Mission courante pour adaptation contextuelle
-            
+
         Returns:
             tuple: (type_besoin, quantité_nécessaire, déjà_sélectionné)
                    ou None si aucune correspondance
         """
-        
+
         # Vérifier si c'est un transfert interhospitalier et adapter le mapping pour AMBULANCE
         is_hospital_transfer = mission and mission.title and "Transfert interhospitalier" in mission.title
         if is_hospital_transfer and alternatives_mapping:
@@ -1108,17 +1106,17 @@ class VehicleScraper:
                     ambulance_mapping['secondary'] = []  # Pas de fallback pour les transferts
                     alternatives_mapping['AMBULANCE'] = ambulance_mapping
                     logger.debug(f"🚑 Transfert interhospitalier détecté: utilisation des véhicules transport_capable pour AMBULANCE: {ambulance_mapping['transport_capable']}")
-        
+
         constrained_vehicles = constrained_vehicles or set()
         constrained_alternatives = constrained_alternatives or {}
-        
+
         # D'abord vérifier la correspondance directe
         if vehicle_type in vehicle_needs:
             needed_count = vehicle_needs[vehicle_type]
             already_selected = selected_counts.get(vehicle_type, 0)
             if needed_count > already_selected:
                 return (vehicle_type, needed_count, already_selected)
-        
+
         # Vérifier si ce vehicle_type est une alternative par capacité pour un véhicule contraint
         for constrained_vehicle, alternatives in constrained_alternatives.items():
             if vehicle_type in alternatives and constrained_vehicle in vehicle_needs:
@@ -1127,7 +1125,7 @@ class VehicleScraper:
                 if needed_count > already_selected:
                     logger.info(f"🔄 Utilisation de {vehicle_type} comme alternative à {constrained_vehicle}")
                     return (constrained_vehicle, needed_count, already_selected)
-        
+
         # Si pas de correspondance directe, vérifier les alternatives
         # MAIS seulement si le véhicule demandé n'a pas de contraintes de capacité
         if alternatives_mapping:
@@ -1139,14 +1137,14 @@ class VehicleScraper:
                     if need_type in constrained_vehicles:
                         logger.debug(f"🔒 {need_type} a des contraintes - pas d'alternatives permises")
                         continue  # Passer ce besoin - seul le véhicule exact peut le satisfaire
-                    
+
                     # Vérifier si ce vehicle_type peut satisfaire ce need_type via primary
                     alternatives = alternatives_mapping.get(need_type, {})
                     primary_alternatives = alternatives.get('primary', [])
-                    
+
                     if vehicle_type in primary_alternatives:
                         return (need_type, needed_count, already_selected)
-            
+
             # DEUXIÈME PASSE: vérifier les alternatives SECONDAIRES seulement si aucun primaire trouvé
             for need_type, needed_count in vehicle_needs.items():
                 already_selected = selected_counts.get(need_type, 0)
@@ -1155,14 +1153,14 @@ class VehicleScraper:
                     if need_type in constrained_vehicles:
                         logger.debug(f"🔒 {need_type} a des contraintes - pas d'alternatives secondaires permises")
                         continue  # Passer ce besoin - seul le véhicule exact peut le satisfaire
-                    
+
                     # Vérifier si ce vehicle_type peut satisfaire ce need_type via secondary
                     alternatives = alternatives_mapping.get(need_type, {})
                     secondary_alternatives = alternatives.get('secondary', [])
-                    
+
                     if vehicle_type in secondary_alternatives:
                         return (need_type, needed_count, already_selected)
-        
+
         return None
 
     def _prioritize_vehicles_by_alternatives(self, vehicle_infos: list, vehicle_needs: dict, alternatives_mapping: dict = None) -> list:
@@ -1224,23 +1222,23 @@ class VehicleScraper:
     async def _load_and_select_additional_vehicles(self, unsatisfied_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, table_selector: str = None, mission: 'Mission' = None) -> int:
         """
         Charge tous les véhicules disponibles et sélectionne ceux manquants.
-        
+
         Déclenche le chargement complet des véhicules (y compris éloignés)
         puis sélectionne automatiquement ceux nécessaires pour satisfaire
         les besoins non comblés par la sélection initiale.
-        
+
         Args:
             unsatisfied_needs: Besoins restants par type de véhicule
             selected_counts: Compteur des véhicules déjà sélectionnés (mis à jour)
             alternatives_mapping: Mapping des alternatives possibles
             table_selector: Sélecteur du tableau de véhicules
             mission: Mission courante pour adaptation contextuelle
-            
+
         Returns:
             int: Nombre de véhicules supplémentaires sélectionnés
         """
         additional_selected = 0
-        
+
         try:
             logger.info("📡 Chargement ciblé de véhicules supplémentaires...")
 
@@ -1349,25 +1347,25 @@ class VehicleScraper:
             # ÉTAPE 6: Rapport final
             if working_unsatisfied_needs:
                 logger.warning(f"⚠️ Besoins restants après chargement complet: {working_unsatisfied_needs}")
-            
+
             logger.info(f"📊 Véhicules supplémentaires sélectionnés: {additional_selected}")
             return additional_selected
 
         except Exception as global_error:
             logger.error(f"Erreur globale dans _load_and_select_additional_vehicles: {global_error}")
-            
+
             # Debug complet pour identifier le problème
             logger.debug("🔬 DEBUG COMPLET:")
             logger.debug(f"  - Type unsatisfied_needs: {type(unsatisfied_needs)} -> {unsatisfied_needs}")
             logger.debug(f"  - Type selected_counts: {type(selected_counts)} -> {selected_counts}")
             logger.debug(f"  - Type alternatives_mapping: {type(alternatives_mapping)}")
             logger.debug(f"  - table_selector: {table_selector}")
-            
+
             if 'safe_alternatives' in locals():
                 logger.debug(f"  - Type safe_alternatives: {type(safe_alternatives)}")
             if 'working_unsatisfied_needs' in locals():
                 logger.debug(f"  - Type working_unsatisfied_needs: {type(working_unsatisfied_needs)}")
-            
+
             import traceback
             logger.debug(f"  - Traceback complet: {traceback.format_exc()}")
 
@@ -1382,29 +1380,28 @@ class VehicleScraper:
             if element is None:
                 logger.debug(f"❌ Élément {index} est None")
                 return False
-            
+
             if isinstance(element, dict):
                 logger.warning(f"❌ Élément {index} est un dictionnaire: {element}")
                 return False
-            
+
             if isinstance(element, (str, int, float, list, tuple)):
                 logger.warning(f"❌ Élément {index} est un type primitif: {type(element)}")
                 return False
-            
+
             # Vérification des méthodes Playwright
             required_methods = ['get_attribute', 'query_selector', 'is_visible']
             for method_name in required_methods:
                 if not hasattr(element, method_name):
                     logger.warning(f"❌ Élément {index} manque la méthode '{method_name}'")
                     return False
-            
+
             return True
-            
+
         except Exception as e:
             logger.warning(f"❌ Erreur validation élément {index}: {e}")
             return False
-    
-    
+
     def _create_safe_alternatives_mapping(self, alternatives_mapping: dict, mission) -> dict:
         """
         Crée une copie complètement isolée et sécurisée du mapping d'alternatives
@@ -1412,7 +1409,7 @@ class VehicleScraper:
         try:
             if not alternatives_mapping or not isinstance(alternatives_mapping, dict):
                 return {}
-            
+
             # Copie profonde du mapping
             safe_mapping = {}
             for key, value in alternatives_mapping.items():
@@ -1420,15 +1417,15 @@ class VehicleScraper:
                     safe_mapping[key] = value.copy()
                 else:
                     safe_mapping[key] = value
-            
+
             # Adaptation pour transferts interhospitaliers
             is_hospital_transfer = (
-                mission and 
-                hasattr(mission, 'title') and 
-                mission.title and 
+                mission and
+                hasattr(mission, 'title') and
+                mission.title and
                 "Transfert interhospitalier" in mission.title
             )
-            
+
             if is_hospital_transfer and 'AMBULANCE' in safe_mapping:
                 try:
                     ambulance_data = safe_mapping['AMBULANCE']
@@ -1439,17 +1436,16 @@ class VehicleScraper:
                             'secondary': []
                         }
                         safe_mapping['AMBULANCE'] = new_ambulance_mapping
-                        logger.debug(f"🚑 Mapping transfert adapté pour AMBULANCE")
+                        logger.debug("🚑 Mapping transfert adapté pour AMBULANCE")
                 except Exception as mapping_error:
                     logger.warning(f"⚠️ Erreur adaptation mapping AMBULANCE: {mapping_error}")
-            
+
             return safe_mapping
-            
+
         except Exception as e:
             logger.error(f"❌ Erreur création safe_alternatives_mapping: {e}")
             return {}
-    
-    
+
     async def _safe_extract_vehicle_data(self, dom_element, index: int) -> Optional[tuple]:
         """
         Extraction ultra-sécurisée des données véhicule avec validation à chaque étape
@@ -1458,31 +1454,30 @@ class VehicleScraper:
             # Double vérification avant extraction
             if not self._validate_dom_element(dom_element, index):
                 return None
-            
+
             # Extraction de l'attribut vehicle_caption
             vehicle_caption = await dom_element.get_attribute("vehicle_caption")
             if not vehicle_caption or not isinstance(vehicle_caption, str):
                 logger.debug(f"⚠️ Véhicule {index}: caption invalide")
                 return None
-            
+
             # Extraction du type de véhicule
             caption_parts = vehicle_caption.strip().split()
             if not caption_parts:
                 logger.debug(f"⚠️ Véhicule {index}: caption vide après split")
                 return None
-            
+
             vehicle_type = caption_parts[0]
             if not vehicle_type:
                 logger.debug(f"⚠️ Véhicule {index}: type vide")
                 return None
-            
+
             return (vehicle_caption, vehicle_type)
-            
+
         except Exception as e:
             logger.debug(f"⚠️ Erreur extraction véhicule {index}: {e}")
             return None
-    
-    
+
     def _find_need_match_safe(self, vehicle_type: str, unsatisfied_needs: dict, safe_alternatives: dict) -> Optional[str]:
         """
         Recherche de correspondance PURE (sans objets DOM) entre type véhicule et besoins
@@ -1491,52 +1486,51 @@ class VehicleScraper:
             # Validation des paramètres d'entrée
             if not isinstance(vehicle_type, str) or not vehicle_type.strip():
                 return None
-            
+
             if not isinstance(unsatisfied_needs, dict):
                 logger.warning(f"⚠️ unsatisfied_needs n'est pas un dict: {type(unsatisfied_needs)}")
                 return None
-            
+
             if not isinstance(safe_alternatives, dict):
                 logger.debug(f"⚠️ safe_alternatives n'est pas un dict: {type(safe_alternatives)}")
                 safe_alternatives = {}
-            
+
             # 1. Correspondance directe
             if vehicle_type in unsatisfied_needs and unsatisfied_needs[vehicle_type] > 0:
                 return vehicle_type
-            
+
             # 2. Correspondance via alternatives primaires
             for need_type, needed_count in unsatisfied_needs.items():
                 if needed_count <= 0:
                     continue
-                
+
                 alternatives_data = safe_alternatives.get(need_type)
                 if not isinstance(alternatives_data, dict):
                     continue
-                
+
                 primary_alternatives = alternatives_data.get('primary', [])
                 if isinstance(primary_alternatives, list) and vehicle_type in primary_alternatives:
                     return need_type
-            
+
             # 3. Correspondance via alternatives secondaires
             for need_type, needed_count in unsatisfied_needs.items():
                 if needed_count <= 0:
                     continue
-                
+
                 alternatives_data = safe_alternatives.get(need_type)
                 if not isinstance(alternatives_data, dict):
                     continue
-                
+
                 secondary_alternatives = alternatives_data.get('secondary', [])
                 if isinstance(secondary_alternatives, list) and vehicle_type in secondary_alternatives:
                     return need_type
-            
+
             return None
-            
+
         except Exception as e:
             logger.warning(f"⚠️ Erreur recherche correspondance pour {vehicle_type}: {e}")
             return None
-    
-    
+
     async def _attempt_vehicle_selection(self, dom_element, vehicle_caption: str, need_type: str) -> bool:
         """
         Tentative de sélection d'un véhicule avec toutes les vérifications de sécurité
@@ -1580,16 +1574,15 @@ class VehicleScraper:
                     await checkbox.dispose()
                 except Exception:
                     pass
-            
-    
+
     async def _extract_vehicle_basic_info(self, row, index: int) -> Optional[tuple]:
         """
         Extrait les informations de base d'un véhicule en parallèle.
-        
+
         Args:
             row: Element DOM de la ligne véhicule
             index: Index pour debug
-            
+
         Returns:
             tuple: (row, vehicle_type, vehicle_caption) ou None si erreur
         """
@@ -1598,14 +1591,14 @@ class VehicleScraper:
             vehicle_caption = await row.get_attribute("vehicle_caption")
             if not vehicle_caption:
                 return None
-                
+
             # Extraire le type : "FS 1 Brunstatt" -> "FS"
             vehicle_type = vehicle_caption.split()[0] if vehicle_caption else None
             if not vehicle_type:
                 return None
-            
+
             return (row, vehicle_type, vehicle_caption)
-            
+
         except Exception as e:
             logger.debug(f"Erreur extraction véhicule {index}: {e}")
             return None

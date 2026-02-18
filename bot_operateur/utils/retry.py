@@ -1,5 +1,5 @@
 import asyncio
-from typing import Callable, Any, TypeVar
+from typing import Callable, TypeVar
 from loguru import logger
 
 from ..config.settings import Settings
@@ -71,7 +71,7 @@ class RetryHandler:
         # Relancer la dernière exception si toutes les tentatives échouent
         if last_exception:
             raise last_exception
-    
+
     async def execute_with_timeout(
         self,
         func: Callable[[], T],
@@ -87,16 +87,16 @@ class RetryHandler:
                 async def wrapper():
                     return func()
                 result = await asyncio.wait_for(wrapper(), timeout=timeout)
-            
+
             return result
-            
+
         except asyncio.TimeoutError:
             logger.error(f"{description} timeout après {timeout}s")
             raise
         except Exception as e:
             logger.error(f"{description} échouée: {e}")
             raise
-    
+
     async def wait_with_retry(
         self,
         condition_func: Callable[[], bool],
@@ -106,21 +106,21 @@ class RetryHandler:
     ) -> bool:
         """Attend qu'une condition soit vraie avec retry"""
         start_time = asyncio.get_event_loop().time()
-        
+
         while asyncio.get_event_loop().time() - start_time < timeout:
             try:
                 if asyncio.iscoroutinefunction(condition_func):
                     result = await condition_func()
                 else:
                     result = condition_func()
-                
+
                 if result:
                     return True
-                    
+
             except Exception as e:
                 logger.debug(f"Erreur lors de la vérification de {description}: {e}")
-            
+
             await asyncio.sleep(check_interval)
-        
+
         logger.warning(f"Timeout lors de l'attente de {description} ({timeout}s)")
         return False

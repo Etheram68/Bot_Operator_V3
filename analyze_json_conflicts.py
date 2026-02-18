@@ -4,8 +4,6 @@ Script d'analyse des conflits et de la cohérence des fichiers JSON de configura
 """
 import json
 import re
-from collections import defaultdict
-from pathlib import Path
 
 def load_json(filepath):
     """Charge un fichier JSON"""

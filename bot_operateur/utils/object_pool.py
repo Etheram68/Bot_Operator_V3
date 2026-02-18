@@ -4,7 +4,6 @@ Pool d'objets réutilisables pour optimiser les performances.
 """
 import time
 import threading
-from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, TypeVar, Generic, Callable, Any
 from dataclasses import dataclass
 from loguru import logger

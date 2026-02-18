@@ -44,7 +44,7 @@ def setup_logger(settings: Settings) -> None:
             retention="7 days",      # Garder 7 jours d'historique
             compression="zip"        # Compression ZIP remise en place
         )
-    
+
     logger.info(f"Logger configuré - Niveau: {log_config['level']}")
     if settings.log_file:
         logger.info(f"Logs sauvegardés dans: {settings.log_file}")

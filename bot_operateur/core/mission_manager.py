@@ -1,5 +1,5 @@
 import asyncio
-import json
+import re
 from pathlib import Path
 from typing import List, Optional, Dict
 from loguru import logger
@@ -7,7 +7,6 @@ from loguru import logger
 from ..models.mission import Mission, MissionStatus
 from ..scrapers.mission_scraper import MissionScraper
 from ..scrapers.vehicle_scraper import VehicleScraper
-from ..strategies.base_strategy import BaseStrategy
 from ..strategies.smart_strategy import SmartStrategy
 from ..strategies.smart_strategy_optimized import SmartStrategyOptimized
 from ..core.browser_manager import BrowserManager
@@ -19,10 +18,10 @@ from ..services.water_pump_service import WaterPumpService
 class MissionManager:
     """
     Gestionnaire principal des missions d'urgence.
-    
+
     Coordonne le scraping des missions, leur analyse et leur déploiement
     en utilisant différentes stratégies de sélection de véhicules.
-    
+
     Attributes:
         browser_manager: Gestionnaire du navigateur web
         settings: Configuration de l'application
@@ -30,7 +29,7 @@ class MissionManager:
         vehicle_scraper: Scraper pour gérer les véhicules
         strategies: Stratégies de déploiement disponibles
     """
-    
+
     def __init__(self, browser_manager: BrowserManager, settings: Settings):
         self.browser_manager = browser_manager
         self.settings = settings
@@ -48,16 +47,15 @@ class MissionManager:
         self._consecutive_timeouts = 0
         self._max_consecutive_timeouts = 5
 
-
     async def initialize(self):
         """Initialisation asynchrone - doit être appelée après la création"""
         # Charger la configuration des besoins manquants
         self.missing_needs_config = self._load_missing_needs_config()
-    
+
     def _load_missing_needs_config(self) -> Dict:
         """
         Charge la configuration des règles de besoins manquants depuis le JSON.
-        
+
         Returns:
             Dict: Configuration chargée ou configuration par défaut en cas d'erreur
         """
@@ -83,7 +81,7 @@ class MissionManager:
                 "deduplication_rules": {},
                 "parsing_patterns": {}
             }
-        
+
     async def get_all_missions(self) -> List[Mission]:
         """
         Récupère toutes les missions disponibles depuis l'interface web.
@@ -110,24 +108,24 @@ class MissionManager:
                 raise
             logger.error(f"Erreur lors de la récupération des missions: {e}")
             return []
-    
+
     async def get_mission_details(self, mission: Mission) -> Optional[Mission]:
         """
         Enrichit une mission avec ses détails complets (patients, exigences).
-        
+
         Args:
             mission: Mission à enrichir
-            
+
         Returns:
             Mission enrichie ou None si la mission est terminée/inaccessible
         """
         logger.debug(f"Récupération des détails pour mission {mission.id}")
-        
+
         try:
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
             await self.browser_manager.page.goto(mission_url)
             await self.browser_manager.page.wait_for_load_state('domcontentloaded', timeout=5000)
-            
+
             # Cliquer sur les easter eggs saisonniers (fire-and-forget)
             asyncio.create_task(self._click_easter_egg(mission.id))
 
@@ -138,7 +136,7 @@ class MissionManager:
                 mission.patients = details.get('patients', [])
                 mission.patient_count = len(mission.patients)
                 mission.requirements = details.get('requirements', [])
-                
+
                 other_info = details.get('other_info', {})
                 if other_info.get('water_to_pump'):
                     mission.water_to_pump = other_info['water_to_pump']
@@ -147,22 +145,22 @@ class MissionManager:
                 if details.get('title'):
                     mission.title = details['title']
                     logger.debug(f"Titre mis à jour: '{mission.title}'")
-                
+
                 logger.debug(
                     f"Mission {mission.id}: {len(mission.patients)} patients, "
                     f"{len(mission.requirements)} exigences, {mission.credits} crédits"
                 )
-                
+
                 return mission
             else:
                 # Si details est None, c'est que la mission est accomplie ou invalide
                 logger.info(f"Mission {mission.id} ignorée (accomplie ou inaccessible)")
                 return None
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des détails de {mission.id}: {e}")
             return mission
-    
+
     async def _click_easter_egg(self, mission_id: str) -> None:
         """Clique sur les liens saisonniers (easter eggs) présents sur la page de mission."""
         try:
@@ -177,19 +175,19 @@ class MissionManager:
             logger.debug(f"Easter egg non cliqué pour mission {mission_id}: {e}")
 
     async def deploy_vehicles_for_mission(
-        self, 
-        mission: Mission, 
+        self,
+        mission: Mission,
         strategy_name: str = None
     ) -> bool:
         """Déploie des véhicules pour une mission selon une stratégie"""
-        
+
         strategy_name = strategy_name or self.settings.default_strategy
         strategy = self.strategies.get(strategy_name)
-        
+
         if not strategy:
             logger.error(f"Stratégie '{strategy_name}' non trouvée")
             return False
-        
+
         logger.info(f"Déploiement pour mission {mission.id} avec stratégie '{strategy_name}'")
 
         try:
@@ -197,7 +195,7 @@ class MissionManager:
             mission = await self.get_mission_details(mission)
             if not mission:
                 # Mission accomplie ou inaccessible - ne pas traiter comme un échec
-                logger.info(f"🏁 Mission ignorée (accomplie ou inaccessible)")
+                logger.info("🏁 Mission ignorée (accomplie ou inaccessible)")
                 return True  # Retourner succès car mission accomplie n'est pas un échec
 
             # Récupérer les véhicules disponibles
@@ -211,7 +209,7 @@ class MissionManager:
             if not await strategy.can_handle_mission(mission, available_vehicles):
                 logger.warning(f"Stratégie {strategy_name} ne peut pas gérer mission {mission.id}")
                 return False
-            
+
             # Sélectionner les véhicules
             selected_vehicle_ids = await strategy.select_vehicles_for_mission(mission, available_vehicles)
 
@@ -241,13 +239,13 @@ class MissionManager:
                         # Il y a des besoins mais aucun véhicule disponible pour les satisfaire
                         logger.warning(f"❌ Mission {mission.id} - besoins identifiés ({vehicle_needs}) mais aucun véhicule disponible")
                         return False
-            
+
             # Sélectionner les véhicules dans l'interface
             selection_success = await self.vehicle_scraper.select_vehicles(selected_vehicle_ids)
             if not selection_success:
                 logger.error(f"Échec de la sélection des véhicules pour mission {mission.id}")
                 return False
-            
+
             # Déployer
             deployment_success = await self.vehicle_scraper.deploy_selected_vehicles()
             if deployment_success:
@@ -259,25 +257,25 @@ class MissionManager:
             else:
                 logger.error(f"Échec du déploiement pour mission {mission.id}")
                 return False
-                
+
         except Exception as e:
             logger.error(f"Erreur lors du déploiement de mission {mission.id}: {e}")
             return False
-    
+
     async def deploy_vehicles_for_mission_optimized(
-        self, 
-        mission: Mission, 
+        self,
+        mission: Mission,
         strategy_name: str = None
     ) -> bool:
         """Déploie des véhicules pour une mission en utilisant la sélection optimisée (véhicules les plus proches)"""
-        
+
         strategy_name = strategy_name or self.settings.default_strategy
         strategy = self.strategies.get(strategy_name)
-        
+
         if not strategy:
             logger.error(f"Stratégie '{strategy_name}' non trouvée")
             return False
-        
+
         logger.info(f"🚀 Déploiement optimisé pour mission {mission.id} avec stratégie '{strategy_name}'")
 
         try:
@@ -285,12 +283,12 @@ class MissionManager:
             mission = await self.get_mission_details(mission)
             if not mission:
                 # Mission accomplie ou inaccessible - ne pas traiter comme un échec
-                logger.info(f"🏁 Mission ignorée (accomplie ou inaccessible)")
+                logger.info("🏁 Mission ignorée (accomplie ou inaccessible)")
                 return True  # Retourner succès car mission accomplie n'est pas un échec
-            
+
             # Navigation optimisée directe vers la page de déploiement (éviter 3 navigations redondantes)
             mission_url = f"https://www.operateur112.fr/missions/{mission.id}"
-            
+
             # Si on a déjà les détails de mission complets, pas besoin de re-naviguer
             if not hasattr(mission, '_deployment_ready') or not mission._deployment_ready:
                 logger.debug(f"Navigation optimisée vers mission {mission.id}")
@@ -299,8 +297,7 @@ class MissionManager:
                 mission._deployment_ready = True
             else:
                 logger.debug(f"Réutilisation de la session existante pour mission {mission.id}")
-            
-            
+
             # Calculer les besoins en véhicules selon la stratégie
             vehicle_needs = await strategy.get_vehicle_needs(mission)
 
@@ -323,18 +320,18 @@ class MissionManager:
 
             # Vérifier les véhicules manquants depuis l'alerte MÊME SI la stratégie ne trouve rien
             try:
-                missing_vehicles_needs = await self._extract_missing_vehicles_from_alert(mission)
-                
+                missing_vehicles_needs, constrained_alternatives_from_alert = await self._extract_missing_vehicles_from_alert(mission)
+
                 # Recouper les véhicules manquants avec les besoins existants
                 alert_override_types = set()
                 if missing_vehicles_needs:
                     logger.info(f"🚨   Besoins manquants (alerte): {missing_vehicles_needs}")
                     for vehicle_type, alert_quantity in missing_vehicles_needs.items():
                         original_quantity = vehicle_needs.get(vehicle_type, 0)
-                        
+
                         # Marquer ce type comme provenant de l'alerte (pour override)
                         alert_override_types.add(vehicle_type)
-                        
+
                         if vehicle_type in vehicle_needs:
                             # Le type existe déjà dans les besoins identifiés
                             if alert_quantity != original_quantity:
@@ -345,9 +342,9 @@ class MissionManager:
                             # Nouveau type de véhicule pas dans les conditions de réalisation
                             vehicle_needs[vehicle_type] = alert_quantity
                             logger.info(f"🆕 {vehicle_type}: ajouté {alert_quantity} (depuis alerte)")
-                    
+
                     logger.info(f"📋 Besoins finaux avec alertes: {vehicle_needs}")
-                    
+
                     # Ajouter les véhicules supplémentaires calculés pour les besoins non-véhicules (eau, personnel, etc.)
                     # Ces véhicules sont stockés dans missing_vehicles_needs mais pas encore dans vehicle_needs
                     for vehicle_key, quantity in missing_vehicles_needs.items():
@@ -361,47 +358,44 @@ class MissionManager:
                             else:
                                 vehicle_needs[vehicle_key] = vehicle_needs.get(vehicle_key, 0) + quantity
                                 logger.info(f"🆕 {vehicle_key}: ajouté {quantity} (calculé depuis besoins supplémentaires)")
-                    
+
                     # Créer la liste des véhicules avec contraintes et leurs alternatives pour le vehicle_scraper
                     constrained_vehicles = set()
                     constrained_alternatives = {}
-                    
+
                     for vehicle_key in missing_vehicles_needs.keys():
                         if vehicle_key.endswith('_CONSTRAINED'):
                             real_vehicle_type = vehicle_key.replace('_CONSTRAINED', '')
                             constrained_vehicles.add(real_vehicle_type)
-                            
-                            # Trouver les alternatives pour ce véhicule depuis additional_vehicles_info
-                            if 'additional_vehicles_info' in locals():
-                                for vehicle_info in additional_vehicles_info:
-                                    if vehicle_info['primary'] == real_vehicle_type:
-                                        constrained_alternatives[real_vehicle_type] = vehicle_info['alternatives']
-                                        logger.debug(f"🔒 {real_vehicle_type} alternatives: {vehicle_info['alternatives']}")
-                                        break
-                            
+
+                            # Trouver les alternatives pour ce véhicule depuis la réponse de l'alerte
+                            if real_vehicle_type in constrained_alternatives_from_alert:
+                                constrained_alternatives[real_vehicle_type] = constrained_alternatives_from_alert[real_vehicle_type]
+                                logger.debug(f"🔒 {real_vehicle_type} alternatives: {constrained_alternatives_from_alert[real_vehicle_type]}")
+
                             logger.debug(f"🔒 Véhicule à contraintes: {real_vehicle_type}")
-                    
+
                     if missing_vehicles_needs:
                         logger.info(f"📋 Besoins finaux avec suppléments: {vehicle_needs}")
                         if constrained_vehicles:
                             logger.info(f"🔒 Véhicules avec contraintes de capacité: {list(constrained_vehicles)}")
                             logger.info(f"🔄 Alternatives par capacité: {constrained_alternatives}")
-                
+
             except Exception as e:
                 logger.error(f"Erreur lors de l'analyse des véhicules manquants: {e}")
-            
+
             # Obtenir le mapping des alternatives depuis la stratégie
             alternatives_mapping = {}
             if hasattr(strategy, 'parser') and strategy.parser:
                 # Extraire le mapping des alternatives depuis le parser
                 vehicle_mapping = strategy.parser.vehicles_mapping.get('vehicle_mapping', {})
-                
+
                 # Combiner TOUTES les catégories de mappings
                 alternatives_mapping = {}
                 for category_name, category_mapping in vehicle_mapping.items():
                     alternatives_mapping.update(category_mapping)
                     logger.debug(f"Ajouté catégorie {category_name}: {len(category_mapping)} types au mapping des alternatives")
-            
+
             # Logique spéciale pour les missions "Transport de patient"
             logger.debug(f"🔍 Vérification du titre de mission: '{mission.title}'")
             if "Transport de patient" in mission.title:
@@ -420,7 +414,7 @@ class MissionManager:
                             "secondary": []
                         }
                         logger.debug("Utilisation du mapping AMBULANCE_TRANSPORT par défaut")
-            
+
             # Vérification finale : analyser pourquoi il n'y a pas de besoins
             if not vehicle_needs:
                 # Vérifier si la mission a des exigences mais elles sont déjà satisfaites
@@ -453,14 +447,14 @@ class MissionManager:
                     logger.info(f"✅ Mission {mission.id} - aucune exigence en véhicule requise")
                     mission.status = MissionStatus.IN_PROGRESS
                     return True
-            
+
             # Sélectionner directement les véhicules les plus proches par type avec alternatives
             # Passer alert_override_types et constrained_vehicles si définis
             alert_override_types_to_pass = alert_override_types if 'alert_override_types' in locals() else set()
             constrained_vehicles_to_pass = constrained_vehicles if 'constrained_vehicles' in locals() else set()
             constrained_alternatives_to_pass = constrained_alternatives if 'constrained_alternatives' in locals() else {}
             selected_count, missing_count = await self.vehicle_scraper.vehicle_needs(vehicle_needs, alternatives_mapping, mission.type, mission, alert_override_types_to_pass, constrained_vehicles_to_pass, constrained_alternatives_to_pass)
-            
+
             if selected_count == -1:
                 # Tous les besoins sont déjà satisfaits - c'est un succès !
                 logger.info(f"✅ Mission {mission.id} - tous les besoins déjà satisfaits")
@@ -475,18 +469,18 @@ class MissionManager:
             elif selected_count == 0:
                 logger.warning(f"❌ Aucun véhicule disponible pour satisfaire les besoins de la mission {mission.id}")
                 return False
-            
+
             # Vérifier si trop de personnel spécialisé manque selon le seuil PERSONNEL_THRESHOLD
             specialized_personnel_missing = await self._count_missing_specialized_personnel(mission)
             if specialized_personnel_missing > self.settings.personnel_threshold:
                 logger.warning(f"🚫 Mission {mission.id} - trop de personnel spécialisé manquant ({specialized_personnel_missing} > {self.settings.personnel_threshold}). Mission critique, passage à la suivante.")
                 return False
-            
+
             # Vérifier si trop de véhicules manquent selon le seuil DEPLOYMENT_THRESHOLD
             if missing_count > self.settings.deployment_threshold:
                 logger.warning(f"🚫 Mission {mission.id} - trop de véhicules manquants ({missing_count} > {self.settings.deployment_threshold}). Passage à la mission suivante.")
                 return False
-            
+
             # Déployer immédiatement
             deployment_success = await self.vehicle_scraper.deploy_selected_vehicles()
             if deployment_success:
@@ -496,7 +490,7 @@ class MissionManager:
             else:
                 logger.error(f"❌ Échec du déploiement pour mission {mission.title} ({mission.id})")
                 return False
-                
+
         except Exception as e:
             error_msg = str(e)
             if any(kw in error_msg for kw in [
@@ -509,33 +503,35 @@ class MissionManager:
             logger.error(f"Erreur lors du déploiement optimisé de mission {mission.title} ({mission.id}): {e}")
             return False
 
-
-    async def _extract_missing_vehicles_from_alert(self, mission: 'Mission') -> dict:
+    async def _extract_missing_vehicles_from_alert(self, mission: 'Mission') -> tuple[dict, dict]:
         """
         Extrait les véhicules manquants depuis la div alert-missing-vehicles.
-        
+
         Analyse l'alerte des véhicules manquants et retourne un dictionnaire
         des besoins supplémentaires. Ignore les besoins seulement si des véhicules
-        correspondants sont en route (table mission_vehicle_driving), mais 
+        correspondants sont en route (table mission_vehicle_driving), mais
         ajoute les besoins même si véhicules sur site (table mission_vehicle_at_mission).
-        
+
         Returns:
-            dict: Besoins supplémentaires {type_véhicule: quantité}
+            tuple[dict, dict]:
+                - Besoins supplémentaires {type_véhicule: quantité}
+                - Alternatives par véhicule contraint {type_véhicule: [alternatives]}
         """
         missing_vehicles_needs = {}
-        
+        constrained_alternatives_map = {}
+
         try:
             # Chercher la div d'alerte des véhicules manquants
             missing_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger.alert-missing-vehicles')
-            
+
             if not missing_alert:
                 logger.debug("Aucune alerte de véhicules manquants trouvée")
-                return missing_vehicles_needs
-            
+                return missing_vehicles_needs, constrained_alternatives_map
+
             # Récupérer seulement les véhicules EN ROUTE pour filtrage (pas ceux sur site)
             # Car les véhicules sur site peuvent remplir d'autres fonctions
             vehicles_en_route_by_type = await self.vehicle_scraper._get_vehicles_en_route_only_by_type()
-            
+
             # Chercher les div avec data-requirement-type="vehicles"
             vehicle_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="vehicles"]')
 
@@ -562,9 +558,19 @@ class MissionManager:
                             parser = RequirementParser()
 
                             for missing_item in missing_items:
-                                # Utiliser la méthode existante pour parser les exigences de véhicules
-                                # On simule un texte de mission pour utiliser le parser existant
-                                simulated_text = f"Exigences de véhicules et du personnel {missing_item} requis"
+                                # Extraire la quantité du début de l'item AVANT de passer au parser.
+                                # Format de l'alerte : "N NomDuVéhicule" (ex: "1 Fortress 200").
+                                # Sans cette extraction préalable, le parser contextuel attrape le
+                                # dernier nombre du nom (ex: "200" dans "Fortress 200") au lieu de "1".
+                                _leading = re.match(r'^(\d+)\s+(.+)$', missing_item.strip())
+                                if _leading:
+                                    explicit_quantity = int(_leading.group(1))
+                                    vehicle_name_only = _leading.group(2)
+                                else:
+                                    explicit_quantity = None
+                                    vehicle_name_only = missing_item
+
+                                simulated_text = f"Exigences de véhicules et du personnel {vehicle_name_only} requis"
 
                                 try:
                                     # Parser avec le système existant
@@ -574,7 +580,9 @@ class MissionManager:
                                     for requirement in parsed_requirements:
                                         if requirement.quantity > 0:
                                             vehicle_type = requirement.vehicle_type
-                                            quantity = requirement.quantity
+                                            # Utiliser la quantité extraite du début si disponible,
+                                            # sinon celle du parser (cas sans chiffre de tête)
+                                            quantity = explicit_quantity if explicit_quantity is not None else requirement.quantity
 
                                             # ✅ Pattern reconnu - marquer immédiatement
                                             found_match = True
@@ -608,7 +616,7 @@ class MissionManager:
             finally:
                 for div in vehicle_requirement_divs:
                     await div.dispose()
-            
+
             # Analyser les besoins non-véhicules (eau, personnel, etc.)
             other_needs = await self._extract_other_missing_needs_from_alert(mission)
             if other_needs:
@@ -622,38 +630,41 @@ class MissionManager:
                         primary_vehicle = vehicle_info['primary']
                         quantity = vehicle_info['quantity']
                         alternatives = vehicle_info['alternatives']
-                        
+
+                        # Mémoriser les alternatives pour les transmettre à l'appelant
+                        constrained_alternatives_map[primary_vehicle] = alternatives
+
                         # Marquer comme véhicules avec contraintes
                         constrained_key = f"{primary_vehicle}_CONSTRAINED"
                         missing_vehicles_needs[constrained_key] = missing_vehicles_needs.get(constrained_key, 0) + quantity
                         logger.info(f"🔒 {primary_vehicle}: {quantity} véhicule(s) avec alternatives: {alternatives}")
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des véhicules manquants: {e}")
-        
-        return missing_vehicles_needs
-    
+
+        return missing_vehicles_needs, constrained_alternatives_map
+
     async def _extract_other_missing_needs_from_alert(self, mission: 'Mission') -> dict:
         """
         Extrait les besoins manquants non-véhicules depuis la div alert-missing-vehicles.
-        
+
         Analyse les éléments comme "Il nous manque: 1000 l d'eau", "Il nous manque: 5 pompiers", etc.
-        
+
         Args:
             mission: Mission concernée
-            
+
         Returns:
             dict: Besoins manquants {type: quantité} avec types comme 'water_l', 'personnel_pompiers', etc.
         """
         other_needs = {}
-        
+
         try:
             # Chercher la div d'alerte des véhicules manquants
             missing_alert = await self.browser_manager.page.query_selector('div.alert.alert-danger.alert-missing-vehicles')
-            
+
             if not missing_alert:
                 return other_needs
-            
+
             # Chercher les div avec data-requirement-type="other" et "personnel"
             other_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="other"]')
             personnel_requirement_divs = await missing_alert.query_selector_all('div[data-requirement-type="personnel"]')
@@ -710,54 +721,52 @@ class MissionManager:
                     await div.dispose()
                 for div in personnel_requirement_divs:
                     await div.dispose()
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction des besoins non-véhicules: {e}")
-        
+
         return other_needs
-    
+
     def _parse_missing_need_text(self, text: str) -> Optional[dict]:
         """
         Parse un texte de besoin manquant pour extraire le type et la quantité en utilisant la configuration JSON.
-        
+
         Exemples:
         - "1000 l d'eau" -> {'type': 'water_l', 'quantity': 1000}
         - "5 pompiers" -> {'type': 'personnel_pompiers', 'quantity': 5}
         - "10 policiers" -> {'type': 'personnel_policiers', 'quantity': 10}
-        
+
         Args:
             text: Texte à parser
-            
+
         Returns:
             dict ou None: Information du besoin {'type': str, 'quantity': int}
         """
-        import re
-        
         text = text.strip().lower()
-        
+
         # Charger les patterns depuis la configuration
         if not hasattr(self, 'missing_needs_config') or not self.missing_needs_config:
             self.missing_needs_config = self._load_missing_needs_config()
-        
+
         other_needs_mapping = self.missing_needs_config.get('other_needs_mapping', {})
         parsing_patterns = self.missing_needs_config.get('parsing_patterns', {})
-        
+
         # Vérifier le pattern pour l'eau
         water_pattern = parsing_patterns.get('water_pattern', r'(\d+)(?:\s*&nbsp;|\s+)l(?:\s+d[\'\u2019]?eau)?')
         water_match = re.search(water_pattern, text, re.IGNORECASE)
         if water_match:
             quantity = int(water_match.group(1))
             return {'type': 'water_l', 'quantity': quantity}
-        
+
         # Vérifier les patterns de personnel générique depuis la configuration
         personnel_generic_patterns = parsing_patterns.get('personnel_generic_patterns', {})
-        
+
         for personnel_type, pattern in personnel_generic_patterns.items():
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 quantity = int(match.group(1))
                 return {'type': f'personnel_{personnel_type}', 'quantity': quantity}
-        
+
         # Vérifier les autres besoins (carburant, équipement, etc.)
         for need_type, need_config in other_needs_mapping.items():
             if 'keywords' in need_config:
@@ -773,52 +782,50 @@ class MissionManager:
                             if quantity_match:
                                 quantity = int(quantity_match.group(1))
                                 return {'type': need_config['type'], 'quantity': quantity}
-        
+
         # Si aucun pattern ne correspond, logger pour analyse future
         logger.warning(f"Pattern de besoin non reconnu: '{text}'")
         return None
-    
+
     def _parse_missing_personnel_text(self, text: str) -> dict:
         """
         Parse un texte de personnel manquant pour extraire les types et quantités.
         Supporte plusieurs formats:
         - Format spécialisé: "3x PLG (Plongeur)"
-        - Format simple: "2 Pompiers", "5 Policiers" 
+        - Format simple: "2 Pompiers", "5 Policiers"
         - Format code court: "1 OPJ", "2 SAV"
-        
+
         Args:
             text: Texte à parser
-            
+
         Returns:
             dict: Personnel manquant {type_personnel: quantité}
         """
-        import re
-        
         personnel_needs = {}
         logger.debug(f"Parsing personnel text: '{text}'")
-        
+
         # S'assurer que la configuration est chargée
         if not hasattr(self, 'missing_needs_config') or not self.missing_needs_config:
             self.missing_needs_config = self._load_missing_needs_config()
-        
+
         parsing_patterns = self.missing_needs_config.get("parsing_patterns", {})
-        
+
         # 1. Format spécialisé avec 'x': "3x PLG (Plongeur)", "2x SAV"
         personnel_pattern = parsing_patterns.get("personnel_pattern", r'(\d+)x\s+([A-Z][A-Z0-9]*)\s*(?:\([^)]+\))?')
         matches = re.findall(personnel_pattern, text, re.IGNORECASE)
-        
+
         for match in matches:
             quantity = int(match[0])
             personnel_code = match[1].upper()
-            
+
             personnel_needs[personnel_code] = personnel_needs.get(personnel_code, 0) + quantity
             logger.debug(f"Personnel spécialisé parsé: {quantity}x {personnel_code}")
-        
-        # 2. Format simple avec mots complets: "2 Pompiers", "5 Policiers" 
+
+        # 2. Format simple avec mots complets: "2 Pompiers", "5 Policiers"
         if not personnel_needs:
             personnel_generic_patterns = parsing_patterns.get("personnel_generic_patterns", {})
             logger.debug(f"Test patterns génériques sur: '{text}'")
-            
+
             for personnel_type, pattern in personnel_generic_patterns.items():
                 logger.debug(f"Test pattern '{personnel_type}': '{pattern}'")
                 match = re.search(pattern, text, re.IGNORECASE)
@@ -826,23 +833,23 @@ class MissionManager:
                     quantity = int(match.group(1))
                     personnel_needs[personnel_type] = personnel_needs.get(personnel_type, 0) + quantity
                     logger.info(f"Personnel générique parsé: {quantity} {personnel_type}")
-        
+
         # 3. Format codes courts sans 'x': "1 OPJ", "2 PLG", "3 SAV"
         if not personnel_needs:
             # Pattern pour codes courts (2-4 lettres majuscules)
             code_pattern = r'(\d+)\s+([A-Z]{2,4})(?:\s|$)'
             matches = re.findall(code_pattern, text, re.IGNORECASE)
-            
+
             for match in matches:
                 quantity = int(match[0])
                 personnel_code = match[1].upper()
-                
+
                 # Vérifier si c'est un code personnel connu
                 personnel_mapping = self.missing_needs_config.get("personnel_mapping", {})
                 if personnel_code in personnel_mapping:
                     personnel_needs[personnel_code] = personnel_needs.get(personnel_code, 0) + quantity
                     logger.info(f"Personnel code court parsé: {quantity} {personnel_code}")
-        
+
         # 4. Formats longs potentiels: "1 Officier de police judiciaire"
         if not personnel_needs:
             extended_patterns = {
@@ -851,7 +858,7 @@ class MissionManager:
                 'MED': r'(\d+)\s+[Mm]édecins?',
                 'INF': r'(\d+)\s+[Ii]nfirmiers?'
             }
-            
+
             for personnel_code, pattern in extended_patterns.items():
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
@@ -859,69 +866,69 @@ class MissionManager:
                     personnel_needs[personnel_code] = personnel_needs.get(personnel_code, 0) + quantity
                     logger.info(f"Personnel format long parsé: {quantity} {personnel_code}")
                     break
-        
+
         if not personnel_needs:
             logger.warning(f"Aucun personnel reconnu dans: '{text}'")
-        
+
         return personnel_needs
-    
+
     async def _count_missing_specialized_personnel(self, mission: 'Mission') -> int:
         """
         Compte le nombre total de personnel spécialisé manquant.
-        
+
         Personnel spécialisé : PLG, SAV, GRIMP, CYN, MED, INF, CHEF, PSY, RAD, OPJ
         (tout sauf pompiers/policiers génériques)
-        
+
         Args:
             mission: Mission concernée
-            
+
         Returns:
             int: Nombre total de spécialistes manquants
         """
         specialized_missing_count = 0
-        
+
         try:
             # Extraire les besoins en personnel depuis les alertes
             other_needs = await self._extract_other_missing_needs_from_alert(mission)
-            
+
             # Liste des codes de personnel spécialisé (excluant générique)
             specialized_personnel_codes = {
                 'PLG', 'SAV', 'GRI', 'CYN', 'MED', 'INF', 'CHEF', 'PSY', 'RAD', 'OPJ'
             }
-            
+
             # Compter uniquement le personnel spécialisé
             for need_type, quantity in other_needs.items():
                 # Vérifier si c'est du personnel spécialisé (code direct)
                 if need_type in specialized_personnel_codes:
                     specialized_missing_count += quantity
                     logger.debug(f"Personnel spécialisé manquant: {quantity}x {need_type}")
-            
+
             if specialized_missing_count > 0:
                 logger.info(f"🔬 Total personnel spécialisé manquant: {specialized_missing_count}")
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du comptage du personnel spécialisé manquant: {e}")
-        
+
         return specialized_missing_count
-    
+
     async def _calculate_vehicles_for_missing_needs_with_fallback(self, other_needs: dict) -> list:
         """
         Calcule les véhicules nécessaires avec alternatives par capacité croissante.
-        
+
         Args:
             other_needs: Besoins à satisfaire {type: quantité}
-            
+
         Returns:
             list: Liste de {primary, quantity, alternatives, need_type} avec fallback par capacité
         """
         vehicles_info = []
-        
+
         try:
             # Charger les spécifications des véhicules depuis vehicles_v2.json
             from ..models.requirement_parser import RequirementParser
             parser = RequirementParser()
             vehicle_specs = parser.vehicles_mapping.get('vehicle_specs', {})
-            
+
             for need_type, needed_quantity in other_needs.items():
                 vehicle_info = await self._find_vehicles_for_need_with_fallback(need_type, needed_quantity, vehicle_specs)
                 if vehicle_info:
@@ -929,21 +936,21 @@ class MissionManager:
                         vehicles_info.extend(vehicle_info)
                     else:
                         vehicles_info.append(vehicle_info)
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du calcul des véhicules avec fallback: {e}")
-        
+
         return vehicles_info
-    
+
     async def _find_vehicles_for_need_with_fallback(self, need_type: str, needed_quantity: int, vehicle_specs: dict):
         """
         Trouve les véhicules optimaux et leurs alternatives par capacité croissante.
-        
+
         Args:
             need_type: Type de besoin ('water_l', 'personnel_pompiers', etc.)
             needed_quantity: Quantité nécessaire
             vehicle_specs: Spécifications des véhicules
-            
+
         Returns:
             list: Liste de dict {primary, quantity, alternatives, need_type}
         """
@@ -957,44 +964,44 @@ class MissionManager:
             else:
                 # Personnel générique
                 return await self._find_personnel_vehicle_with_fallback(personnel_type, needed_quantity, vehicle_specs)
-        
+
         return None
-    
+
     async def _find_personnel_vehicle_with_fallback(self, personnel_type: str, needed_quantity: int, vehicle_specs: dict) -> list:
         """
         Trouve les véhicules de personnel optimaux pour satisfaire le besoin.
         Retourne TOUS les véhicules de la solution optimale.
-        
+
         Args:
             personnel_type: Type de personnel ('pompiers', 'policiers', 'medical')
             needed_quantity: Nombre de personnel nécessaire
             vehicle_specs: Spécifications des véhicules
-            
+
         Returns:
             list: Liste de dict {primary: str, quantity: int, alternatives: list, need_type: str}
         """
         # Calculer la solution optimale complète
         vehicles_needed = await self._calculate_personnel_vehicles(personnel_type, needed_quantity, vehicle_specs)
-        
+
         if not vehicles_needed:
             return []
-        
+
         vehicle_list = []
-        
+
         # Créer une entrée pour chaque véhicule de la solution
         for vehicle_type, quantity in vehicles_needed.items():
             # Générer les alternatives pour ce véhicule spécifique
             alternatives = self._generate_personnel_alternatives(personnel_type, needed_quantity, vehicle_specs, vehicle_type)
-            
+
             vehicle_list.append({
                 'primary': vehicle_type,
                 'quantity': quantity,
                 'alternatives': alternatives,
                 'need_type': f'personnel_{personnel_type}'
             })
-        
+
         return vehicle_list
-    
+
     def _find_specialized_personnel_vehicle_with_fallback(self, personnel_code: str, needed_quantity: int, vehicle_specs: dict) -> list:
         """
         Trouve les véhicules de personnel spécialisé optimaux et leurs alternatives.
@@ -1030,17 +1037,17 @@ class MissionManager:
             })
 
         return vehicle_list
-    
+
     def _generate_personnel_alternatives(self, personnel_type: str, needed_quantity: int, vehicle_specs: dict, exclude_primary: str) -> list:
         """
         Génère une liste d'alternatives par capacité croissante pour le personnel générique.
-        
+
         Args:
             personnel_type: Type de personnel ('pompiers', 'policiers', 'medical')
             needed_quantity: Nombre de personnel nécessaire
             vehicle_specs: Spécifications des véhicules
             exclude_primary: Véhicule primaire à exclure
-            
+
         Returns:
             list: Liste de véhicules ordonés par capacité croissante
         """
@@ -1049,38 +1056,38 @@ class MissionManager:
             from ..models.requirement_parser import RequirementParser
             parser = RequirementParser()
             config = parser.missing_config
-            
+
             personnel_mapping = config.get('personnel_vehicle_mapping', {})
             if personnel_type not in personnel_mapping:
                 return []
-            
+
             # Obtenir tous les véhicules possibles pour ce type de personnel
             possible_vehicles = personnel_mapping[personnel_type].get('vehicles', [])
-            
+
             # Filtrer et trier par capacité
             vehicle_alternatives = []
-            
+
             for vehicle_type in possible_vehicles:
                 if vehicle_type == exclude_primary:
                     continue
-                    
+
                 crew_size = vehicle_specs.get(vehicle_type, {}).get('crew_size', 0)
                 if crew_size >= needed_quantity:  # Seulement les véhicules suffisants
                     vehicle_alternatives.append({
                         'type': vehicle_type,
                         'capacity': crew_size
                     })
-            
+
             # Trier par capacité croissante
             vehicle_alternatives.sort(key=lambda x: x['capacity'])
-            
+
             # Retourner seulement les types de véhicules
             return [v['type'] for v in vehicle_alternatives]
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de la génération des alternatives personnel: {e}")
             return []
-    
+
     def _generate_specialized_personnel_alternatives(
         self, personnel_code: str, needed_quantity: int, vehicle_specs: dict,
         exclude_primary: str = "", exclude_types: set = None
@@ -1131,63 +1138,63 @@ class MissionManager:
         except Exception as e:
             logger.error(f"Erreur lors de la génération des alternatives personnel spécialisé: {e}")
             return []
-    
+
     async def _calculate_vehicles_for_missing_needs(self, other_needs: dict) -> dict:
         """
         Calcule les véhicules nécessaires pour satisfaire les besoins non-véhicules.
-        
+
         Utilise les spécifications des véhicules (water_capacity_l, crew_size, etc.) pour
         déterminer quels véhicules envoyer et en quelle quantité.
-        
+
         Args:
             other_needs: Besoins à satisfaire {type: quantité}
-            
+
         Returns:
             dict: Véhicules à ajouter {vehicle_type: quantité}
         """
         additional_vehicles = {}
-        
+
         try:
             # Charger les spécifications des véhicules depuis vehicles_v2.json
             from ..models.requirement_parser import RequirementParser
             parser = RequirementParser()
             vehicle_specs = parser.vehicles_mapping.get('vehicle_specs', {})
-            
+
             for need_type, needed_quantity in other_needs.items():
                 vehicles_for_need = await self._find_vehicles_for_need(need_type, needed_quantity, vehicle_specs)
-                
+
                 # Ajouter les véhicules trouvés
                 for vehicle_type, quantity in vehicles_for_need.items():
                     additional_vehicles[vehicle_type] = additional_vehicles.get(vehicle_type, 0) + quantity
                     logger.info(f"💧 Pour {need_type} ({needed_quantity}): ajouter {quantity} {vehicle_type}")
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du calcul des véhicules pour besoins: {e}")
-        
+
         return additional_vehicles
-    
+
     async def _find_vehicles_for_need(self, need_type: str, needed_quantity: int, vehicle_specs: dict) -> dict:
         """
         Trouve les véhicules appropriés pour un type de besoin spécifique.
-        
+
         Args:
             need_type: Type de besoin ('water_l', 'personnel_pompiers', etc.)
             needed_quantity: Quantité nécessaire
             vehicle_specs: Spécifications des véhicules
-            
+
         Returns:
             dict: Véhicules recommandés {vehicle_type: quantité}
         """
         vehicles_needed = {}
-        
+
         if need_type == 'water_l':
             # Calculer les véhicules pour l'eau
             vehicles_needed = await self.water_pump_service.calculate_water_vehicles(needed_quantity, vehicle_specs)
-            
+
         elif need_type.startswith('personnel_'):
             # Calculer les véhicules pour le personnel
             personnel_type = need_type.replace('personnel_', '')
-            
+
             # Distinguer les codes de personnel spécialisé (PLG, SAV) du personnel générique
             if personnel_type.isupper() and len(personnel_type) <= 4:
                 # Code de personnel spécialisé (PLG, SAV, etc.)
@@ -1195,52 +1202,54 @@ class MissionManager:
             else:
                 # Personnel générique (pompiers, policiers)
                 vehicles_needed = await self._calculate_personnel_vehicles(personnel_type, needed_quantity, vehicle_specs)
-        
+
         return vehicles_needed
-    
+
     async def _calculate_personnel_vehicles(self, personnel_type: str, personnel_needed: int, vehicle_specs: dict) -> dict:
         """
         Calcule les véhicules nécessaires pour fournir du personnel avec logique intelligente.
-        
+
         Utilise un algorithme d'optimisation similaire à celui de l'eau pour minimiser
         le nombre de véhicules tout en maximisant l'efficacité de l'équipage.
-        
+
         Args:
             personnel_type: Type de personnel ('pompiers', 'policiers', 'general')
             personnel_needed: Nombre de personnes nécessaires
             vehicle_specs: Spécifications des véhicules
-            
+
         Returns:
             dict: Véhicules recommandés {vehicle_type: quantité}
         """
         vehicles_needed = {}
-        
+
         # S'assurer que la configuration est chargée
         if not hasattr(self, 'missing_needs_config') or not self.missing_needs_config:
             self.missing_needs_config = self._load_missing_needs_config()
-        
+
         # Récupérer le mapping depuis la configuration
         personnel_vehicle_mapping = self.missing_needs_config.get("personnel_vehicle_mapping", {})
         personnel_config = personnel_vehicle_mapping.get(personnel_type, {})
-        
+
         appropriate_vehicles = personnel_config.get("vehicles", [])
         priority_vehicles = personnel_config.get("priority", appropriate_vehicles)
-        
+        priority_set = set(priority_vehicles)
+        priority_index_map = {v: i for i, v in enumerate(priority_vehicles)}
+
         if not appropriate_vehicles:
             logger.warning(f"👥 Aucun type de véhicule défini pour le personnel '{personnel_type}' dans la configuration")
             return vehicles_needed
-        
+
         # Calculer le personnel actuellement en route
         current_personnel_capacity = await self._estimate_current_personnel_capacity(personnel_type, appropriate_vehicles, vehicle_specs)
-        
+
         # Calculer ce qu'il manque réellement
         remaining_personnel_needed = max(0, personnel_needed - current_personnel_capacity)
         if remaining_personnel_needed <= 0:
             logger.info(f"👥 Personnel {personnel_type} suffisant en route ({current_personnel_capacity}), pas de véhicule supplémentaire nécessaire")
             return vehicles_needed
-        
+
         logger.info(f"👥 Personnel {personnel_type} nécessaire: {remaining_personnel_needed} (total: {personnel_needed} - en route: {current_personnel_capacity})")
-        
+
         # Créer une liste SEULEMENT des véhicules qui ont des capacités d'équipage définies
         # IMPORTANT: Ne pas inclure les véhicules de remplacement sans crew_size pour les besoins personnel
         personnel_vehicles = []
@@ -1248,9 +1257,9 @@ class MissionManager:
             if vehicle_type in vehicle_specs:
                 crew_size = vehicle_specs[vehicle_type].get('crew_size', 0)
                 if crew_size > 0:  # OBLIGATOIRE: seulement les véhicules avec équipage défini
-                    is_priority = vehicle_type in priority_vehicles
-                    priority_index = priority_vehicles.index(vehicle_type) if is_priority else len(priority_vehicles)
-                    
+                    is_priority = vehicle_type in priority_set
+                    priority_index = priority_index_map.get(vehicle_type, len(priority_vehicles))
+
                     personnel_vehicles.append({
                         'type': vehicle_type,
                         'crew_size': crew_size,
@@ -1261,65 +1270,67 @@ class MissionManager:
                     logger.debug(f"👥 {vehicle_type} exclu pour personnel (crew_size=0 ou non défini)")
             else:
                 logger.debug(f"👥 {vehicle_type} exclu pour personnel (pas dans vehicle_specs)")
-        
+
         # Trier par priorité puis par crew_size décroissant
         personnel_vehicles.sort(key=lambda x: (x['priority_index'], -x['crew_size']))
-        
+
         logger.info(f"👥 Véhicules {personnel_type} disponibles:")
         for v in personnel_vehicles:
             priority_str = "(prioritaire)" if v['is_priority'] else ""
             logger.info(f"   - {v['type']}: {v['crew_size']} personnes {priority_str}")
-        
+
         # Algorithme d'optimisation : trouver la combinaison la plus efficace
         best_combination = self._find_optimal_personnel_combination(remaining_personnel_needed, personnel_vehicles)
-        
+
         if best_combination:
             vehicles_needed = best_combination['vehicles']
             total_personnel = best_combination['total_personnel']
             excess = total_personnel - remaining_personnel_needed
-            
+
             logger.info(f"👥 Solution optimale trouvée pour {personnel_type}:")
             logger.info(f"   - Besoin: {remaining_personnel_needed} personnes")
             logger.info(f"   - Personnel fourni: {total_personnel} personnes")
             logger.info(f"   - Excédent: {excess} personnes ({excess/remaining_personnel_needed*100:.1f}%)")
-            
+
+            vehicle_lookup = {v['type']: v for v in personnel_vehicles}
             for vehicle_type, count in vehicles_needed.items():
-                vehicle_info = next(v for v in personnel_vehicles if v['type'] == vehicle_type)
+                vehicle_info = vehicle_lookup[vehicle_type]
                 logger.info(f"   - {count}x {vehicle_type} ({vehicle_info['crew_size']} personnes chacun)")
         else:
             logger.warning(f"👥 Impossible de satisfaire le besoin en personnel {personnel_type} de {remaining_personnel_needed} personnes")
-        
+
         return vehicles_needed
-    
+
     def _find_optimal_personnel_combination(self, target_personnel: int, personnel_vehicles: list) -> dict:
         """
         Trouve la combinaison optimale de véhicules pour approcher au mieux le besoin en personnel.
-        
+
         Applique le même principe que pour l'eau : privilégier 1 véhicule surdimensionné
         plutôt que plusieurs véhicules plus petits si le nombre dépasse VEHICLE_THRESHOLD.
-        
+
         Args:
             target_personnel: Nombre de personnes cible
             personnel_vehicles: Liste des véhicules avec leurs capacités d'équipage
-            
+
         Returns:
             dict: Meilleure combinaison trouvée avec 'vehicles' et 'total_personnel'
         """
         if not personnel_vehicles:
             return None
-        
+
         OPTIMIZATION_THRESHOLD = self.settings.optimization_threshold  # Seuil pour optimisation véhicules
-        
+
         # Limiter le nombre de véhicules de chaque type pour éviter les combinaisons absurdes
         max_vehicles_per_type = max(2, (target_personnel // min(v['crew_size'] for v in personnel_vehicles)) + 1)
-        
+
         best_solution = None
         min_excess = float('inf')
         min_vehicles = float('inf')
-        
+
         # Générer toutes les combinaisons raisonnables
         combinations_to_test = []
-        
+        vehicle_lookup = {v['type']: v for v in personnel_vehicles}
+
         # STRATÉGIE PRIORITAIRE: Véhicule unique si possible (comme pour l'eau)
         # Trier les véhicules par capacité croissante pour trouver le plus petit suffisant
         vehicles_by_capacity = sorted(personnel_vehicles, key=lambda x: x['crew_size'])
@@ -1327,7 +1338,7 @@ class MissionManager:
             if vehicle['crew_size'] >= target_personnel:
                 combinations_to_test.append({vehicle['type']: 1})
                 break  # Prendre le plus petit véhicule suffisant en premier
-        
+
         # STRATÉGIE SECONDAIRE: Combinaisons multiples SEULEMENT si aucun véhicule unique
         if not combinations_to_test:
             # Stratégie 2: Combinaisons de 2-3 véhicules prioritaires
@@ -1336,38 +1347,38 @@ class MissionManager:
                 for i, v1 in enumerate(priority_vehicles[:3]):  # Limiter aux 3 premiers prioritaires
                     for count1 in range(1, min(max_vehicles_per_type, (target_personnel // v1['crew_size']) + 2)):
                         combination = {v1['type']: count1}
-                        total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
+                        total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles, vehicle_lookup)
                         if total_personnel >= target_personnel:
                             combinations_to_test.append(combination)
-                        
+
                         # Combinaisons avec un deuxième véhicule
                         for j, v2 in enumerate(priority_vehicles[:3]):
                             if i != j:  # Véhicules différents
                                 for count2 in range(1, min(max_vehicles_per_type, (target_personnel // v2['crew_size']) + 2)):
                                     combination = {v1['type']: count1, v2['type']: count2}
-                                    total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
+                                    total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles, vehicle_lookup)
                                     if total_personnel >= target_personnel:
                                         combinations_to_test.append(combination)
-        
+
         # Évaluer toutes les combinaisons avec la logique de seuil OPTIMIZATION_THRESHOLD
         for combination in combinations_to_test:
-            total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles)
-            
+            total_personnel = self._calculate_combination_personnel(combination, personnel_vehicles, vehicle_lookup)
+
             if total_personnel >= target_personnel:
                 excess = total_personnel - target_personnel
                 vehicle_count = sum(combination.values())
-                
+
                 # LOGIQUE DU SEUIL : Si une solution nécessite > OPTIMIZATION_THRESHOLD véhicules,
                 # privilégier les solutions avec 1 seul véhicule même si plus d'excédent
                 is_single_vehicle = vehicle_count == 1
                 is_multi_vehicle_over_threshold = vehicle_count > OPTIMIZATION_THRESHOLD
-                
+
                 # Critères d'évaluation prioritaires :
                 # 1. Éviter les solutions avec > OPTIMIZATION_THRESHOLD véhicules si possible
                 # 2. Privilégier les véhicules uniques
                 # 3. Minimiser l'excédent personnel
                 # 4. Minimiser le nombre de véhicules
-                
+
                 is_better = False
                 if best_solution is None:
                     is_better = True
@@ -1382,7 +1393,7 @@ class MissionManager:
                     # Si même catégorie, comparer excédent puis nombre de véhicules
                     if (excess < min_excess or (excess == min_excess and vehicle_count < min_vehicles)):
                         is_better = True
-                
+
                 if is_better:
                     min_excess = excess
                     min_vehicles = vehicle_count
@@ -1393,112 +1404,118 @@ class MissionManager:
                         'is_single_vehicle': is_single_vehicle,
                         'is_multi_over_threshold': is_multi_vehicle_over_threshold
                     }
-        
+
         # Nettoyer les métadonnées avant de retourner
         if best_solution:
             best_solution.pop('is_single_vehicle', None)
             best_solution.pop('is_multi_over_threshold', None)
-        
+
         return best_solution
-    
-    def _calculate_combination_personnel(self, combination: dict, personnel_vehicles: list) -> int:
+
+    def _calculate_combination_personnel(self, combination: dict, personnel_vehicles: list, _vehicle_lookup: dict = None) -> int:
         """
         Calcule le nombre total de personnel d'une combinaison de véhicules.
-        
+
         Args:
             combination: Dictionnaire {vehicle_type: count}
             personnel_vehicles: Liste des véhicules avec leurs spécifications
-            
+            _vehicle_lookup: Cache pré-calculé {type: vehicle_info} (optionnel)
+
         Returns:
             int: Nombre total de personnel
         """
+        if _vehicle_lookup is None:
+            _vehicle_lookup = {v['type']: v for v in personnel_vehicles}
+
         total_personnel = 0
-        
         for vehicle_type, count in combination.items():
-            vehicle_info = next((v for v in personnel_vehicles if v['type'] == vehicle_type), None)
+            vehicle_info = _vehicle_lookup.get(vehicle_type)
             if vehicle_info:
                 total_personnel += vehicle_info['crew_size'] * count
-        
+
         return total_personnel
-    
+
     async def _estimate_current_personnel_capacity(self, personnel_type: str, appropriate_vehicles: list, vehicle_specs: dict) -> int:
         """
         Estime le nombre de personnel actuellement en route vers la mission.
-        
+
         Args:
             personnel_type: Type de personnel ('pompiers', 'policiers')
             appropriate_vehicles: Liste des types de véhicules appropriés
             vehicle_specs: Spécifications des véhicules
-            
+
         Returns:
             int: Nombre de personnel estimé en route
         """
         try:
             # Récupérer les véhicules en route
             vehicles_en_route = await self.vehicle_scraper._get_vehicles_en_route_only_by_type()
-            
+
             total_personnel_capacity = 0
-            
+            appropriate_set = set(appropriate_vehicles)
+
             for vehicle_type, count in vehicles_en_route.items():
                 # Vérifier si ce véhicule est approprié pour ce type de personnel
-                if vehicle_type in appropriate_vehicles and vehicle_type in vehicle_specs:
+                if vehicle_type in appropriate_set and vehicle_type in vehicle_specs:
                     crew_size = vehicle_specs[vehicle_type].get('crew_size', 0)
-                    
+
                     if crew_size > 0:
                         vehicle_personnel = crew_size * count
                         total_personnel_capacity += vehicle_personnel
-                        
+
                         logger.debug(f"👥 Véhicule {personnel_type} en route: {count}x {vehicle_type} = {vehicle_personnel} personnes ({crew_size}/véhicule)")
-            
+
             if total_personnel_capacity > 0:
                 logger.info(f"👥 Personnel {personnel_type} en route: {total_personnel_capacity} personnes")
-            
+
             return total_personnel_capacity
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du calcul du personnel en route pour {personnel_type}: {e}")
             return 0
-    
+
     def _calculate_specialized_personnel_vehicles(self, personnel_code: str, personnel_needed: int, vehicle_specs: dict) -> dict:
         """
         Calcule les véhicules nécessaires pour du personnel spécialisé (PLG, SAV, etc.).
         Utilise la configuration JSON pour les mappings.
-        
+
         Args:
             personnel_code: Code du personnel spécialisé ('PLG', 'SAV', etc.)
             personnel_needed: Nombre de spécialistes nécessaires
             vehicle_specs: Spécifications des véhicules
-            
+
         Returns:
             dict: Véhicules recommandés {vehicle_type: quantité}
         """
         vehicles_needed = {}
-        
+
         # S'assurer que la configuration est chargée
         if not hasattr(self, 'missing_needs_config') or not self.missing_needs_config:
             self.missing_needs_config = self._load_missing_needs_config()
-        
+
         # Récupérer le mapping depuis la configuration
         personnel_mapping = self.missing_needs_config.get("personnel_mapping", {})
         personnel_config = personnel_mapping.get(personnel_code, {})
-        
+
         appropriate_vehicles = personnel_config.get("vehicles", [])
         priority_vehicles = personnel_config.get("priority", appropriate_vehicles)
-        
+        priority_set = set(priority_vehicles)
+        priority_index_map = {v: i for i, v in enumerate(priority_vehicles)}
+
         if not appropriate_vehicles:
             logger.warning(f"👨‍💼 Aucun type de véhicule défini pour le personnel spécialisé '{personnel_code}' dans la configuration")
             return vehicles_needed
-        
+
         personnel_name = personnel_config.get("name", personnel_code)
-        
+
         # Créer la liste des véhicules avec leurs capacités
         specialized_vehicles = []
         for vehicle_type in appropriate_vehicles:
             if vehicle_type in vehicle_specs:
                 crew_size = vehicle_specs[vehicle_type].get('crew_size', 1)
-                is_priority = vehicle_type in priority_vehicles
-                priority_index = priority_vehicles.index(vehicle_type) if is_priority else len(priority_vehicles)
-                
+                is_priority = vehicle_type in priority_set
+                priority_index = priority_index_map.get(vehicle_type, len(priority_vehicles))
+
                 specialized_vehicles.append({
                     'type': vehicle_type,
                     'crew_size': crew_size,
@@ -1508,9 +1525,9 @@ class MissionManager:
                 logger.debug(f"👨‍💼 Véhicule {vehicle_type} : {crew_size} spécialistes, priorité={is_priority}")
             else:
                 # Fallback pour véhicules sans specs
-                is_priority = vehicle_type in priority_vehicles
-                priority_index = priority_vehicles.index(vehicle_type) if is_priority else len(priority_vehicles)
-                
+                is_priority = vehicle_type in priority_set
+                priority_index = priority_index_map.get(vehicle_type, len(priority_vehicles))
+
                 specialized_vehicles.append({
                     'type': vehicle_type,
                     'crew_size': 1,  # Fallback par défaut
@@ -1518,38 +1535,34 @@ class MissionManager:
                     'priority_index': priority_index
                 })
                 logger.debug(f"👨‍💼 Véhicule {vehicle_type} : crew_size=1 (fallback), priorité={is_priority}")
-        
+
         if not specialized_vehicles:
             logger.warning(f"👨‍💼 Aucun véhicule approprié trouvé pour {personnel_code} - configuration: {personnel_config}")
             return vehicles_needed
-        
+
         # Trier par priorité puis par capacité croissante (pour trouver le plus petit suffisant)
         specialized_vehicles.sort(key=lambda x: (x['priority_index'], x['crew_size']))
-        
+
         logger.info(f"👨‍💼 Véhicules disponibles pour {personnel_name} ({personnel_code}):")
         for v in specialized_vehicles:
             priority_str = "(prioritaire)" if v['is_priority'] else ""
             logger.info(f"   - {v['type']}: {v['crew_size']} spécialistes {priority_str}")
-        
+
         # STRATÉGIE PRIORITAIRE: Véhicule unique avec capacité suffisante
-        best_solution = None
-        min_vehicles = float('inf')
-        min_excess = float('inf')
-        
         # D'abord chercher un véhicule unique suffisant
         for vehicle in specialized_vehicles:
             if vehicle['crew_size'] >= personnel_needed:
                 vehicles_count = 1
                 total_personnel = vehicle['crew_size']
                 excess = total_personnel - personnel_needed
-                
+
                 # Privilégier véhicule unique
                 vehicles_needed = {vehicle['type']: vehicles_count}
                 logger.info(f"👨‍💼 Solution optimale trouvée pour {personnel_needed} {personnel_name}:")
                 logger.info(f"   - {vehicles_count}x {vehicle['type']} ({vehicle['crew_size']} spécialistes)")
                 logger.info(f"   - Personnel fourni: {total_personnel}, Excédent: {excess}")
                 return vehicles_needed
-        
+
         # STRATÉGIE SECONDAIRE: Backtracking pour combinaison optimale
         best_combination = self._backtrack_optimal_personnel_vehicles(
             specialized_vehicles, personnel_needed
@@ -1557,8 +1570,9 @@ class MissionManager:
 
         if best_combination:
             vehicles_needed = best_combination
+            spec_lookup = {v['type']: v for v in specialized_vehicles}
             total_personnel = sum(
-                next(v['crew_size'] for v in specialized_vehicles if v['type'] == vtype) * count
+                spec_lookup[vtype]['crew_size'] * count
                 for vtype, count in best_combination.items()
             )
             excess = total_personnel - personnel_needed
@@ -1566,7 +1580,7 @@ class MissionManager:
 
             logger.info(f"👨‍💼 Solution optimale (backtracking) pour {personnel_needed} {personnel_name}:")
             for vtype, count in best_combination.items():
-                crew = next(v['crew_size'] for v in specialized_vehicles if v['type'] == vtype)
+                crew = spec_lookup[vtype]['crew_size']
                 logger.info(f"   - {count}x {vtype} ({crew} spécialistes chacun)")
             logger.info(f"   - Personnel fourni: {total_personnel}, Excédent: {excess}, Véhicules: {total_count}")
 
@@ -1693,7 +1707,7 @@ class MissionManager:
                 f.write(entry + "\n")
         except OSError as e:
             logger.warning(f"Impossible de loguer label non reconnu: {e}")
-    
+
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
         """Déploie automatiquement les missions selon la configuration"""
         max_missions = max_missions or self.settings.max_concurrent_missions
@@ -1711,21 +1725,21 @@ class MissionManager:
             # Récupérer toutes les missions
             missions = await self.get_all_missions()
             stats["found"] = len(missions)
-            
+
             if not missions:
                 logger.info("Aucune mission trouvée")
                 return stats
-            
+
             # Filtrer les missions éligibles
             eligible_missions = self._filter_eligible_missions(missions)
             logger.info(f"{len(eligible_missions)} missions éligibles sur {len(missions)}")
-            
+
             deployed_count = 0
-            
+
             for mission in eligible_missions:
                 if deployed_count >= max_missions:
                     break
-                
+
                 logger.info(f"Traitement mission {mission.id}: ---------- {mission.title} ----------")
 
                 # Déploiement optimisé avec timeout de protection (évite les blocages)
@@ -1751,19 +1765,19 @@ class MissionManager:
                 else:
                     stats["failed"] += 1
                     logger.warning(f"❌ Échec de déploiement pour mission {mission.id}")
-                
+
                 # Cooldown entre missions
                 if deployed_count < max_missions:
                     await asyncio.sleep(self.settings.mission_cooldown)
-            
+
             # Compter les missions ignorées
             stats["skipped"] = len(eligible_missions) - stats["deployed"] - stats["failed"]
-            
+
             logger.info(
                 f"Déploiement terminé: {stats['deployed']} réussies, "
                 f"{stats['failed']} échouées, {stats['skipped']} ignorées"
             )
-            
+
         except Exception as e:
             error_msg = str(e)
             # Propager les erreurs navigateur pour permettre la recovery
@@ -1777,40 +1791,40 @@ class MissionManager:
             logger.error(f"Erreur lors du déploiement automatique: {e}")
 
         return stats
-    
+
     def _filter_eligible_missions(self, missions: List[Mission]) -> List[Mission]:
         """
         Filtre les missions selon les critères de déploiement automatique.
-        
+
         Applique les filtres configurés : statut disponible, seuil de crédits minimum,
         et autres critères définis dans les settings.
-        
+
         Args:
             missions: Liste des missions à filtrer
-            
+
         Returns:
             List[Mission]: Missions éligibles au déploiement
         """
         eligible = []
-        
+
         for mission in missions:
             # Ignorer si déjà en cours
             if mission.status != MissionStatus.AVAILABLE:
                 continue
-            
+
             # Vérifier le seuil de crédits si configuré
-            if (self.settings.min_credits_threshold > 0 and 
-                mission.credits and 
+            if (self.settings.min_credits_threshold > 0 and
+                mission.credits and
                 mission.credits < self.settings.min_credits_threshold):
                 logger.debug(f"Mission {mission.id} ignorée: crédits trop faibles ({mission.credits})")
                 continue
-            
+
             # Autres filtres possibles (localisation, type, etc.)
             eligible.append(mission)
-        
+
         # Trier par priorité (score d'importance = crédits × nombre de véhicules requis)
         eligible.sort(key=lambda m: self._calculate_mission_importance_score(m), reverse=True)
-        
+
         return eligible
 
     def _calculate_mission_importance_score(self, mission: Mission) -> float:
@@ -1889,4 +1903,3 @@ class MissionManager:
                 logger.error(f"Erreur navigateur dans le cycle: {e} - propagation pour recovery")
                 raise
             logger.error(f"Erreur dans le cycle de missions: {e}")
-    

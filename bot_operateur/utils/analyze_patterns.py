@@ -43,7 +43,7 @@ def analyze_patterns():
         print("Aucun label non reconnu dans le fichier.")
         return
 
-    print(f"Statistiques generales:")
+    print("Statistiques generales:")
     print(f"   Total labels non reconnus: {len(entries)}")
     print(f"   Missions concernees: {len(missions)}")
     print()

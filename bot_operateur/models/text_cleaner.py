@@ -10,7 +10,7 @@ import re
 
 class TextCleaner:
     """Nettoie et normalise les textes de mission en préservant la structure."""
-    
+
     @staticmethod
     def clean_mission_text(text: str) -> str:
         """

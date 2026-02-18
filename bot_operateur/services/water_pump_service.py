@@ -4,7 +4,7 @@ Contient les algorithmes d'optimisation pour le calcul des véhicules d'eau.
 Extrait de MissionManager pour une architecture modulaire.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from loguru import logger
 
@@ -129,7 +129,7 @@ class WaterPumpService:
             total_capacity = best_combination['total_capacity']
             waste = total_capacity - remaining_water_needed
 
-            logger.info(f"💧 Solution optimale trouvée:")
+            logger.info("💧 Solution optimale trouvée:")
             logger.info(f"   - Besoin: {remaining_water_needed}L")
             logger.info(f"   - Capacité fournie: {total_capacity}L")
             logger.info(f"   - Gaspillage: {waste}L ({waste/remaining_water_needed*100:.1f}%)")

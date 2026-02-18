@@ -79,7 +79,7 @@ MISSION_STATUS = {
 
 # Types de véhicules critiques (utilisés fréquemment)
 CRITICAL_VEHICLE_TYPES = {
-    'AMBULANCE', 'FPT', 'CARS_POLICE', 'BEA', 'CCF', 
+    'AMBULANCE', 'FPT', 'CARS_POLICE', 'BEA', 'CCF',
     'VSAV', 'RESCUE_DIRECTOR', 'CHEF_DE_GROUPE'
 }
 
