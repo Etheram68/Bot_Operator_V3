@@ -249,14 +249,14 @@ class MissionScraper:
                 if h1_element:
                     title_complete = await h1_element.inner_text()
 
-            requirements_list, requirements_metadata = await self._scrape_requirements_from_current_page()
+            requirements_list, requirements_metadata, other_info = await self._scrape_requirements_from_current_page()
             details = {
                 'patients': patients,
                 'requirements': requirements_list,
                 'requirements_metadata': requirements_metadata,
                 'credits': None,  # Les crédits sont déjà récupérés dans _extract_mission_from_element
                 'title': title_complete,  # Titre complet récupéré depuis la page de mission
-                'other_info': await self._extract_other_info_from_tables()
+                'other_info': other_info,
             }
 
             return details
@@ -494,26 +494,30 @@ class MissionScraper:
             logger.error(f"Erreur lors de l'extraction du texte des colonnes: {e}")
             return ""
 
-    async def _scrape_requirements_from_current_page(self) -> tuple[List[MissionRequirement], Dict]:
+    async def _scrape_requirements_from_current_page(self) -> tuple[List[MissionRequirement], Dict, Dict]:
         """Scrape les exigences depuis la page courante avec parser intelligent.
 
         Returns:
-            (requirements, metadata) où metadata peut contenir 'water_needed_l'
+            (requirements, metadata, other_info)
+            - metadata peut contenir 'water_needed_l'
+            - other_info peut contenir 'water_to_pump', 'required_formations'
         """
         requirements = []
         metadata: Dict = {}
+        other_info: Dict = {}
 
         try:
-            # NOUVEAU: Extraction structurée par <tr> pour relier véhicule + quantité
-            structured_requirements, req_metadata = await self._extract_requirements_from_table_rows()
+            # Extraction structurée en un seul passage DOM (toutes tables à la fois)
+            structured_requirements, req_metadata, other_info = await self._extract_all_tables_data()
             metadata.update(req_metadata)
             if structured_requirements:
                 # Appliquer la conversion personnel → véhicules (ex: 10 Spécialistes IMP → 2 VIMP)
                 requirements = self.requirement_parser._convert_personnel_to_vehicle_requirements(structured_requirements)
                 logger.debug(f"Trouvé {len(requirements)} exigences via extraction structurée <tr>")
-                return requirements, metadata
+                return requirements, metadata, other_info
 
             # Fallback : Extraire le texte spécifiquement de la seconde colonne des besoins
+            # (other_info déjà capturé par _extract_all_tables_data même en cas de fallback)
             requirements_text = await self._extract_requirements_text_from_columns()
 
             if requirements_text:
@@ -550,7 +554,7 @@ class MissionScraper:
         except Exception as e:
             logger.error(f"Erreur lors du scraping des exigences: {e}")
 
-        return requirements, metadata
+        return requirements, metadata, other_info
 
     def _parse_requirement_text(self, text: str) -> Optional[MissionRequirement]:
         """Parse le texte d'exigence vers un MissionRequirement"""
@@ -570,173 +574,119 @@ class MissionScraper:
 
         return None
 
-    async def _extract_requirements_from_table_rows(self) -> tuple[List[MissionRequirement], Dict]:
-        """Extraction structurée des exigences basée sur les <tr> pour relier véhicule + quantité.
+    async def _extract_all_tables_data(self) -> tuple[List[MissionRequirement], Dict, Dict]:
+        """Extraction en un seul passage DOM de toutes les tables pertinentes.
+
+        Parcourt les tables UNE SEULE FOIS pour extraire simultanément :
+        - Table "Exigences de véhicules" → requirements + metadata (water_needed_l)
+        - Table "Autre information"      → other_info (water_to_pump, required_formations)
 
         Returns:
-            (requirements, metadata) où metadata peut contenir 'water_needed_l'
+            (requirements, metadata, other_info)
         """
-        requirements = []
+        requirements: List[MissionRequirement] = []
         metadata: Dict = {}
+        other_info: Dict = {}
 
         try:
-            # Chercher toutes les tables et identifier celle des exigences
-            target_table = None
             tables = await self.page.query_selector_all("table")
-
             try:
                 for table in tables:
+                    # Lire tous les <th> de la table pour identifier son type
                     headers = await table.query_selector_all("th")
+                    header_text_combined = ""
                     try:
                         for header in headers:
-                            header_text = await header.inner_text()
-                            if "Exigences" in header_text and "véhicules" in header_text:
-                                target_table = table
-                                logger.debug(f"Table des exigences trouvée: '{header_text}'")
-                                break
+                            header_text_combined += await header.inner_text()
                     finally:
                         for h in headers:
                             await h.dispose()
-                    if target_table:
-                        break
-            finally:
-                for t in tables:
-                    if t is not target_table:
-                        await t.dispose()
 
-            if not target_table:
-                logger.debug("Table des exigences non trouvée")
-                return []
+                    is_requirements = "Exigences" in header_text_combined and "véhicules" in header_text_combined
+                    is_other_info = "Autre" in header_text_combined and "information" in header_text_combined
 
-            # Extraire tous les <tr> avec 2 <td> (label + valeur)
-            try:
-                rows = await target_table.query_selector_all("tbody tr")
+                    if not is_requirements and not is_other_info:
+                        continue
 
-                for row in rows:
-                    cells = await row.query_selector_all("td")
-                    try:
-                        if len(cells) == 2:
-                            label_cell = cells[0]
-                            value_cell = cells[1]
+                    if is_requirements:
+                        logger.debug(f"Table des exigences trouvée")
+                    else:
+                        logger.debug(f"Table 'Autre information' trouvée")
 
-                            label_text = await label_cell.inner_text()
-                            value_text = await value_cell.inner_text()
-
-                            label_clean = label_text.strip()
-                            value_clean = value_text.strip()
-
-                            logger.debug(f"Ligne extraite: '{label_clean}' -> '{value_clean}'")
-
-                            if "Eau nécessaire" in label_clean:
-                                clean_value = re.sub(r'[^\d]', '', value_clean)
-                                if clean_value:
-                                    metadata['water_needed_l'] = int(clean_value)
-                                    logger.debug(f"💧 Eau nécessaire détectée: {metadata['water_needed_l']}L")
+                    rows = await table.query_selector_all("tbody tr")
+                    for row in rows:
+                        cells = await row.query_selector_all("td")
+                        try:
+                            if len(cells) != 2:
                                 continue
 
-                            try:
-                                quantity = int(value_clean)
-                                if 1 <= quantity <= 50:
-                                    # 1. Essayer LabelMatcher (lookup direct O(1))
-                                    vehicle_type = self.label_matcher.match(label_clean)
-                                    if vehicle_type:
-                                        requirements.append(MissionRequirement(
-                                            vehicle_type=vehicle_type,
-                                            quantity=quantity,
-                                            optional=False,
-                                        ))
-                                        logger.debug(f"✅ LabelMatcher: '{label_clean}' -> {vehicle_type} x{quantity}")
-                                    else:
-                                        # 2. Fallback regex existant
-                                        formatted_text = f"{label_clean} {quantity}"
-                                        parsed_requirements = self.requirement_parser.parse_mission_text(formatted_text)
-                                        if parsed_requirements:
-                                            requirements.extend(parsed_requirements)
-                                            logger.debug(f"✅ Regex fallback: '{label_clean}' -> {quantity}")
+                            label_clean = (await cells[0].inner_text()).strip()
+                            value_clean = (await cells[1].inner_text()).strip()
+
+                            if is_requirements:
+                                logger.debug(f"Ligne extraite: '{label_clean}' -> '{value_clean}'")
+
+                                if "Eau nécessaire" in label_clean:
+                                    clean_value = re.sub(r'[^\d]', '', value_clean)
+                                    if clean_value:
+                                        metadata['water_needed_l'] = int(clean_value)
+                                        logger.debug(f"💧 Eau nécessaire détectée: {metadata['water_needed_l']}L")
+                                    continue
+
+                                try:
+                                    quantity = int(value_clean)
+                                    if 1 <= quantity <= 50:
+                                        vehicle_type = self.label_matcher.match(label_clean)
+                                        if vehicle_type:
+                                            requirements.append(MissionRequirement(
+                                                vehicle_type=vehicle_type,
+                                                quantity=quantity,
+                                                optional=False,
+                                            ))
+                                            logger.debug(f"✅ LabelMatcher: '{label_clean}' -> {vehicle_type} x{quantity}")
                                         else:
-                                            # 3. Log pour auto-learning futur
-                                            self._log_unmatched_label(label_clean, quantity, "unknown")
-                                            logger.debug(f"⚠️ Pas de match pour: {repr(label_clean)}")
-                                else:
-                                    logger.debug(f"Quantité hors limites ignorée: {value_clean}")
-                            except ValueError:
-                                logger.debug(f"Valeur non numérique ignorée: {value_clean}")
-                    finally:
-                        for c in cells:
-                            await c.dispose()
+                                            formatted_text = f"{label_clean} {quantity}"
+                                            parsed = self.requirement_parser.parse_mission_text(formatted_text)
+                                            if parsed:
+                                                requirements.extend(parsed)
+                                                logger.debug(f"✅ Regex fallback: '{label_clean}' -> {quantity}")
+                                            else:
+                                                self._log_unmatched_label(label_clean, quantity, "unknown")
+                                                logger.debug(f"⚠️ Pas de match pour: {repr(label_clean)}")
+                                    else:
+                                        logger.debug(f"Quantité hors limites ignorée: {value_clean}")
+                                except ValueError:
+                                    logger.debug(f"Valeur non numérique ignorée: {value_clean}")
 
-                for r in rows:
-                    await r.dispose()
-            finally:
-                await target_table.dispose()
+                            else:  # is_other_info
+                                label_lower = label_clean.lower()
+                                if "eau" in label_lower and "pomp" in label_lower:
+                                    clean_value = re.sub(r'[^\d]', '', value_clean)
+                                    if clean_value:
+                                        other_info['water_to_pump'] = int(clean_value)
+                                        logger.debug(f"Eau à pomper détectée: {other_info['water_to_pump']}L")
+                                elif "formation" in label_lower:
+                                    formations = self._parse_formations_text(value_clean)
+                                    if formations:
+                                        other_info['required_formations'] = formations
+                                        logger.debug(f"Formations requises: {formations}")
+                        finally:
+                            for c in cells:
+                                await c.dispose()
 
-            logger.debug(f"Extraction structurée <tr>: {len(requirements)} exigences trouvées")
+                    for r in rows:
+                        await r.dispose()
 
-        except Exception as e:
-            logger.error(f"Erreur lors de l'extraction structurée <tr>: {e}")
-
-        return requirements, metadata
-
-    async def _extract_other_info_from_tables(self) -> Dict:
-        """Extraction des données du tableau 'Autre information' (eau à pomper, etc.)"""
-        result = {}
-        try:
-            tables = await self.page.query_selector_all("table")
-            target_table = None
-            try:
-                for table in tables:
-                    headers = await table.query_selector_all("th")
-                    try:
-                        for header in headers:
-                            header_text = await header.inner_text()
-                            if "Autre" in header_text and "information" in header_text:
-                                target_table = table
-                                logger.debug(f"Table 'Autre information' trouvée: '{header_text}'")
-                                break
-                    finally:
-                        for h in headers:
-                            await h.dispose()
-                    if target_table:
-                        break
             finally:
                 for t in tables:
-                    if t is not target_table:
-                        await t.dispose()
+                    await t.dispose()
 
-            if not target_table:
-                logger.debug("Table 'Autre information' non trouvée")
-                return result
-
-            try:
-                rows = await target_table.query_selector_all("tbody tr")
-                for row in rows:
-                    cells = await row.query_selector_all("td")
-                    try:
-                        if len(cells) == 2:
-                            label = (await cells[0].inner_text()).strip().lower()
-                            value = (await cells[1].inner_text()).strip()
-                            if "eau" in label and "pomp" in label:
-                                clean_value = re.sub(r'[^\d]', '', value)
-                                if clean_value:
-                                    result['water_to_pump'] = int(clean_value)
-                                    logger.debug(f"Eau à pomper détectée: {result['water_to_pump']}L")
-                            elif "formation" in label:
-                                formations = self._parse_formations_text(value)
-                                if formations:
-                                    result['required_formations'] = formations
-                                    logger.debug(f"Formations requises: {formations}")
-                    finally:
-                        for c in cells:
-                            await c.dispose()
-                for r in rows:
-                    await r.dispose()
-            finally:
-                await target_table.dispose()
+            logger.debug(f"Extraction tables: {len(requirements)} exigences, metadata={metadata}, other_info={other_info}")
 
         except Exception as e:
-            logger.warning(f"Erreur lors de l'extraction 'Autre information': {e}")
+            logger.error(f"Erreur lors de l'extraction des tables: {e}")
 
-        return result
+        return requirements, metadata, other_info
 
     def _parse_formations_text(self, text: str) -> Dict[str, int]:
         """Parse le texte des formations requises.

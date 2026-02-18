@@ -242,13 +242,16 @@ class WaterPumpService:
         Returns:
             (water_capacity_l, extra_water_storage_pct)
         """
+        # Normaliser : FPT_CONSTRAINED → FPT, CITERNE_CONSTRAINED → CITERNE, etc.
+        lookup_type = generic_type.removesuffix('_CONSTRAINED')
+
         # Type direct dans vehicle_specs (ex: FPT → 3000L)
-        if generic_type in vehicle_specs:
-            specs = vehicle_specs[generic_type]
+        if lookup_type in vehicle_specs:
+            specs = vehicle_specs[lookup_type]
             return specs.get('water_capacity_l', 0), specs.get('extra_water_storage_pct', 0)
 
         # Résolution via mapping aplati {generic_type: {primary: [...], ...}}
-        config = vehicle_mapping.get(generic_type)
+        config = vehicle_mapping.get(lookup_type)
         if not config:
             return 0, 0
 
@@ -323,11 +326,16 @@ class WaterPumpService:
         mission,
         vehicle_specs: dict,
         vehicle_mapping: dict,
+        reverse_mapping: Optional[dict] = None,
     ) -> Dict[str, int]:
         """Ajoute des véhicules citernes si l'eau transportée est insuffisante.
 
         Calcule la capacité effective des véhicules déjà requis (avec bonus motopompes),
         détermine le déficit, et trouve la combinaison minimale de citernes à ajouter.
+
+        Args:
+            reverse_mapping: index {real_type: generic_type} pré-calculé (O(1)).
+                             Si absent, fallback O(n) via _find_generic_type_for_real.
         """
         if not mission.water_needed_l or mission.water_needed_l <= 0:
             return vehicle_needs
@@ -367,7 +375,10 @@ class WaterPumpService:
         if best_combo:
             added: Dict[str, int] = {}
             for vtype, count in best_combo['vehicles'].items():
-                generic_type = self._find_generic_type_for_real(vtype, vehicle_mapping) or vtype
+                if reverse_mapping:
+                    generic_type = reverse_mapping.get(vtype, vtype)
+                else:
+                    generic_type = self._find_generic_type_for_real(vtype, vehicle_mapping) or vtype
                 vehicle_needs[generic_type] = vehicle_needs.get(generic_type, 0) + count
                 added[f"{vtype}→{generic_type}"] = count
 

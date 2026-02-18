@@ -47,10 +47,43 @@ class MissionManager:
         self._consecutive_timeouts = 0
         self._max_consecutive_timeouts = 5
 
+        # Cache du mapping véhicules (calculé une fois à la première mission)
+        self._cached_vehicle_specs: dict = {}
+        self._cached_flat_mapping: dict = {}      # {generic_type: {primary, secondary}}
+        self._cached_reverse_mapping: dict = {}   # {real_type: generic_type}
+
     async def initialize(self):
         """Initialisation asynchrone - doit être appelée après la création"""
         # Charger la configuration des besoins manquants
         self.missing_needs_config = self._load_missing_needs_config()
+
+    def _ensure_vehicle_mapping_cache(self, strategy) -> None:
+        """Construit une seule fois les caches de mapping véhicules depuis la stratégie.
+
+        - _cached_vehicle_specs   : {vehicle_type: {crew_size, water_capacity_l, ...}}
+        - _cached_flat_mapping    : {generic_type: {primary: [...], secondary: [...]}}
+        - _cached_reverse_mapping : {real_type: generic_type}  — index O(1) pour _find_generic_type_for_real
+        """
+        if self._cached_flat_mapping:
+            return  # Déjà construit
+        if not (hasattr(strategy, 'parser') and strategy.parser):
+            return
+
+        vehicles_mapping = strategy.parser.vehicles_mapping
+        self._cached_vehicle_specs = vehicles_mapping.get('vehicle_specs', {})
+
+        for cat in vehicles_mapping.get('vehicle_mapping', {}).values():
+            self._cached_flat_mapping.update(cat)
+
+        for generic_type, config in self._cached_flat_mapping.items():
+            if isinstance(config, dict):
+                for real_type in config.get('primary', []):
+                    self._cached_reverse_mapping.setdefault(real_type, generic_type)
+
+        logger.debug(
+            f"Cache mapping véhicules construit: {len(self._cached_flat_mapping)} types génériques, "
+            f"{len(self._cached_reverse_mapping)} types réels indexés"
+        )
 
     def _load_missing_needs_config(self) -> Dict:
         """
@@ -335,25 +368,21 @@ class MissionManager:
             # Optimiser les pompes selon le volume d'eau à pomper
             vehicle_needs = self.water_pump_service.optimize_pump_needs(vehicle_needs, mission)
 
-            # Optimiser le transport d'eau et les formations si la stratégie expose le parser
-            if hasattr(strategy, 'parser') and strategy.parser:
-                _vehicle_specs = strategy.parser.vehicles_mapping.get('vehicle_specs', {})
-                _vehicle_mapping_all = strategy.parser.vehicles_mapping.get('vehicle_mapping', {})
-                _flat_mapping: dict = {}
-                for _cat in _vehicle_mapping_all.values():
-                    _flat_mapping.update(_cat)
-
+            # Optimiser le transport d'eau et les formations (cache construit une seule fois)
+            self._ensure_vehicle_mapping_cache(strategy)
+            if self._cached_flat_mapping:
                 # Compenser le déficit en eau de transport
                 if mission.water_needed_l:
                     vehicle_needs = self.water_pump_service.optimize_water_transport_needs(
-                        vehicle_needs, mission, _vehicle_specs, _flat_mapping
+                        vehicle_needs, mission, self._cached_vehicle_specs,
+                        self._cached_flat_mapping, self._cached_reverse_mapping
                     )
 
                 # Compenser les formations manquantes
                 if mission.required_formations:
                     _personnel_mapping = self.missing_needs_config.get('personnel_mapping', {})
                     vehicle_needs = self.water_pump_service.optimize_formation_needs(
-                        vehicle_needs, mission, _personnel_mapping, _vehicle_specs
+                        vehicle_needs, mission, _personnel_mapping, self._cached_vehicle_specs
                     )
 
             # Traiter les résultats d'alertes de véhicules manquants
@@ -424,17 +453,8 @@ class MissionManager:
             except Exception as e:
                 logger.error(f"Erreur lors de l'analyse des véhicules manquants: {e}")
 
-            # Obtenir le mapping des alternatives depuis la stratégie
-            alternatives_mapping = {}
-            if hasattr(strategy, 'parser') and strategy.parser:
-                # Extraire le mapping des alternatives depuis le parser
-                vehicle_mapping = strategy.parser.vehicles_mapping.get('vehicle_mapping', {})
-
-                # Combiner TOUTES les catégories de mappings
-                alternatives_mapping = {}
-                for category_name, category_mapping in vehicle_mapping.items():
-                    alternatives_mapping.update(category_mapping)
-                    logger.debug(f"Ajouté catégorie {category_name}: {len(category_mapping)} types au mapping des alternatives")
+            # Obtenir le mapping des alternatives depuis le cache (construit une seule fois)
+            alternatives_mapping = dict(self._cached_flat_mapping)  # copie légère pour mutation locale
 
             # Logique spéciale pour les missions "Transport de patient"
             logger.debug(f"🔍 Vérification du titre de mission: '{mission.title}'")
@@ -1538,34 +1558,29 @@ class MissionManager:
             return vehicles_needed
 
         personnel_name = personnel_config.get("name", personnel_code)
+        # count_per_vehicle prime sur crew_size (valeurs exactes du jeu vs taille d'équipage générique)
+        cpv_map: dict = personnel_config.get("count_per_vehicle", {})
 
         # Créer la liste des véhicules avec leurs capacités
         specialized_vehicles = []
         for vehicle_type in appropriate_vehicles:
-            if vehicle_type in vehicle_specs:
+            is_priority = vehicle_type in priority_set
+            priority_index = priority_index_map.get(vehicle_type, len(priority_vehicles))
+            # Priorité : count_per_vehicle → crew_size de vehicle_specs → 1
+            if vehicle_type in cpv_map:
+                crew_size = cpv_map[vehicle_type]
+            elif vehicle_type in vehicle_specs:
                 crew_size = vehicle_specs[vehicle_type].get('crew_size', 1)
-                is_priority = vehicle_type in priority_set
-                priority_index = priority_index_map.get(vehicle_type, len(priority_vehicles))
-
-                specialized_vehicles.append({
-                    'type': vehicle_type,
-                    'crew_size': crew_size,
-                    'is_priority': is_priority,
-                    'priority_index': priority_index
-                })
-                logger.debug(f"👨‍💼 Véhicule {vehicle_type} : {crew_size} spécialistes, priorité={is_priority}")
             else:
-                # Fallback pour véhicules sans specs
-                is_priority = vehicle_type in priority_set
-                priority_index = priority_index_map.get(vehicle_type, len(priority_vehicles))
+                crew_size = 1
 
-                specialized_vehicles.append({
-                    'type': vehicle_type,
-                    'crew_size': 1,  # Fallback par défaut
-                    'is_priority': is_priority,
-                    'priority_index': priority_index
-                })
-                logger.debug(f"👨‍💼 Véhicule {vehicle_type} : crew_size=1 (fallback), priorité={is_priority}")
+            specialized_vehicles.append({
+                'type': vehicle_type,
+                'crew_size': crew_size,
+                'is_priority': is_priority,
+                'priority_index': priority_index
+            })
+            logger.debug(f"👨‍💼 Véhicule {vehicle_type} : {crew_size} spécialistes, priorité={is_priority}")
 
         if not specialized_vehicles:
             logger.warning(f"👨‍💼 Aucun véhicule approprié trouvé pour {personnel_code} - configuration: {personnel_config}")
