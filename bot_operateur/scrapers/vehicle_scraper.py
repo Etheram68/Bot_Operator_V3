@@ -600,8 +600,35 @@ class VehicleScraper:
 
             logger.debug(f"📋 {len(vehicle_infos)} véhicules analysés via JS bulk")
 
+            # Pré-calculer l'effective mapping (adaptation transfert interhospitalier) et le reverse index
+            # Une seule fois avant la boucle, évite O(besoins) par véhicule dans _find_matching_need
+            is_hospital_transfer = mission and mission.title and "Transfert interhospitalier" in mission.title
+            effective_alternatives = alternatives_mapping
+            if is_hospital_transfer and alternatives_mapping and 'AMBULANCE' in alternatives_mapping:
+                effective_alternatives = alternatives_mapping.copy()
+                amb = effective_alternatives['AMBULANCE'].copy()
+                if 'transport_capable' in amb:
+                    amb['primary'] = amb['transport_capable']
+                    amb['secondary'] = []
+                    effective_alternatives['AMBULANCE'] = amb
+                    logger.debug(f"🚑 Transfert interhospitalier: mapping AMBULANCE adapté pour {amb['transport_capable']}")
+
+            # Reverse index: {vehicle_type → [need_types]} pour lookup O(1) au lieu de O(besoins)
+            alt_primary_by_vt: dict = {}
+            alt_secondary_by_vt: dict = {}
+            if effective_alternatives:
+                for _need_type, _cfg in effective_alternatives.items():
+                    if isinstance(_cfg, dict):
+                        for _vt in _cfg.get('primary', []):
+                            alt_primary_by_vt.setdefault(_vt, []).append(_need_type)
+                        for _vt in _cfg.get('secondary', []):
+                            alt_secondary_by_vt.setdefault(_vt, []).append(_need_type)
+
             # Trier les véhicules par priorité (primary avant secondary)
-            prioritized_vehicle_infos = self._prioritize_vehicles_by_alternatives(vehicle_infos, adjusted_vehicle_needs, alternatives_mapping)
+            prioritized_vehicle_infos = self._prioritize_vehicles_by_alternatives(
+                vehicle_infos, adjusted_vehicle_needs, effective_alternatives,
+                alt_primary_by_vt, alt_secondary_by_vt
+            )
 
             # Parcourir les véhicules triés par priorité
             for vehicle_info in prioritized_vehicle_infos:
@@ -611,7 +638,11 @@ class VehicleScraper:
                         continue
 
                     # Chercher si ce véhicule peut satisfaire un besoin (utiliser adjusted_vehicle_needs)
-                    matching_need = self._find_matching_need(vehicle_type, adjusted_vehicle_needs, selected_counts, alternatives_mapping, mission, constrained_vehicles, constrained_alternatives)
+                    matching_need = self._find_matching_need(
+                        vehicle_type, adjusted_vehicle_needs, selected_counts,
+                        effective_alternatives, mission, constrained_vehicles, constrained_alternatives,
+                        alt_primary_by_vt, alt_secondary_by_vt
+                    )
 
                     if matching_need:
                         need_type, needed_count, already_selected = matching_need
@@ -1071,51 +1102,42 @@ class VehicleScraper:
 
         return adjusted_needs
 
-    def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, mission: 'Mission' = None, constrained_vehicles: set = None, constrained_alternatives: dict = None):
+    def _find_matching_need(self, vehicle_type: str, vehicle_needs: dict, selected_counts: dict, alternatives_mapping: dict = None, mission: 'Mission' = None, constrained_vehicles: set = None, constrained_alternatives: dict = None, alt_primary_by_vt: dict = None, alt_secondary_by_vt: dict = None):
         """
         Détermine si un véhicule peut satisfaire un besoin spécifique.
 
         Vérifie d'abord une correspondance directe, puis explore les
-        alternatives primaires et secondaires. Adapte le mapping pour
-        les transferts interhospitaliers.
+        alternatives primaires et secondaires.
+
+        Quand alt_primary_by_vt/alt_secondary_by_vt sont fournis (reverse index pré-calculé),
+        la recherche est O(alternatives_du_véhicule) au lieu de O(tous_les_besoins).
 
         Args:
             vehicle_type: Type du véhicule candidat
             vehicle_needs: Besoins restants par type de véhicule
             selected_counts: Nombre de véhicules déjà sélectionnés par type
-            alternatives_mapping: Mapping des alternatives possibles
-            mission: Mission courante pour adaptation contextuelle
+            alternatives_mapping: Mapping des alternatives possibles (effective, déjà adapté si besoin)
+            mission: Mission courante (utilisé seulement en fallback sans reverse index)
+            constrained_vehicles: Besoins avec contraintes de capacité
+            constrained_alternatives: Alternatives par capacité pour véhicules contraints
+            alt_primary_by_vt: Reverse index {vehicle_type → [need_types]} pour primaires
+            alt_secondary_by_vt: Reverse index {vehicle_type → [need_types]} pour secondaires
 
         Returns:
             tuple: (type_besoin, quantité_nécessaire, déjà_sélectionné)
                    ou None si aucune correspondance
         """
-
-        # Vérifier si c'est un transfert interhospitalier et adapter le mapping pour AMBULANCE
-        is_hospital_transfer = mission and mission.title and "Transfert interhospitalier" in mission.title
-        if is_hospital_transfer and alternatives_mapping:
-            # Créer une copie du mapping pour modification locale
-            alternatives_mapping = alternatives_mapping.copy()
-            if 'AMBULANCE' in alternatives_mapping:
-                ambulance_mapping = alternatives_mapping['AMBULANCE'].copy()
-                # Pour les transferts interhospitaliers, utiliser transport_capable au lieu de primary
-                if 'transport_capable' in ambulance_mapping:
-                    ambulance_mapping['primary'] = ambulance_mapping['transport_capable']
-                    ambulance_mapping['secondary'] = []  # Pas de fallback pour les transferts
-                    alternatives_mapping['AMBULANCE'] = ambulance_mapping
-                    logger.debug(f"🚑 Transfert interhospitalier détecté: utilisation des véhicules transport_capable pour AMBULANCE: {ambulance_mapping['transport_capable']}")
-
         constrained_vehicles = constrained_vehicles or set()
         constrained_alternatives = constrained_alternatives or {}
 
-        # D'abord vérifier la correspondance directe
+        # Correspondance directe
         if vehicle_type in vehicle_needs:
             needed_count = vehicle_needs[vehicle_type]
             already_selected = selected_counts.get(vehicle_type, 0)
             if needed_count > already_selected:
                 return (vehicle_type, needed_count, already_selected)
 
-        # Vérifier si ce vehicle_type est une alternative par capacité pour un véhicule contraint
+        # Alternative par capacité pour un véhicule contraint
         for constrained_vehicle, alternatives in constrained_alternatives.items():
             if vehicle_type in alternatives and constrained_vehicle in vehicle_needs:
                 needed_count = vehicle_needs[constrained_vehicle]
@@ -1124,51 +1146,84 @@ class VehicleScraper:
                     logger.info(f"🔄 Utilisation de {vehicle_type} comme alternative à {constrained_vehicle}")
                     return (constrained_vehicle, needed_count, already_selected)
 
-        # Si pas de correspondance directe, vérifier les alternatives
-        # MAIS seulement si le véhicule demandé n'a pas de contraintes de capacité
-        if alternatives_mapping:
-            # PREMIÈRE PASSE: vérifier seulement les alternatives PRIMAIRES
-            for need_type, needed_count in vehicle_needs.items():
+        if not alternatives_mapping:
+            return None
+
+        if alt_primary_by_vt is not None:
+            # Chemin optimisé via reverse index: O(besoins_couverts_par_ce_véhicule)
+            # PREMIÈRE PASSE: primaires
+            for need_type in alt_primary_by_vt.get(vehicle_type, []):
+                if need_type not in vehicle_needs or need_type in constrained_vehicles:
+                    continue
+                needed_count = vehicle_needs[need_type]
                 already_selected = selected_counts.get(need_type, 0)
                 if needed_count > already_selected:
-                    # Vérifier si ce need_type a des contraintes de capacité
-                    if need_type in constrained_vehicles:
-                        logger.debug(f"🔒 {need_type} a des contraintes - pas d'alternatives permises")
-                        continue  # Passer ce besoin - seul le véhicule exact peut le satisfaire
+                    return (need_type, needed_count, already_selected)
 
-                    # Vérifier si ce vehicle_type peut satisfaire ce need_type via primary
-                    alternatives = alternatives_mapping.get(need_type, {})
-                    primary_alternatives = alternatives.get('primary', [])
-
-                    if vehicle_type in primary_alternatives:
+            # DEUXIÈME PASSE: secondaires
+            if alt_secondary_by_vt is not None:
+                for need_type in alt_secondary_by_vt.get(vehicle_type, []):
+                    if need_type not in vehicle_needs or need_type in constrained_vehicles:
+                        continue
+                    needed_count = vehicle_needs[need_type]
+                    already_selected = selected_counts.get(need_type, 0)
+                    if needed_count > already_selected:
                         return (need_type, needed_count, already_selected)
 
-            # DEUXIÈME PASSE: vérifier les alternatives SECONDAIRES seulement si aucun primaire trouvé
-            for need_type, needed_count in vehicle_needs.items():
-                already_selected = selected_counts.get(need_type, 0)
-                if needed_count > already_selected:
-                    # Vérifier si ce need_type a des contraintes de capacité
-                    if need_type in constrained_vehicles:
-                        logger.debug(f"🔒 {need_type} a des contraintes - pas d'alternatives secondaires permises")
-                        continue  # Passer ce besoin - seul le véhicule exact peut le satisfaire
+            return None
 
-                    # Vérifier si ce vehicle_type peut satisfaire ce need_type via secondary
-                    alternatives = alternatives_mapping.get(need_type, {})
-                    secondary_alternatives = alternatives.get('secondary', [])
+        # Fallback: logique originale O(besoins) — utilisée sans reverse index
+        # (ex: _load_and_select_additional_vehicles via _find_need_match_safe)
 
-                    if vehicle_type in secondary_alternatives:
-                        return (need_type, needed_count, already_selected)
+        # Adapter le mapping pour les transferts interhospitaliers
+        is_hospital_transfer = mission and mission.title and "Transfert interhospitalier" in mission.title
+        if is_hospital_transfer:
+            alternatives_mapping = alternatives_mapping.copy()
+            if 'AMBULANCE' in alternatives_mapping:
+                ambulance_mapping = alternatives_mapping['AMBULANCE'].copy()
+                if 'transport_capable' in ambulance_mapping:
+                    ambulance_mapping['primary'] = ambulance_mapping['transport_capable']
+                    ambulance_mapping['secondary'] = []
+                    alternatives_mapping['AMBULANCE'] = ambulance_mapping
+                    logger.debug(f"🚑 Transfert interhospitalier détecté: utilisation des véhicules transport_capable pour AMBULANCE: {ambulance_mapping['transport_capable']}")
+
+        # PREMIÈRE PASSE: alternatives PRIMAIRES
+        for need_type, needed_count in vehicle_needs.items():
+            already_selected = selected_counts.get(need_type, 0)
+            if needed_count > already_selected:
+                if need_type in constrained_vehicles:
+                    logger.debug(f"🔒 {need_type} a des contraintes - pas d'alternatives permises")
+                    continue
+                alternatives = alternatives_mapping.get(need_type, {})
+                if vehicle_type in alternatives.get('primary', []):
+                    return (need_type, needed_count, already_selected)
+
+        # DEUXIÈME PASSE: alternatives SECONDAIRES
+        for need_type, needed_count in vehicle_needs.items():
+            already_selected = selected_counts.get(need_type, 0)
+            if needed_count > already_selected:
+                if need_type in constrained_vehicles:
+                    logger.debug(f"🔒 {need_type} a des contraintes - pas d'alternatives secondaires permises")
+                    continue
+                alternatives = alternatives_mapping.get(need_type, {})
+                if vehicle_type in alternatives.get('secondary', []):
+                    return (need_type, needed_count, already_selected)
 
         return None
 
-    def _prioritize_vehicles_by_alternatives(self, vehicle_infos: list, vehicle_needs: dict, alternatives_mapping: dict = None) -> list:
+    def _prioritize_vehicles_by_alternatives(self, vehicle_infos: list, vehicle_needs: dict, alternatives_mapping: dict = None, alt_primary_by_vt: dict = None, alt_secondary_by_vt: dict = None) -> list:
         """
         Trie les véhicules par priorité : les véhicules primary d'abord, puis secondary.
+
+        Quand alt_primary_by_vt/alt_secondary_by_vt sont fournis (reverse index pré-calculé),
+        la classification est O(alternatives_du_véhicule) au lieu de O(tous_les_besoins).
 
         Args:
             vehicle_infos: Liste des infos véhicules (row, vehicle_type, vehicle_caption)
             vehicle_needs: Besoins en véhicules par type
             alternatives_mapping: Mapping des alternatives
+            alt_primary_by_vt: Reverse index {vehicle_type → [need_types]} pour primaires
+            alt_secondary_by_vt: Reverse index {vehicle_type → [need_types]} pour secondaires
 
         Returns:
             list: Liste triée par priorité
@@ -1189,19 +1244,27 @@ class VehicleScraper:
             is_primary = False
             is_secondary = False
 
-            # Vérifier si ce véhicule est primary ou secondary pour un besoin
-            for need_type in vehicle_needs.keys():
-                alternatives = alternatives_mapping.get(need_type, {})
-                primary_alternatives = alternatives.get('primary', [])
-                secondary_alternatives = alternatives.get('secondary', [])
+            if alt_primary_by_vt is not None:
+                # Reverse index: O(needs_couverts_par_ce_véhicule) au lieu de O(all_needs)
+                for need_type in alt_primary_by_vt.get(vehicle_type, []):
+                    if need_type in vehicle_needs:
+                        is_primary = True
+                        break
+                if not is_primary and alt_secondary_by_vt is not None:
+                    for need_type in alt_secondary_by_vt.get(vehicle_type, []):
+                        if need_type in vehicle_needs:
+                            is_secondary = True
+                            break
+            else:
+                # Fallback: logique originale O(all_needs)
+                for need_type in vehicle_needs.keys():
+                    alternatives = alternatives_mapping.get(need_type, {})
+                    if vehicle_type in alternatives.get('primary', []):
+                        is_primary = True
+                        break
+                    elif vehicle_type in alternatives.get('secondary', []):
+                        is_secondary = True
 
-                if vehicle_type in primary_alternatives:
-                    is_primary = True
-                    break
-                elif vehicle_type in secondary_alternatives:
-                    is_secondary = True
-
-            # Classer le véhicule selon sa priorité
             if is_primary:
                 primary_vehicles.append(vehicle_info)
             elif is_secondary:

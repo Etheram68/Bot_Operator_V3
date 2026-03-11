@@ -1,4 +1,5 @@
 import re
+import time
 from typing import Dict, List, Optional
 from pathlib import Path
 from loguru import logger
@@ -21,6 +22,19 @@ class RequirementParser:
     _contextual_parser = None
     _text_cleaner = None
     _pools_initialized = False
+
+    # Données statiques de déduplication — définies une fois au niveau classe
+    _COMPATIBLE_GROUPS: dict = {
+        'fourgons': ['FPT', 'FPT_SR', 'FPT_BEA', 'FPT_VIM', 'FPT_SR_BEA'],
+        'secours_routier': ['VSR', 'FPT_SR', 'FPT_SR_BEA'],
+        'elevateur_aerien': ['BEA', 'FPT_BEA', 'FPT_SR_BEA'],
+        'commandement': ['CHEF_DE_GROUPE', 'VLHR'],
+        'police': ['CARS_POLICE', 'CARS_POLICE_VR', 'CARS_POLICE_PATROUILLE_VR'],
+    }
+    _OVERLAP_RULES: dict = {
+        'BLS_CSL': ['BLS'],
+        'VIM': ['VIMP'],
+    }
 
     def __new__(cls, needs_labels_path: str = None, vehicles_mapping_path: str = None, missing_config_path: str = None):
         if cls._instance is None:
@@ -327,7 +341,6 @@ class RequirementParser:
         Returns:
             List[MissionRequirement]: Liste déduplicatée
         """
-        import time
         start_time = time.time()
         max_processing_time = 5.0  # 5 secondes max
 
@@ -336,20 +349,11 @@ class RequirementParser:
 
         logger.debug(f"🔄 Déduplication de {len(requirements)} exigences")
 
-        # Regrouper les exigences par "famille" de véhicules compatibles
-        compatible_groups = {
-            'fourgons': ['FPT', 'FPT_SR', 'FPT_BEA', 'FPT_VIM', 'FPT_SR_BEA'],
-            'secours_routier': ['VSR', 'FPT_SR', 'FPT_SR_BEA'],
-            'elevateur_aerien': ['BEA', 'FPT_BEA', 'FPT_SR_BEA'],
-            'commandement': ['CHEF_DE_GROUPE', 'VLHR'],
-            'police': ['CARS_POLICE', 'CARS_POLICE_VR', 'CARS_POLICE_PATROUILLE_VR'],
-        }
-
         # Pour chaque famille, prendre la quantité maximale requise
         requirements_to_remove = set()
         processed_families = set()
 
-        for family_name, family_types in compatible_groups.items():
+        for family_name, family_types in self._COMPATIBLE_GROUPS.items():
             # Timeout check
             if time.time() - start_time > max_processing_time:
                 logger.warning(f"⚠️ Timeout déduplication famille {family_name} - arrêt forcé")
@@ -385,13 +389,7 @@ class RequirementParser:
             logger.warning("⚠️ Timeout déduplication - skip règles overlap")
         else:
             # Appliquer aussi les règles d'overlap classiques pour les cas non couverts
-            overlap_rules = {
-                'BLS_CSL': ['BLS'],
-                'VIM': ['VIMP'],  # Un VIM peut satisfaire les besoins VIMP
-            }
-
-            # Appliquer les règles d'overlap pour les cas non gérés par les familles
-            for specific_type, generic_types in overlap_rules.items():
+            for specific_type, generic_types in self._OVERLAP_RULES.items():
                 # Timeout check dans la loop
                 if time.time() - start_time > max_processing_time:
                     logger.warning(f"⚠️ Timeout déduplication overlap {specific_type} - arrêt forcé")

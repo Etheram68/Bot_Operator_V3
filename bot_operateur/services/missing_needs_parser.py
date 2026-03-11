@@ -122,11 +122,13 @@ class MissingNeedsParser:
         """Parse le texte des véhicules manquants."""
         parsed_vehicles = {}
 
-        if "Véhicules manquants:" not in div_text:
+        _VEHICLE_PREFIXES = ["Véhicules manquants:", "Restant à envoyer:"]
+        _detected_prefix = next((p for p in _VEHICLE_PREFIXES if p in div_text), None)
+        if not _detected_prefix:
             return parsed_vehicles
 
-        # Extraire la partie après "Véhicules manquants:"
-        missing_part = div_text.split("Véhicules manquants:")[1].strip()
+        # Extraire la partie après le préfixe détecté
+        missing_part = div_text.split(_detected_prefix)[1].strip()
 
         # Diviser par les virgules
         missing_items = [item.strip() for item in missing_part.split(',')]

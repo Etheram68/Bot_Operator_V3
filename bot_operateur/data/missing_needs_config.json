@@ -9,28 +9,28 @@
       "name": "Plongeur",
       "vehicles": ["VPL"],
       "priority": ["VPL"],
-      "count_per_vehicle": {"VPL": 3},
+      "count_per_vehicle": { "VPL": 3 },
       "description": "Personnel spécialisé dans les interventions subaquatiques (double formation PLG+SAV)"
     },
     "SAV": {
       "name": "Sauvetage Aquatique",
       "vehicles": ["VPL"],
       "priority": ["VPL"],
-      "count_per_vehicle": {"VPL": 3},
+      "count_per_vehicle": { "VPL": 3 },
       "description": "Personnel spécialisé dans le sauvetage aquatique (double formation PLG+SAV)"
     },
     "GRI": {
       "name": "GRIMP",
       "vehicles": ["VIMP"],
       "priority": ["VIMP"],
-      "count_per_vehicle": {"VIMP": 5},
+      "count_per_vehicle": { "VIMP": 5 },
       "description": "Groupe d'Intervention en Milieu Périlleux"
     },
     "CYN": {
       "name": "Cynophile",
       "vehicles": ["CARS_DROGUE"],
       "priority": ["CARS_DROGUE"],
-      "count_per_vehicle": {"CARS_DROGUE": 2},
+      "count_per_vehicle": { "CARS_DROGUE": 2 },
       "description": "Unité cynophile (maître-chien)"
     },
     "MED": {
@@ -43,21 +43,21 @@
       "name": "Radiologie",
       "vehicles": ["VIRT"],
       "priority": ["VIRT"],
-      "count_per_vehicle": {"VIRT": 4},
+      "count_per_vehicle": { "VIRT": 4 },
       "description": "Personnel de Radiologie"
     },
     "OPJ": {
       "name": "Officier de Police Judiciaire",
       "vehicles": ["VB", "GN", "PN"],
       "priority": ["VB", "GN", "PN"],
-      "count_per_vehicle": {"VB": 4, "GN": 1, "PN": 1},
+      "count_per_vehicle": { "VB": 4, "GN": 1, "PN": 1 },
       "description": "Officier de police judiciaire pour enquêtes et procédures"
     },
     "USAR": {
       "name": "USAR (Sauvetage Déblaiement)",
-      "vehicles": ["MaGec", "VDIP", "VEC"],
-      "priority": ["MaGec", "VDIP", "VEC"],
-      "count_per_vehicle": {"MaGec": 6, "VDIP": 4, "VEC": 4},
+      "vehicles": ["VTP(ers)SC", "MaGec", "VDIP", "VEC"],
+      "priority": ["VTP(ers)SC", "MaGec", "VDIP", "VEC"],
+      "count_per_vehicle": { "VTP(ers)SC": 9, "MaGec": 6, "VDIP": 4, "VEC": 4 },
       "description": "Personnel Urban Search and Rescue / Sauvetage-Déblaiement"
     }
   },

@@ -603,10 +603,13 @@ class MissionManager:
                         div_text = await div.inner_text()
 
                         # Parser le texte pour extraire les véhicules manquants
-                        # Format attendu: "Véhicules manquants: 1 camion-citerne" ou "Véhicules manquants: 1 Chef de groupe, 1 camion-citerne"
-                        if "Véhicules manquants:" in div_text:
-                            # Extraire la partie après "Véhicules manquants:"
-                            missing_part = div_text.split("Véhicules manquants:")[1].strip()
+                        # Format possible: "Véhicules manquants: 1 FPT, 2 VSAV" (ancien)
+                        #                  "Restant à envoyer: 1 VTP" (nouveau)
+                        _VEHICLE_PREFIXES = ["Véhicules manquants:", "Restant à envoyer:"]
+                        _detected_prefix = next((p for p in _VEHICLE_PREFIXES if p in div_text), None)
+                        if _detected_prefix:
+                            # Extraire la partie après le préfixe détecté
+                            missing_part = div_text.split(_detected_prefix)[1].strip()
 
                             # Nettoyer les entités HTML (&nbsp; -> espaces normaux)
                             import html

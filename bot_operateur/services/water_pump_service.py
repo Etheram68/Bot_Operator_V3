@@ -135,8 +135,9 @@ class WaterPumpService:
             logger.info(f"   - Capacité fournie: {total_capacity}L")
             logger.info(f"   - Gaspillage: {waste}L ({waste/remaining_water_needed*100:.1f}%)")
 
+            water_vehicles_by_type = {v['type']: v for v in water_vehicles}
             for vehicle_type, count in vehicles_needed.items():
-                vehicle_info = next(v for v in water_vehicles if v['type'] == vehicle_type)
+                vehicle_info = water_vehicles_by_type[vehicle_type]
                 logger.info(f"   - {count}x {vehicle_type} ({vehicle_info['capacity']}L chacun)")
         else:
             logger.warning(f"💧 Impossible de satisfaire le besoin en eau de {remaining_water_needed}L")
