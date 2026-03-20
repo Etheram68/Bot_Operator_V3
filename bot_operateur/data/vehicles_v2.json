@@ -10,15 +10,24 @@
         "secondary": []
       },
       "FPT": {
-        "primary": ["FPT", "FPT(SR)", "CCR(SR)", "VPI"],
+        "primary": ["FPT", "FPT(SR)", "CCR(SR)", "VPI", "FPT(SR)-RR", "VRR"],
         "secondary": ["FS"]
       },
       "FPT_BEA": {
-        "primary": ["FPT", "FPT(SR)", "CCR(SR)", "VPI", "BEA", "EPA"],
+        "primary": [
+          "FPT",
+          "FPT(SR)",
+          "CCR(SR)",
+          "VPI",
+          "BEA",
+          "EPA",
+          "FPT(SR)-RR",
+          "VRR"
+        ],
         "secondary": ["FS"]
       },
       "FPT_VIM": {
-        "primary": ["FPT", "FPT(SR)", "CCR(SR)"],
+        "primary": ["FPT", "FPT(SR)", "CCR(SR)", "FPT(SR)-RR", "VRR"],
         "secondary": ["VPI", "VIM"]
       },
       "FPT_CONSTRAINED": {
@@ -54,7 +63,7 @@
         "secondary": ["FMOGP"]
       },
       "VSR": {
-        "primary": ["VSR", "FPT(SR)", "CCR(SR)", "FS"],
+        "primary": ["VSR", "FPT(SR)", "CCR(SR)", "FS", "FPT(SR)-RR"],
         "secondary": []
       },
       "CITERNE": {
@@ -463,13 +472,44 @@
       }
     },
 
+    "railway": {
+      "FPTSR_RR": {
+        "primary": ["FPT(SR)-RR"],
+        "secondary": []
+      },
+      "VRR": {
+        "primary": ["VRR"],
+        "secondary": []
+      },
+      "NEF": {
+        "primary": ["NEF"],
+        "secondary": []
+      },
+      "PLATEAU_LORRY": {
+        "primary": ["PLATEAU_LORRY"],
+        "secondary": []
+      },
+      "ELRR": {
+        "primary": ["ELRR"],
+        "secondary": []
+      },
+      "CHEN": {
+        "primary": ["CHEN"],
+        "secondary": []
+      },
+      "VGPA": {
+        "primary": ["VGPA"],
+        "secondary": []
+      }
+    },
+
     "combined_requirements": {
       "FPT_SR": {
-        "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR"],
+        "primary": ["FPT(SR)", "CCR(SR)", "VSR", "FPT(SR)-RR"],
         "secondary": ["FS", "VPI"]
       },
       "FPT_SR_CONSTRAINED": {
-        "primary": ["FPT(SR)", "CCR(SR)", "FPT"],
+        "primary": ["FPT(SR)", "CCR(SR)", "FPT(SR)-RR"],
         "secondary": []
       },
       "BLS_CSL": {
@@ -478,7 +518,17 @@
         "availability_limited": true
       },
       "FPT_SR_BEA": {
-        "primary": ["FPT(SR)", "CCR(SR)", "FPT", "VSR", "BEA", "EPA", "VPI"],
+        "primary": [
+          "FPT(SR)",
+          "CCR(SR)",
+          "FPT",
+          "VSR",
+          "BEA",
+          "EPA",
+          "VPI",
+          "FPT(SR)-RR",
+          "VRR"
+        ],
         "secondary": []
       }
     }
@@ -593,6 +643,25 @@
     },
     "VEC": {
       "crew_size": 4
+    },
+    "FPT(SR)-RR": {
+      "crew_size": 6,
+      "water_capacity_l": 3000,
+      "pump_capacity_l_min": 1000
+    },
+    "VRR": {
+      "crew_size": 4,
+      "water_capacity_l": 3000,
+      "pump_capacity_l_min": 1000
+    },
+    "ELRR": {
+      "crew_size": 0,
+      "water_capacity_l": 2000,
+      "pump_capacity_l_min": 1000
+    },
+    "CHEN": {
+      "crew_size": 0,
+      "pump_capacity_l_min": 1000
     }
   },
 

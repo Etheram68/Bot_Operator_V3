@@ -167,7 +167,12 @@
     "CEREV": ["CEREV requis", "CEREV", "\\d+\\s+CEREV"],
     "CEDEPOL": ["Requis CEDEPOL", "CEDEPOL", "\\d+\\s+CEDEPOL"],
     "CETRAN": ["Requis CETRAN", "CETRAN", "\\d+\\s+CETRAN"],
-    "CEFSP": ["Requis CEFSP", "CEFSP", "\\d+\\s+CEFSP"],
+    "CEFSP": [
+      "Requis CEFSP",
+      "CEFSP",
+      "\\d+\\s+CEFSP",
+      "Poudre et support de CO2\\s+requis"
+    ],
     "CESD": [
       "Cellule de Sauvetage et déblaiement requis",
       "Cellule de sauvetage et déblaiement",
@@ -265,11 +270,7 @@
       "\\bMotoneiges?\\b",
       "\\d+\\s+[Mm]otoneiges?"
     ],
-    "QUAD": [
-      "QUAD\\s*(requis|obligatoires?)?",
-      "\\bQUAD\\b",
-      "\\d+\\s+QUAD"
-    ],
+    "QUAD": ["QUAD\\s*(requis|obligatoires?)?", "\\bQUAD\\b", "\\d+\\s+QUAD"],
     "DRONE": [
       "Drones?\\s*(requis|obligatoires?)?",
       "\\bDrones?\\b",
@@ -373,6 +374,50 @@
     ],
     "RESCUE_DIRECTOR_PROBABILITY": [
       "Chances qu['’ ]un Directeur des Secours Médicaux soit requis"
+    ],
+    "FPTSR_RR": [
+      "FPTSR-RR\\s+requis",
+      "FPT\\(SR\\)-RR\\s+requis",
+      "\\bFPTSR-RR\\b",
+      "\\bFPT\\(SR\\)-RR\\b",
+      "\\d+\\s+FPTSR-RR"
+    ],
+    "VRR": [
+      "VÉHICULE\\s+RAIL\\s+ROUTE\\s+requis",
+      "Véhicule\\s+[Rr]ail\\s+[Rr]oute\\s+requis",
+      "\\bVÉHICULE RAIL ROUTE\\b",
+      "\\d+\\s+VÉHICULE RAIL ROUTE"
+    ],
+    "NEF": [
+      "NEF\\s+requis",
+      "\\bNEF\\b",
+      "navette.{0,20}ferroviaire",
+      "\\d+\\s+NEF"
+    ],
+    "PLATEAU_LORRY": [
+      "Plateau\\s+Lorry\\s+requis",
+      "\\bPLATEAU LORRY\\b",
+      "\\d+\\s+[Pp]lateau [Ll]orry"
+    ],
+    "ELRR": [
+      "ELRR\\s+requis",
+      "\\bELRR\\b",
+      "engin\\s+lourd\\s+rail.route",
+      "\\d+\\s+ELRR"
+    ],
+    "CHEN": [
+      "Chenilles\\s+obligatoires.{0,10}Chen",
+      "CHEN\\s+requis",
+      "chenillettes?\\s+requis",
+      "\\bCHEN\\b",
+      "\\d+\\s+CHEN",
+      "\\d+\\s+[Cc]henillettes?"
+    ],
+    "VGPA": [
+      "VGPA\\s+requis",
+      "\\bVGPA\\b",
+      "ventilateur\\s+grande\\s+puissance\\s+autoporté",
+      "\\d+\\s+VGPA"
     ]
   },
   "resource_indicators": {
