@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List, Optional, Dict
 from loguru import logger
 
-from ..models.mission import Mission, MissionStatus
+from ..models.mission import Mission, MissionStatus, MissionType
 from ..scrapers.mission_scraper import MissionScraper
 from ..scrapers.vehicle_scraper import VehicleScraper
 from ..strategies.smart_strategy import SmartStrategy
@@ -1899,7 +1899,13 @@ class MissionManager:
         # Score = crédits × véhicules (favorise les grosses missions lucratives)
         score = credits * total_vehicles
 
-        logger.debug(f"Mission {mission.id}: {credits} crédits × {total_vehicles} véhicules = score {score}")
+        # Bonus de priorité pour les missions alliance event (traitées en premier)
+        if mission.type == MissionType.ALLIANCE_EVENT:
+            score *= 1000
+        elif mission.type == MissionType.ALLIANCE:
+            score *= 100
+
+        logger.debug(f"Mission {mission.id} ({mission.type.value}): {credits} crédits × {total_vehicles} véhicules = score {score}")
 
         return score
 

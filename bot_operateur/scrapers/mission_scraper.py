@@ -52,6 +52,8 @@ class MissionScraper:
         missions = []
 
         mission_panels = {
+            MissionType.ALLIANCE_EVENT: "#mission_list_alliance_event",
+            MissionType.ALLIANCE: "#mission_list_alliance",
             MissionType.NORMAL: "#mission_list",
             MissionType.TRANSPORT: "#mission_list_krankentransporte",
             MissionType.SECURITY: "#mission_list_sicherheitswache",

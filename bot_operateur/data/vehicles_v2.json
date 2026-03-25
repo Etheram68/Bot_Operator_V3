@@ -145,6 +145,10 @@
         "primary": ["CEEM"],
         "secondary": []
       },
+      "CEEM_CONSTRAINED": {
+        "primary": ["CEEM"],
+        "secondary": []
+      },
       "CEPC": {
         "primary": ["CEPC"],
         "secondary": []
@@ -251,6 +255,10 @@
       },
       "UFR": {
         "primary": ["UFR"],
+        "secondary": []
+      },
+      "UNITE_DEMINAGE": {
+        "primary": ["TEODOR"],
         "secondary": []
       }
     },
@@ -652,15 +660,6 @@
     "VRR": {
       "crew_size": 4,
       "water_capacity_l": 3000,
-      "pump_capacity_l_min": 1000
-    },
-    "ELRR": {
-      "crew_size": 0,
-      "water_capacity_l": 2000,
-      "pump_capacity_l_min": 1000
-    },
-    "CHEN": {
-      "crew_size": 0,
       "pump_capacity_l_min": 1000
     }
   },

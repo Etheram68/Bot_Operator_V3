@@ -418,6 +418,13 @@
       "\\bVGPA\\b",
       "ventilateur\\s+grande\\s+puissance\\s+autoporté",
       "\\d+\\s+VGPA"
+    ],
+    "UNITE_DEMINAGE": [
+      "Unités? de déminage requises?",
+      "unités? de déminage nécessaires?",
+      "Unité\\s+de\\s+déminage",
+      "\\d+\\s+Unités?\\s+de\\s+déminage",
+      "\\d+\\s+unités?\\s+de\\s+déminage"
     ]
   },
   "resource_indicators": {
