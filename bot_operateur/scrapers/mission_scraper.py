@@ -168,6 +168,8 @@ class MissionScraper:
                         logger.warning(f"⚠️ État mission inconnu pour {mission_id}: '{mission_state_filter}'")
                         state = MissionState.UNKNOWN
 
+                created_at = sortable_data.get("created_at")
+
                 mission = Mission(
                     id=mission_id,
                     title=title,
@@ -177,7 +179,8 @@ class MissionScraper:
                     deploy_url=deploy_url,
                     help_url=help_url,
                     credits=credits,
-                    max_prisoners=prisoner_count
+                    max_prisoners=prisoner_count,
+                    created_at=created_at
                 )
                 logger.debug(f"Mission extraite: {mission.id} - {mission.title} - {credits} crédits - {prisoner_count} prisonniers")
                 return mission

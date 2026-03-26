@@ -321,10 +321,10 @@
     ],
     "PELICAN": [
       "Pélican nécessaire",
-      "\\d+\\s+bombardier d['’ ]eau",
-      "\\d+\\s+avions?\\s+bombardiers?\\s+d['’ ]eau",
-      "avions?\\s+bombardiers?\\s+d['’ ]eau",
-      "bombardiers?\\s+d['’ ]eau"
+      "\\d+\\s+bombardier d[‘’ ]eau",
+      "\\d+\\s+avions?\\s+bombardiers?\\s+d[‘’ ]eau",
+      "avions?\\s+bombardiers?\\s+d[‘’ ]eau",
+      "bombardiers?\\s+d[‘’ ]eau"
     ],
     "FPT_BEA": ["Fourgons d['’ ]incendie ou moyens elévateur aérien"],
     "FPT_VIM": [

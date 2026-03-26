@@ -6,6 +6,7 @@ Serveur API Flask pour gérer les actions Docker depuis l'interface de monitorin
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import subprocess
+import json
 import logging
 import os
 
@@ -192,6 +193,139 @@ def logs_stream():
         return jsonify({
             "success": False,
             "error": str(e)
+        }), 500
+
+RUNTIME_CONFIG_PATH = "/app/bot_operateur/data/runtime_config.json"
+ALL_MISSION_TYPES = ["normal", "transport", "security", "alliance", "alliance_event"]
+VALID_MISSION_SORTS = ["importance_desc", "created_at_asc", "created_at_desc", "credits_asc", "credits_desc"]
+
+@app.route('/api/runtime-config', methods=['GET'])
+def get_runtime_config():
+    """Lit la configuration runtime depuis le container du bot"""
+    logger.info("Lecture de la configuration runtime")
+
+    success, output = run_docker_command([
+        'docker', 'exec', CONTAINER_NAME,
+        'cat', RUNTIME_CONFIG_PATH
+    ])
+
+    if success:
+        try:
+            config = json.loads(output)
+            # S'assurer que tous les champs sont présents
+            config.setdefault("enabled_mission_types", ALL_MISSION_TYPES)
+            config.setdefault("max_missions", 5)
+            config.setdefault("mission_sort", "importance_desc")
+            config.setdefault("min_credits_threshold", None)
+            config.setdefault("optimization_threshold", None)
+            config.setdefault("deployment_threshold", None)
+            config.setdefault("personnel_threshold", None)
+            return jsonify({"success": True, "config": config}), 200
+        except json.JSONDecodeError:
+            return jsonify({
+                "success": False,
+                "error": "Fichier de configuration invalide"
+            }), 500
+    else:
+        # Retourner les valeurs par défaut si le fichier n'existe pas
+        return jsonify({
+            "success": True,
+            "config": {
+                "enabled_mission_types": ALL_MISSION_TYPES,
+                "max_missions": 5,
+                "mission_sort": "importance_desc",
+                "min_credits_threshold": None,
+                "optimization_threshold": None,
+                "deployment_threshold": None,
+                "personnel_threshold": None
+            },
+            "default": True
+        }), 200
+
+@app.route('/api/runtime-config', methods=['POST'])
+def update_runtime_config():
+    """Met à jour la configuration runtime dans le container du bot"""
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "Données JSON requises"}), 400
+
+    logger.info(f"Mise à jour de la configuration runtime: {data}")
+
+    # Valider les types de missions
+    enabled_types = data.get("enabled_mission_types", ALL_MISSION_TYPES)
+    invalid_types = [t for t in enabled_types if t not in ALL_MISSION_TYPES]
+    if invalid_types:
+        return jsonify({
+            "success": False,
+            "error": f"Types de mission invalides: {invalid_types}"
+        }), 400
+
+    # Valider max_missions
+    max_missions = data.get("max_missions", 5)
+    if not isinstance(max_missions, int) or max_missions < 1 or max_missions > 200:
+        return jsonify({
+            "success": False,
+            "error": "max_missions doit être un entier entre 1 et 200"
+        }), 400
+
+    # Valider mission_sort
+    mission_sort = data.get("mission_sort", "importance_desc")
+    if mission_sort not in VALID_MISSION_SORTS:
+        return jsonify({
+            "success": False,
+            "error": f"Tri invalide: {mission_sort}. Valeurs acceptées: {VALID_MISSION_SORTS}"
+        }), 400
+
+    # Valider les thresholds (null = utiliser valeur .env)
+    THRESHOLD_LIMITS = {
+        "min_credits_threshold": (0, 100000),
+        "optimization_threshold": (1, 20),
+        "deployment_threshold": (1, 50),
+        "personnel_threshold": (1, 20),
+    }
+    thresholds = {}
+    for key, (lo, hi) in THRESHOLD_LIMITS.items():
+        val = data.get(key)
+        if val is not None:
+            if not isinstance(val, int) or val < lo or val > hi:
+                return jsonify({
+                    "success": False,
+                    "error": f"{key} doit être un entier entre {lo} et {hi} (ou null pour valeur .env)"
+                }), 400
+        thresholds[key] = val
+
+    config = {
+        "enabled_mission_types": enabled_types,
+        "max_missions": max_missions,
+        "mission_sort": mission_sort,
+        **thresholds
+    }
+
+    config_json = json.dumps(config, ensure_ascii=False)
+
+    # Écrire via docker exec + python pour un JSON propre sans problème d'échappement
+    python_write = (
+        f"import json; "
+        f"json.dump(json.loads('{config_json}'), "
+        f"open('{RUNTIME_CONFIG_PATH}', 'w'), indent=2, ensure_ascii=False); "
+        f"print('ok')"
+    )
+    success, output = run_docker_command([
+        'docker', 'exec', CONTAINER_NAME,
+        'python', '-c', python_write
+    ])
+
+    if success:
+        return jsonify({
+            "success": True,
+            "message": "Configuration mise à jour (prise en compte au prochain cycle)",
+            "config": config
+        }), 200
+    else:
+        return jsonify({
+            "success": False,
+            "error": "Erreur lors de l'écriture de la configuration",
+            "details": output
         }), 500
 
 @app.errorhandler(404)

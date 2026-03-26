@@ -1,4 +1,5 @@
 import asyncio
+import json
 import re
 from pathlib import Path
 from typing import List, Optional, Dict
@@ -52,10 +53,44 @@ class MissionManager:
         self._cached_flat_mapping: dict = {}      # {generic_type: {primary, secondary}}
         self._cached_reverse_mapping: dict = {}   # {real_type: generic_type}
 
+    # Tous les types de mission scrapables
+    ALL_MISSION_TYPES = {"normal", "transport", "security", "alliance", "alliance_event"}
+
     async def initialize(self):
         """Initialisation asynchrone - doit être appelée après la création"""
         # Charger la configuration des besoins manquants
         self.missing_needs_config = self._load_missing_needs_config()
+
+    def _load_runtime_config(self) -> Dict:
+        """Charge la configuration runtime depuis runtime_config.json.
+
+        Ce fichier est modifiable à chaud depuis le monitoring.
+        Retourne les valeurs par défaut si le fichier est absent ou invalide.
+        """
+        config_path = Path(__file__).parent.parent / "data" / "runtime_config.json"
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            return {
+                "enabled_mission_types": set(config.get("enabled_mission_types", self.ALL_MISSION_TYPES)),
+                "max_missions": config.get("max_missions", self.settings.max_concurrent_missions),
+                "mission_sort": config.get("mission_sort", "importance_desc"),
+                "min_credits_threshold": config.get("min_credits_threshold") if config.get("min_credits_threshold") is not None else self.settings.min_credits_threshold,
+                "optimization_threshold": config.get("optimization_threshold") if config.get("optimization_threshold") is not None else self.settings.optimization_threshold,
+                "deployment_threshold": config.get("deployment_threshold") if config.get("deployment_threshold") is not None else self.settings.deployment_threshold,
+                "personnel_threshold": config.get("personnel_threshold") if config.get("personnel_threshold") is not None else self.settings.personnel_threshold,
+            }
+        except (OSError, json.JSONDecodeError, TypeError) as e:
+            logger.debug(f"Config runtime indisponible, utilisation des valeurs par défaut: {e}")
+            return {
+                "enabled_mission_types": self.ALL_MISSION_TYPES.copy(),
+                "max_missions": self.settings.max_concurrent_missions,
+                "mission_sort": "importance_desc",
+                "min_credits_threshold": self.settings.min_credits_threshold,
+                "optimization_threshold": self.settings.optimization_threshold,
+                "deployment_threshold": self.settings.deployment_threshold,
+                "personnel_threshold": self.settings.personnel_threshold,
+            }
 
     def _ensure_vehicle_mapping_cache(self, strategy) -> None:
         """Construit une seule fois les caches de mapping véhicules depuis la stratégie.
@@ -532,13 +567,15 @@ class MissionManager:
             specialized_personnel_missing = self._count_missing_specialized_personnel(
                 alert_other_needs if 'alert_other_needs' in locals() else {}
             )
-            if specialized_personnel_missing > self.settings.personnel_threshold:
-                logger.warning(f"🚫 Mission {mission.id} - trop de personnel spécialisé manquant ({specialized_personnel_missing} > {self.settings.personnel_threshold}). Mission critique, passage à la suivante.")
+            personnel_th = getattr(self, '_runtime_personnel_threshold', self.settings.personnel_threshold)
+            if specialized_personnel_missing > personnel_th:
+                logger.warning(f"🚫 Mission {mission.id} - trop de personnel spécialisé manquant ({specialized_personnel_missing} > {personnel_th}). Mission critique, passage à la suivante.")
                 return False
 
             # Vérifier si trop de véhicules manquent selon le seuil DEPLOYMENT_THRESHOLD
-            if missing_count > self.settings.deployment_threshold:
-                logger.warning(f"🚫 Mission {mission.id} - trop de véhicules manquants ({missing_count} > {self.settings.deployment_threshold}). Passage à la mission suivante.")
+            deployment_th = getattr(self, '_runtime_deployment_threshold', self.settings.deployment_threshold)
+            if missing_count > deployment_th:
+                logger.warning(f"🚫 Mission {mission.id} - trop de véhicules manquants ({missing_count} > {deployment_th}). Passage à la mission suivante.")
                 return False
 
             # Déployer immédiatement
@@ -1372,7 +1409,7 @@ class MissionManager:
         if not personnel_vehicles:
             return None
 
-        OPTIMIZATION_THRESHOLD = self.settings.optimization_threshold  # Seuil pour optimisation véhicules
+        OPTIMIZATION_THRESHOLD = getattr(self, '_runtime_optimization_threshold', self.settings.optimization_threshold)
 
         # Limiter le nombre de véhicules de chaque type pour éviter les combinaisons absurdes
         max_vehicles_per_type = max(2, (target_personnel // min(v['crew_size'] for v in personnel_vehicles)) + 1)
@@ -1666,7 +1703,7 @@ class MissionManager:
         """
         best_solution: dict | None = None
         best_score = (float('inf'), float('inf'), float('inf'))
-        max_total_vehicles = self.settings.optimization_threshold * 2
+        max_total_vehicles = getattr(self, '_runtime_optimization_threshold', self.settings.optimization_threshold) * 2
 
         def backtrack(
             remaining: int, idx: int, current: dict,
@@ -1759,9 +1796,16 @@ class MissionManager:
 
     async def auto_deploy_missions(self, max_missions: int = None) -> Dict[str, int]:
         """Déploie automatiquement les missions selon la configuration"""
-        max_missions = max_missions or self.settings.max_concurrent_missions
+        runtime_config = self._load_runtime_config()
+        max_missions = runtime_config["max_missions"] if max_missions is None else max_missions
 
-        logger.info(f"Déploiement automatique - max {max_missions} missions")
+        # Appliquer les thresholds runtime (surcharge les valeurs .env pour ce cycle)
+        self._runtime_min_credits_threshold = runtime_config["min_credits_threshold"]
+        self._runtime_optimization_threshold = runtime_config["optimization_threshold"]
+        self._runtime_deployment_threshold = runtime_config["deployment_threshold"]
+        self._runtime_personnel_threshold = runtime_config["personnel_threshold"]
+
+        logger.info(f"Déploiement automatique - max {max_missions} missions (types: {', '.join(sorted(runtime_config['enabled_mission_types']))})")
 
         stats = {
             "found": 0,
@@ -1780,7 +1824,9 @@ class MissionManager:
                 return stats
 
             # Filtrer les missions éligibles
-            eligible_missions = self._filter_eligible_missions(missions)
+            eligible_missions = self._filter_eligible_missions(
+                missions, runtime_config["enabled_mission_types"], runtime_config["mission_sort"]
+            )
             logger.info(f"{len(eligible_missions)} missions éligibles sur {len(missions)}")
 
             deployed_count = 0
@@ -1841,19 +1887,25 @@ class MissionManager:
 
         return stats
 
-    def _filter_eligible_missions(self, missions: List[Mission]) -> List[Mission]:
+    def _filter_eligible_missions(self, missions: List[Mission], enabled_types: set = None,
+                                   mission_sort: str = "importance_desc") -> List[Mission]:
         """
         Filtre les missions selon les critères de déploiement automatique.
 
         Applique les filtres configurés : statut disponible, seuil de crédits minimum,
-        et autres critères définis dans les settings.
+        types de missions activés, et autres critères définis dans les settings.
 
         Args:
             missions: Liste des missions à filtrer
+            enabled_types: Ensemble des types de missions activés (depuis runtime_config)
+            mission_sort: Clé de tri (importance_desc, created_at_asc, created_at_desc)
 
         Returns:
             List[Mission]: Missions éligibles au déploiement
         """
+        if enabled_types is None:
+            enabled_types = self.ALL_MISSION_TYPES
+
         eligible = []
 
         for mission in missions:
@@ -1861,20 +1913,51 @@ class MissionManager:
             if mission.status != MissionStatus.AVAILABLE:
                 continue
 
-            # Vérifier le seuil de crédits si configuré
-            if (self.settings.min_credits_threshold > 0 and
-                mission.credits and
-                mission.credits < self.settings.min_credits_threshold):
-                logger.debug(f"Mission {mission.id} ignorée: crédits trop faibles ({mission.credits})")
+            # Filtrer par type de mission activé
+            if mission.type.value not in enabled_types:
+                logger.debug(f"Mission {mission.id} ignorée: type {mission.type.value} désactivé")
                 continue
 
-            # Autres filtres possibles (localisation, type, etc.)
+            # Vérifier le seuil de crédits si configuré (runtime > .env)
+            credits_th = getattr(self, '_runtime_min_credits_threshold', self.settings.min_credits_threshold)
+            if (credits_th > 0 and
+                mission.credits and
+                mission.credits < credits_th):
+                logger.debug(f"Mission {mission.id} ignorée: crédits trop faibles ({mission.credits} < {credits_th})")
+                continue
+
             eligible.append(mission)
 
-        # Trier par priorité (score d'importance = crédits × nombre de véhicules requis)
-        eligible.sort(key=lambda m: self._calculate_mission_importance_score(m), reverse=True)
+        # Appliquer le tri configuré
+        self._sort_missions(eligible, mission_sort)
 
         return eligible
+
+    def _sort_missions(self, missions: List[Mission], mission_sort: str) -> None:
+        """Trie la liste de missions en place selon la clé de tri configurée.
+
+        Args:
+            missions: Liste à trier (modifiée en place)
+            mission_sort: Format "key_direction" (ex: importance_desc, created_at_asc)
+        """
+        if mission_sort == "created_at_asc":
+            missions.sort(key=lambda m: m.created_at or 0)
+            logger.debug("Tri des missions: plus anciennes en premier (created_at asc)")
+        elif mission_sort == "created_at_desc":
+            missions.sort(key=lambda m: m.created_at or 0, reverse=True)
+            logger.debug("Tri des missions: plus récentes en premier (created_at desc)")
+        elif mission_sort == "credits_asc":
+            # Crédits croissants, puis anciennes en premier à crédits égaux
+            missions.sort(key=lambda m: (m.credits or 0, m.created_at or 0))
+            logger.debug("Tri des missions: crédits croissants (+ anciennes en premier)")
+        elif mission_sort == "credits_desc":
+            # Crédits décroissants, puis anciennes en premier à crédits égaux
+            missions.sort(key=lambda m: (-(m.credits or 0), m.created_at or 0))
+            logger.debug("Tri des missions: crédits décroissants (+ anciennes en premier)")
+        else:
+            # Défaut: importance décroissante, puis anciennes en premier à score égal
+            missions.sort(key=lambda m: (-self._calculate_mission_importance_score(m), m.created_at or 0))
+            logger.debug("Tri des missions: score d'importance (+ anciennes en premier)")
 
     def _calculate_mission_importance_score(self, mission: Mission) -> float:
         """

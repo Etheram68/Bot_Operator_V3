@@ -66,6 +66,7 @@ class Mission(BaseModel):
     # Métadonnées
     location: Optional[str] = Field(default=None, description="Lieu de la mission")
     additional_info: Dict[str, str] = Field(default_factory=dict)
+    created_at: Optional[int] = Field(default=None, description="Timestamp de création de la mission (depuis data-sortable-by)")
 
     def get_total_vehicle_requirements(self) -> Dict[str, int]:
         """Retourne les exigences totales en véhicules"""

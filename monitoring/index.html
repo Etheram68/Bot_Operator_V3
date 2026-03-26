@@ -535,6 +535,191 @@
             color: #374151;
             font-weight: 600;
         }
+
+        /* Runtime Config Card */
+        .config-section {
+            margin-bottom: 20px;
+        }
+
+        .config-section h3 {
+            font-size: 1.1em;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+
+        .mission-types-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .mission-type-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .mission-type-item:hover {
+            background: #f3f4f6;
+        }
+
+        .mission-type-item.disabled {
+            opacity: 0.5;
+            background: #fee2e2;
+            border-color: #fca5a5;
+        }
+
+        .mission-type-label {
+            font-size: 0.95em;
+            color: #374151;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .max-missions-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .max-missions-input {
+            width: 70px;
+            padding: 8px 12px;
+            border: 2px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            color: #374151;
+        }
+
+        .max-missions-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .max-missions-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            outline: none;
+        }
+
+        .max-missions-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .config-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .config-status.saved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .config-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .config-status.loading {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .mission-sort-select {
+            width: 100%;
+            max-width: 350px;
+            padding: 10px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.95em;
+            color: #374151;
+            background: #f9fafb;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .mission-sort-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .thresholds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+        }
+
+        .threshold-item {
+            padding: 14px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .threshold-item label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 4px;
+            font-size: 0.9em;
+        }
+
+        .threshold-item .threshold-hint {
+            display: block;
+            font-size: 0.78em;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        .threshold-item input[type="number"] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.95em;
+            color: #374151;
+            background: white;
+            transition: border-color 0.2s;
+        }
+
+        .threshold-item input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .threshold-item input.is-env-default {
+            border-color: #d1d5db;
+            color: #9ca3af;
+            font-style: italic;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -589,6 +774,113 @@
                     <div class="chart-container">
                         <canvas id="memoryChart"></canvas>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🎛️ Configuration à Chaud</h2>
+            <div id="config-content">
+                <div class="config-section">
+                    <h3>Types de missions à traiter</h3>
+                    <div class="mission-types-grid">
+                        <div class="mission-type-item" id="type-item-normal">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="type-normal" checked onchange="onConfigChange()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="mission-type-label" onclick="document.getElementById('type-normal').click()">🚒 Normales</span>
+                        </div>
+                        <div class="mission-type-item" id="type-item-transport">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="type-transport" checked onchange="onConfigChange()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="mission-type-label" onclick="document.getElementById('type-transport').click()">🚑 Transport</span>
+                        </div>
+                        <div class="mission-type-item" id="type-item-security">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="type-security" checked onchange="onConfigChange()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="mission-type-label" onclick="document.getElementById('type-security').click()">🛡️ Sécurité</span>
+                        </div>
+                        <div class="mission-type-item" id="type-item-alliance">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="type-alliance" checked onchange="onConfigChange()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="mission-type-label" onclick="document.getElementById('type-alliance').click()">🤝 Alliance</span>
+                        </div>
+                        <div class="mission-type-item" id="type-item-alliance_event">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="type-alliance_event" checked onchange="onConfigChange()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="mission-type-label" onclick="document.getElementById('type-alliance_event').click()">⭐ Alliance Event</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Nombre max de missions par cycle</h3>
+                    <div class="max-missions-container">
+                        <input type="number" id="max-missions-input" class="max-missions-input"
+                               value="40" min="1" max="200" onchange="syncSlider()" oninput="syncSlider()">
+                        <input type="range" id="max-missions-slider" class="max-missions-slider"
+                               value="40" min="1" max="200" oninput="syncInput()" onchange="onConfigChange()">
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Tri des missions</h3>
+                    <select id="mission-sort-select" class="mission-sort-select" onchange="onConfigChange()">
+                        <option value="importance_desc">Score d'importance (défaut)</option>
+                        <option value="created_at_asc">Le plus vieux en premier</option>
+                        <option value="created_at_desc">Le plus récent en premier</option>
+                        <option value="credits_asc">Crédits croissants</option>
+                        <option value="credits_desc">Crédits décroissants</option>
+                    </select>
+                </div>
+
+                <div class="config-section">
+                    <h3>Seuils de déploiement</h3>
+                    <div class="thresholds-grid">
+                        <div class="threshold-item">
+                            <label for="th-min-credits">Crédits minimum</label>
+                            <span class="threshold-hint">Ignore les missions sous ce seuil (0 = toutes)</span>
+                            <input type="number" id="th-min-credits" min="0" max="100000" step="100"
+                                   placeholder="Valeur .env" onchange="onConfigChange()">
+                        </div>
+                        <div class="threshold-item">
+                            <label for="th-optimization">Seuil d'optimisation</label>
+                            <span class="threshold-hint">Privilégier 1 gros véhicule vs plusieurs petits</span>
+                            <input type="number" id="th-optimization" min="1" max="20"
+                                   placeholder="Valeur .env" onchange="onConfigChange()">
+                        </div>
+                        <div class="threshold-item">
+                            <label for="th-deployment">Véhicules manquants max</label>
+                            <span class="threshold-hint">Skip la mission si plus de X véhicules manquent</span>
+                            <input type="number" id="th-deployment" min="1" max="50"
+                                   placeholder="Valeur .env" onchange="onConfigChange()">
+                        </div>
+                        <div class="threshold-item">
+                            <label for="th-personnel">Personnel manquant max</label>
+                            <span class="threshold-hint">Skip si trop de personnel spécialisé manque</span>
+                            <input type="number" id="th-personnel" min="1" max="20"
+                                   placeholder="Valeur .env" onchange="onConfigChange()">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+                    <button class="action-button success" onclick="saveRuntimeConfig()">
+                        <span>💾</span> Sauvegarder
+                    </button>
+                    <button class="action-button" onclick="loadRuntimeConfig()">
+                        <span>🔄</span> Recharger
+                    </button>
+                    <span id="config-status" class="config-status" style="display: none;"></span>
                 </div>
             </div>
         </div>
@@ -1498,6 +1790,148 @@
             }
         }
 
+        // --- Runtime Config ---
+        let configDirty = false;
+
+        function syncSlider() {
+            const val = parseInt(document.getElementById('max-missions-input').value) || 1;
+            document.getElementById('max-missions-slider').value = Math.min(val, 20);
+            onConfigChange();
+        }
+
+        function syncInput() {
+            document.getElementById('max-missions-input').value = document.getElementById('max-missions-slider').value;
+            onConfigChange();
+        }
+
+        function onConfigChange() {
+            configDirty = true;
+            // Mettre à jour le style des items selon checked/unchecked
+            const types = ['normal', 'transport', 'security', 'alliance', 'alliance_event'];
+            types.forEach(t => {
+                const item = document.getElementById('type-item-' + t);
+                const cb = document.getElementById('type-' + t);
+                if (item && cb) {
+                    item.classList.toggle('disabled', !cb.checked);
+                }
+            });
+        }
+
+        function showConfigStatus(message, type) {
+            const el = document.getElementById('config-status');
+            el.textContent = message;
+            el.className = 'config-status ' + type;
+            el.style.display = 'inline-block';
+            if (type !== 'loading') {
+                setTimeout(() => { el.style.display = 'none'; }, 4000);
+            }
+        }
+
+        async function loadRuntimeConfig() {
+            try {
+                const response = await fetch('/api/runtime-config');
+                const data = await response.json();
+
+                if (data.success && data.config) {
+                    const config = data.config;
+                    const types = ['normal', 'transport', 'security', 'alliance', 'alliance_event'];
+
+                    types.forEach(t => {
+                        const cb = document.getElementById('type-' + t);
+                        if (cb) {
+                            cb.checked = config.enabled_mission_types.includes(t);
+                        }
+                    });
+
+                    document.getElementById('max-missions-input').value = config.max_missions;
+                    document.getElementById('max-missions-slider').value = Math.min(config.max_missions, 200);
+
+                    // Tri des missions
+                    const sortSelect = document.getElementById('mission-sort-select');
+                    if (config.mission_sort && sortSelect) {
+                        sortSelect.value = config.mission_sort;
+                    }
+
+                    // Thresholds (null = placeholder "Valeur .env")
+                    const thFields = {
+                        'th-min-credits': 'min_credits_threshold',
+                        'th-optimization': 'optimization_threshold',
+                        'th-deployment': 'deployment_threshold',
+                        'th-personnel': 'personnel_threshold'
+                    };
+                    for (const [inputId, configKey] of Object.entries(thFields)) {
+                        const input = document.getElementById(inputId);
+                        if (input) {
+                            const val = config[configKey];
+                            input.value = val !== null && val !== undefined ? val : '';
+                            input.classList.toggle('is-env-default', val === null || val === undefined);
+                        }
+                    }
+
+                    // Mettre à jour le style
+                    onConfigChange();
+                    configDirty = false;
+
+                    if (data.default) {
+                        showConfigStatus('Config par défaut', 'loading');
+                    }
+                }
+            } catch (error) {
+                showConfigStatus('Erreur chargement', 'error');
+            }
+        }
+
+        async function saveRuntimeConfig() {
+            const types = ['normal', 'transport', 'security', 'alliance', 'alliance_event'];
+            const enabledTypes = types.filter(t => {
+                const cb = document.getElementById('type-' + t);
+                return cb && cb.checked;
+            });
+
+            const maxMissions = parseInt(document.getElementById('max-missions-input').value) || 5;
+            const missionSort = document.getElementById('mission-sort-select').value;
+
+            // Thresholds : vide = null (utiliser valeur .env)
+            const getThreshold = (id) => {
+                const val = document.getElementById(id).value;
+                return val !== '' ? parseInt(val) : null;
+            };
+
+            if (enabledTypes.length === 0) {
+                alert('Vous devez activer au moins un type de mission.');
+                return;
+            }
+
+            showConfigStatus('Sauvegarde...', 'loading');
+
+            try {
+                const response = await fetch('/api/runtime-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enabled_mission_types: enabledTypes,
+                        max_missions: maxMissions,
+                        mission_sort: missionSort,
+                        min_credits_threshold: getThreshold('th-min-credits'),
+                        optimization_threshold: getThreshold('th-optimization'),
+                        deployment_threshold: getThreshold('th-deployment'),
+                        personnel_threshold: getThreshold('th-personnel')
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    configDirty = false;
+                    showConfigStatus('Sauvegardé !', 'saved');
+                } else {
+                    showConfigStatus('Erreur: ' + (data.error || 'inconnue'), 'error');
+                }
+            } catch (error) {
+                showConfigStatus('Erreur connexion', 'error');
+            }
+        }
+
         // Rafraîchissement automatique toutes les 5 secondes
         function startAutoRefresh() {
             // Initialiser les graphiques
@@ -1508,6 +1942,7 @@
             loadLogs();
             loadPatterns();
             loadDebugStatus();
+            loadRuntimeConfig();
 
             if (autoRefreshInterval) {
                 clearInterval(autoRefreshInterval);
